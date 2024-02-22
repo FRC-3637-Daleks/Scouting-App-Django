@@ -1,0 +1,76 @@
+{% extends 'scouting/base.html' %}
+
+{% block title %} | Pit Scout {% endblock %}
+
+{% block content %}
+    <div class="container">
+        <h1 class="m-3 text-center">Assigned Teams</h1>
+            <table class="table table-striped">
+                <thead>
+                    <th scope="col">Team #</th>
+                    <th scope="col">Team Name</th>
+                    <th scope="col">Scout Assigned</th>
+                    <th scope="col">Scout</th>
+                </thead>
+                <tbody>
+                    {% for report in pit_scout_reports %}
+                        {% if report.description == '' and report.assigned_scout == current_user%}
+                            <tr>
+                                <th scope="row">{{ report.team.team_number }}</th>
+                                <th scope="row">{{ report.team.team_name }}</th>
+                                <th scope="row">{{ report.assigned_scout }}</th>
+                                <th scope="row"><a href="{% url 'scouting:pit_scout_team' team_number=report.team.team_number %}" class="btn btn-primary" rile="button">Scout</a></th>
+                            </tr>
+                        {% endif %}
+                    {% endfor %}
+                </tbody>
+
+            </table>
+
+            <h1 class="m-3 text-center">Other's Assigned Teams</h1>
+            <table class="table table-striped">
+                <thead>
+                    <th scope="col">Team #</th>
+                    <th scope="col">Team Name</th>
+                    <th scope="col">Scout Assigned</th>
+                    <th scope="col">Scout</th>
+                </thead>
+                <tbody>
+                    {% for report in pit_scout_reports %}
+                        {% if report.description == '' and not report.assigned_scout == current_user%}
+                            <tr>
+                                <th scope="row">{{ report.team.team_number }}</th>
+                                <th scope="row">{{ report.team.team_name }}</th>
+                                <th scope="row">{{ report.assigned_scout }}</th>
+                                <th scope="row"><a href="{% url 'scouting:pit_scout_team' team_number=report.team.team_number %}" class="btn btn-primary" rile="button">Scout</a></th>
+                            </tr>
+                        {% endif %}
+                    {% endfor %}
+                </tbody>
+
+            </table>
+
+    <h1 class="m-3 text-center">Pit Scouting Complete</h1>
+            <table class="table table-striped">
+                <thead>
+                    <th scope="col">Team #</th>
+                    <th scope="col">Team Name</th>
+                    <th scope="col">Scout</th>
+                    <th scope="col">Report</th>
+                </thead>
+                <tbody>
+                    {% for report in pit_scout_reports %}
+                        {% if report.description != '' %}
+                            <tr>
+                                <th scope="row">{{ report.team.team_number }}</th>
+                                <th scope="row">{{ report.team.team_name }}</th>
+                                <th scope="row">{{ report.assigned_scout }}</th>
+                                <th scope="row"><a href="{% url 'scouting:pit_scout_team' team_number=report.team.team_number %}" class="btn btn-primary" rile="button">View Report</a></th>
+                            </tr>
+                        {% endif %}
+                    {% endfor %}
+                </tbody>
+
+            </table>
+    </div>
+{% endblock %}

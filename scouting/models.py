@@ -1,0 +1,190 @@
+from django.db import models
+from django_extensions.db.models import TimeStampedModel
+from django.conf import settings
+
+
+class MatchField(TimeStampedModel):
+    class FieldTypes(models.TextChoices):
+        BOOL = "BOOL"
+        INTEGER = "INTEGER"
+
+    type = models.CharField(
+        max_length=7,
+        choices=FieldTypes,
+        default=FieldTypes.BOOL,
+    )
+    field_name = models.CharField(max_length=30)
+
+    def __str__(self):
+        return self.field_name
+
+
+class Game(TimeStampedModel):
+    year = models.IntegerField(unique=True)
+    name = models.CharField(max_length=20)
+    pre_match_fields = models.ManyToManyField(MatchField, related_name="+", blank=True)
+    auton_fields = models.ManyToManyField(MatchField, related_name="+", blank=True)
+    teleop_fields = models.ManyToManyField(MatchField, related_name="+", blank=True)
+    endgame_fields = models.ManyToManyField(MatchField, related_name="+", blank=True)
+    post_match_fields = models.ManyToManyField(MatchField, related_name="+", blank=True)
+
+    def __str__(self):
+        return str(self.year) + " " + self.name
+
+
+class Team(TimeStampedModel):
+    team_name = models.CharField(max_length=30)
+    team_number = models.IntegerField()
+
+    def __str__(self):
+        return str(self.team_number) + " - " + self.team_name
+
+
+class Event(TimeStampedModel):
+    game = models.ForeignKey(Game, on_delete=models.CASCADE)
+    event_name = models.CharField(max_length=30)
+    start_date = models.DateField()
+    end_date = models.DateField()
+    active = models.BooleanField(default=False)
+    tba_event_key = models.CharField(max_length=20, null=True)
+    teams = models.ManyToManyField(Team, blank=True)
+
+    def save(self, *args, **kwargs):
+        if self.active:
+            Event.objects.filter(active=True).update(active=False)
+        super(Event, self).save(*args, **kwargs)
+
+    def __str__(self):
+        return str(self.game.year) + " " + self.event_name
+
+
+class Match(TimeStampedModel):
+    match_number = models.IntegerField()
+    event_id = models.ForeignKey(Event, on_delete=models.CASCADE, null=False, related_name="+")
+    team_red_1 = models.ForeignKey(Team, on_delete=models.CASCADE, null=False, related_name="+")
+    team_red_2 = models.ForeignKey(Team, on_delete=models.CASCADE, null=False, related_name="+")
+    team_red_3 = models.ForeignKey(Team, on_delete=models.CASCADE, null=False, related_name="+")
+    team_blue_1 = models.ForeignKey(Team, on_delete=models.CASCADE, null=False, related_name="+")
+    team_blue_2 = models.ForeignKey(Team, on_delete=models.CASCADE, null=False, related_name="+")
+    team_blue_3 = models.ForeignKey(Team, on_delete=models.CASCADE, null=False, related_name="+")
+
+    class Meta:
+        verbose_name_plural = "Matches"
+
+    def __str__(self):
+        return str(self.match_number)
+
+
+class MatchData(TimeStampedModel):
+    match = models.ForeignKey(Match, on_delete=models.CASCADE, null=False, related_name="+")
+    event = models.ForeignKey(Event, on_delete=models.CASCADE, null=False, related_name="+")
+    team = models.ForeignKey(Team, on_delete=models.CASCADE, null=False, related_name="+", limit_choices_to=models.Q(matchdata__match__team_red_1=models.F('id')) | models.Q(matchdata__match__team_red_2=models.F('id')) | models.Q(matchdata__match__team_red_3=models.F('id')) | models.Q(matchdata__match__team_blue_1=models.F('id')) | models.Q(matchdata__match__team_blue_2=models.F('id')) | models.Q(matchdata__match__team_blue_3=models.F('id')))
+    match_field = models.ForeignKey(MatchField, on_delete=models.CASCADE, null=False, related_name="+")
+    response_bool = models.BooleanField(null=True, default=None)
+    response_int = models.IntegerField(null=True, default=None)
+
+    class Meta:
+        verbose_name_plural = "Match data"
+
+    def __str__(self):
+        return str(self.event.event_name + " - Match  " + str(self.match.match_number) + " | Team " + str(self.team.team_number))
+
+
+class TbaApiKey(models.Model):
+    api_key = models.CharField(max_length=100, null=False, blank=False)
+    active = models.BooleanField(default=False)
+
+    class Meta:
+        verbose_name_plural = "The Blue Alliance API Keys"
+
+    def save(self, *args, **kwargs):
+        if self.active:
+            TbaApiKey.objects.filter(active=True).update(active=False)
+        super(TbaApiKey, self).save(*args, **kwargs)
+
+
+class PitScoutData(TimeStampedModel):
+    team = models.ForeignKey('Team', on_delete=models.CASCADE, null=False, blank=False)
+    event = models.ForeignKey('Event', on_delete=models.CASCADE, null=False)
+    assigned_scout = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True)
+    # Boolean Fields
+    has_crisp_boombers = models.BooleanField(default=False, name='Crisp Boombers')
+    has_floor_pickup = models.BooleanField(default=False)
+    has_player_station_pickup = models.BooleanField(default=False)
+    can_go_under_stage = models.BooleanField(default=False)
+    has_april_tag_recognition = models.BooleanField(default=False)
+    has_vision_object_detection = models.BooleanField(default=False)
+    has_variable_angle_shooter = models.BooleanField(default=False)
+    can_climb = models.BooleanField(default=False)
+    can_climb_2_robots = models.BooleanField(default=False)
+    can_lift_another_robot = models.BooleanField(default=False)
+    can_score_amp = models.BooleanField(default=False)
+    shoots_up_into_amp = models.BooleanField(default=False)
+    shoots_down_into_amp = models.BooleanField(default=False)
+    can_score_speaker_from_subwoofer = models.BooleanField(default=False)
+    can_score_speaker_from_other_position = models.BooleanField(default=False)
+    can_place_note_in_trap = models.BooleanField(default=False) 
+    # Integer Fields
+    linear_speed = models.IntegerField(default=0)
+    robot_length_in = models.IntegerField(default=0)
+    robot_width_in = models.IntegerField(default=0)
+    robot_heigh_in = models.IntegerField(default=0)
+    robot_weight_lbs = models.IntegerField(default=0)
+    # Char Fields
+    description = models.TextField(max_length=2000)
+
+    class Meta:
+        verbose_name_plural = "Pit scout data"
+
+    def __str__(self):
+        return str(str(self.team.team_number) + " - " + self.team.team_name + " | " + self.event.event_name)
+
+
+class MatchData2024(TimeStampedModel):
+    team = models.ForeignKey('Team', on_delete=models.CASCADE, null=False)
+    match = models.ForeignKey('Match', on_delete=models.CASCADE, null=False)
+
+    # Pre-Match Tags
+    #bools
+    arrived_on_field_on_time = models.BooleanField(default=True)
+    start_with_note = models.BooleanField(default=False)
+    dead_on_arrival= models.BooleanField(default=False)
+    #strings
+    startingLocation = models.CharField(max_length=20, null=True)
+
+    # Auton Tags
+    #bools
+    left_community_zone = models.BooleanField(default=False)
+    moved = models.BooleanField(default=False)
+    a_stopped = models.BooleanField(default=False)
+    #ints
+    amp_notes_scored = models.IntegerField(default=0)
+    speaker_notes_scored = models.IntegerField(default=0)
+    notes_picked_up_from_wing = models.IntegerField(default=0)
+    notes_picked_up_from_center = models.IntegerField(default=0)
+    time_to_centerline_note = models.IntegerField(default=0)
+
+    # Teleop Tags
+    #bools
+    e_stopped = models.BooleanField(default=False)
+    communication_lost= models.BooleanField(default=False)
+    shoots_from_subwoofer_to_speaker = models.BooleanField(default=False)
+    shoots_from_podium_to_speaker = models.BooleanField(default=False)
+    shoots_from_free_space_to_speaker = models.BooleanField(default=False)
+    #ints
+    amp_notes_scored = models.IntegerField(default=0)
+    notes_scored_from_subwoofer = models.IntegerField(default=0)
+    notes_scored_from_elesewhere = models.IntegerField(default=0)
+    speaker_notes_missed = models.IntegerField(default=0)
+    defense_scale = models.IntegerField(default=0)
+    notes_picked_up_from_floor = models.IntegerField(default=0)
+    notes_picked_up_from_player_station = models.IntegerField(default=0)
+    notes_dropped = models.IntegerField(default=0)
+
+    # Endgame Tags
+    #bools
+    climbed_solo = models.BooleanField(default=False)
+    climbed_with_another_robot = models.BooleanField(default=False)
+    scored_high_notes = models.BooleanField(default=False)
+    #integer
+    notes_scored_in_trap = models.IntegerField(default=0)

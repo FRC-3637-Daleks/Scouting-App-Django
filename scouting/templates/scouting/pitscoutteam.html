@@ -1,0 +1,33 @@
+{% extends 'scouting/base.html' %}
+{% load crispy_forms_tags %}
+
+{% block title %} | Pit Scout Team {{ pit_scout_data.team.team_number }} {% endblock %}
+
+{% block content %}
+    <div class="container">
+        <h1 class="m-3 text-center">Pit Scouting | Team {{ pit_scout_data.team.team_number }}</h1>
+        <table class="table table-striped">
+                <thead>
+                    <th scope="col">Team #</th>
+                    <th scope="col">Team Name</th>
+                    <th scope="col">Scout Assigned</th>
+                </thead>
+                <tbody>
+                    <tr>
+                        <th scope="row">{{ pit_scout_data.team.team_number }}</th>
+                        <th scope="row">{{ pit_scout_data.team.team_name }}</th>
+                        <th scope="row">{{ pit_scout_data.assigned_scout.first_name }} {{ pit_scout_data.assigned_scout.last_name }}</th>
+                    </tr>
+                </tbody>
+            </table>
+
+        <form method="POST" enctype="multipart/form-data">
+            {% csrf_token %}
+{#            {{ form.as_p }}#}
+            {{ form | crispy }}
+            <button href="#" class="btn btn-primary">Submit</button>
+        </form>
+
+
+    </div>
+{% endblock %}

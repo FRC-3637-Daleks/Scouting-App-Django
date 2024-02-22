@@ -1,0 +1,14 @@
+{% extends 'base.html' %}
+
+{% block brand %}
+    <a class="navbar-brand" href="{% url 'scouting:index' %}"><i class="fas fa-magnifying-glass mr-3"></i>Scouting</a>
+{% endblock %}
+
+{%  block navbar_items %}
+    <div class="navbar-item">
+        <a href="{% url 'scouting:index' %}" class="nav-link">Match Schedule</a>
+    </div>
+    <div class="navbar-item">
+        <a href="{% url 'scouting:pit_scout_teams_list' %}" class="nav-link">Pit Scout</a>
+    </div>
+{% endblock %}

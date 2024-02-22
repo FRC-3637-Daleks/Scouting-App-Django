@@ -1,0 +1,46 @@
+{% extends 'scouting/base.html' %}
+{% load crispy_forms_tags %}
+
+{% block title %} | Match {{ match.match_number }} {% endblock %}
+
+{% block content %}
+    <div class="container">
+        <h1 class="m-3 text-center">Match {{ match.match_number }} | Team {{ team.team_number }}</h1>
+
+<form method="post">
+    {% csrf_token %}
+    <div class="accordion" id="accordionParts">
+        <!-- Accordion Part 1: Boolean Fields -->
+        <div class="accordion-item">
+            <h2 class="accordion-header" id="headingBool">
+                <button class="accordion-button" type="button" data-bs-toggle="collapse" data-bs-target="#collapseBool" aria-expanded="true" aria-controls="collapseBool">
+                    Boolean Fields
+                </button>
+            </h2>
+            <div id="collapseBool" class="accordion-collapse collapse show" aria-labelledby="headingBool" data-bs-parent="#accordionParts">
+                <div class="accordion-body">
+                    {{ form.bool1 }}
+                    {{ form.bool2 }}
+                    {{ form.bool3 }}
+                </div>
+            </div>
+        </div>
+
+        <!-- Accordion Part 2: Integer Fields -->
+        <div class="accordion-item">
+            <!-- Similar structure for integer fields -->
+        </div>
+
+        <!-- Accordion Part 3: Other Fields -->
+        <div class="accordion-item">
+            <!-- Similar structure for other fields -->
+        </div>
+    </div>
+
+    <!-- Add other form elements here -->
+    <button type="submit">Submit</button>
+</form>
+
+
+    </div>
+{% endblock %}

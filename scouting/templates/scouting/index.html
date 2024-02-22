@@ -1,0 +1,33 @@
+{% extends 'scouting/base.html' %}
+
+{% block title %} | Scouting App {% endblock %}
+
+{% block content %}
+    <div class="container">
+        <h1 class="m-3 text-center">Match Schedule</h1>
+            <table class="table table-striped">
+                <thead>
+                    <th scope="col">Match #</th>
+                    <th scope="col">Red 1</th>
+                    <th scope="col">Red 2</th>
+                    <th scope="col">Red 3</th>
+                    <th scope="col">Blue 1</th>
+                    <th scope="col">Blue 2</th>
+                    <th scope="col">Blue 3</th>
+                </thead>
+                <tbody>
+                    {% for match in matches %}
+                        <tr>
+                            <th scope="row">{{ match.match_number }}</th>
+                            <td class="table-danger"><a href="{% url 'scouting:stands_scout_match' match_number=match.match_number team_number=match.team_red_1.team_number %}">{{ match.team_red_1.team_number }}</a></td>
+                            <td class="table-danger"><a href="{% url 'scouting:stands_scout_match' match_number=match.match_number team_number=match.team_red_2.team_number %}">{{ match.team_red_2.team_number }}</a></td>
+                            <td class="table-danger"><a href="{% url 'scouting:stands_scout_match' match_number=match.match_number team_number=match.team_red_3.team_number %}">{{ match.team_red_3.team_number }}</a></td>
+                            <td class="table-info"><a href="{% url 'scouting:stands_scout_match' match_number=match.match_number team_number=match.team_blue_1.team_number %}">{{ match.team_blue_1.team_number }}</a></td>
+                            <td class="table-info"><a href="{% url 'scouting:stands_scout_match' match_number=match.match_number team_number=match.team_blue_2.team_number %}">{{ match.team_blue_2.team_number }}</a></td>
+                            <td class="table-info"><a href="{% url 'scouting:stands_scout_match' match_number=match.match_number team_number=match.team_blue_3.team_number %}">{{ match.team_blue_3.team_number }}</a></td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+    </div>
+{% endblock %}
