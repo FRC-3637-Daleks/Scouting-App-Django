@@ -1,68 +1,39 @@
 from django import forms
-from django.forms import modelformset_factory
+from crispy_forms.helper import FormHelper
+from crispy_forms.layout import Layout, Div, Field, ButtonHolder, Submit
 
 from .models import *
 
 
-# class StandsScoutingForm(forms.ModelForm):
-#     class Meta:
-#         model
-
 class PitScoutDataForm(forms.ModelForm):
     class Meta:
         model = PitScoutData
-        # fields = ['description', 'has_crisp_boombers']
         exclude = ['assigned_scout', 'team', 'event']
 
 
-class MatchDataForm2024(forms.ModelForm):
+class MatchData2024Form(forms.ModelForm):
     class Meta:
         model = MatchData2024
         exclude = ['team', 'match']
 
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.helper = FormHelper()
+        self.helper.form_tag = False  # No <form> tags
 
-class MatchDataForm(forms.ModelForm):
-    # id = forms.IntegerField(widget=forms.HiddenInput(), required=False)
-    id = forms.IntegerField()
+        # Group fields by section
+        self.field_groups = {
+            'Pre-Match': ['arrived_on_field_on_time', 'start_with_note', 'dead_on_arrival', 'startingLocation'],
+            'Auton': ['left_community_zone', 'moved', 'a_stopped', 'amp_notes_scored', 'speaker_notes_scored', 'notes_picked_up_from_wing', 'notes_picked_up_from_center', 'time_to_centerline_note'],
+            'Teleop': ['e_stopped', 'communication_lost', 'shoots_from_subwoofer_to_speaker', 'shoots_from_podium_to_speaker', 'shoots_from_free_space_to_speaker', 'amp_notes_scored', 'notes_scored_from_subwoofer', 'notes_scored_from_elesewhere', 'speaker_notes_missed', 'defense_scale', 'notes_picked_up_from_floor', 'notes_dropped', 'notes_picked_up_from_player_station'],
+            'Endgame': ['climbed_solo', 'climbed_with_another_robot', 'scored_high_notes', 'notes_scored_in_trap'],
+        }
 
-    class Meta:
-        model = MatchData
-        fields = ['id', 'match_field', 'response_bool', 'response_int']
-
-    # def __init__(self, *args, **kwargs):
-    #     team = kwargs.pop('team')
-    #     event = kwargs.pop('event')
-    #     match = kwargs.pop('match')
-    #     match_fields = kwargs.pop('match_fields')
-    #     match_fields = MatchField.objects.filter(id__in=[mf.id for mf in match_fields])
-    #     super().__init__(*args, **kwargs)
-    #     self.fields['match_field'].queryset = match_fields
-def __init__(self, *args, **kwargs):
-    team = kwargs.pop('team', None)
-    event = kwargs.pop('event', None)
-    match = kwargs.pop('match', None)
-    match_fields = kwargs.pop('match_fields', None)
-    match_fields = MatchField.objects.filter(id__in=[mf.id for mf in match_fields])
-    super().__init__(*args, **kwargs)
-    self.fields['match_field'].queryset = match_fields
-
-    # Get the match_field instance
-    match_field = self.instance.match_field
-
-    # Check the field type
-    if match_field.type == MatchField.FieldTypes.BOOL:
-        # If it's a BOOL, use a RadioSelect widget for response_bool
-        self.fields['response_bool'].widget = forms.RadioSelect(choices=[(True, 'Yes'), (False, 'No')])
-        # And remove the response_int field
-        del self.fields['response_int']
-    elif match_field.type == MatchField.FieldTypes.INTEGER:
-        # If it's an INTEGER, use a NumberInput widget for response_int
-        self.fields['response_int'].widget = forms.NumberInput()
-        # And remove the response_bool field
-        del self.fields['response_bool']
-
-
-MatchDataFormSet = modelformset_factory(MatchData, form=MatchDataForm, extra=0, can_delete=False, can_order=False)
-
-
-
+        layout_fields = []
+        for section, fields in self.field_groups.items():
+            layout_fields.append(
+                Div(
+                    *[Field(field) for field in fields],
+                )
+            )
+        self.helper.layout = Layout(*layout_fields, ButtonHolder(Submit('submit', 'Save', css_class='btn-primary')))

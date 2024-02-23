@@ -20,7 +20,6 @@ def view_index(request):
     return render(request, 'scouting/index.html', context)
 
 
-
 def view_pit_scout_team_list(request):
     event = Event.objects.get(active=True)
     event_teams = event.teams.all().order_by('team_number')
@@ -72,53 +71,13 @@ def view_match(request, team_number, match_number):
     team = Team.objects.get(team_number=team_number)
     event = Event.objects.get(active=True)
     match = Match.objects.get(match_number=match_number, event_id=event)
-    game = event.game
 
-    # Get the MatchFields for this game
-    match_fields = list(game.pre_match_fields.all()) + list(game.auton_fields.all()) + list(
-        game.teleop_fields.all()) + list(game.endgame_fields.all()) + list(game.post_match_fields.all())
-    # print(match_fields)
-
-    # if request.method == 'POST':
-    #     print("POST Recieved")
-    #     # formset = MatchDataFormSet(request.POST)
-    #     formset = MatchDataFormSet(request.POST, form_kwargs={'team': team, 'event': event, 'match': match,
-    #                                                           'match_fields': match_fields})
-    #     print(formset)
-    #     if formset.is_valid():
-    #         formset.save()
-    #         return redirect('scouting:index')
-    #     else:
-    #         print(formset.errors)
-    # else:
-    #     print("NO POST Recieved, Rendering Form")
-    #     # Create a MatchData object for each MatchField
-    #     for match_field in match_fields:
-    #         MatchData.objects.get_or_create(match_field=match_field, team=team, event=event, match=match)
-    #
-    #     # Convert match_fields list to a QuerySet
-    #     match_fields = MatchField.objects.filter(id__in=[mf.id for mf in match_fields])
-    #
-    #     # Create a formset instance from the MatchData objects
-    #     match_data = MatchData.objects.filter(match_field__in=match_fields, team=team, event=event, match=match)
-    #     # print(match_data)
-    #     # print('Form kwargs:', {'team': team, 'event': event, 'match': match, 'match_fields': match_fields})
-    #     formset = MatchDataFormSet(
-    #         queryset=MatchData.objects.filter(match_field__in=match_fields, team=team, event=event, match=match),
-    #         initial=[
-    #             {'id': md.id, 'match_field': md.match_field, 'response_bool': md.response_bool,
-    #              'response_int': md.response_int}
-    #             for md in match_data
-    #         ],
-    #         form_kwargs={'team': team, 'event': event, 'match': match, 'match_fields': match_fields},
-    #     )
-        # print(formset)
     # Check if a PitScoutData object already exists for this team and event
     match_data, created = MatchData2024.objects.get_or_create(team=team, match=match)
 
     if request.method == 'POST':
         # If the form has been submitted, create a form instance with the POST data and the existing PitScoutData object
-        form = MatchDataForm2024(request.POST, instance=match_data)
+        form = MatchData2024Form(request.POST, instance=match_data)
 
         # Validate the form
         if form.is_valid():
@@ -129,7 +88,8 @@ def view_match(request, team_number, match_number):
             return redirect('scouting:index')
     else:
         # If the form has not been submitted, create a form instance from the PitScoutData object
-        form = MatchDataForm2024(instance=match_data)
+        form = MatchData2024Form(instance=match_data)
+        # print(form)
 
     context = {
         'form': form,
