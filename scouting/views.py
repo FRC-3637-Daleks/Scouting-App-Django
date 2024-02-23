@@ -198,6 +198,15 @@ def view_team_statistics(request, team_number):
         'integer_stats': integer_stats,
     }
 
-    return render(request, 'scouting/teamstatistics.html', context)
+    return render(request, 'scouting/statisticsteam.html', context)
 
 
+def view_team_statistics_list(request):
+    event = Event.objects.get(active=True)
+    teams = event.teams.all()
+
+    context = {
+        'teams': teams,
+    }
+
+    return render(request, 'scouting/statisticsteamlist.html', context)
