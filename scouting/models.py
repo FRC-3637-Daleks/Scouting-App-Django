@@ -131,7 +131,7 @@ class PitScoutData(TimeStampedModel):
     robot_height_in = models.IntegerField(default=0, name='Robot height (inches)')
     robot_weight_lbs = models.IntegerField(default=0, name='Robot weight (lbs)')
     # Char Fields
-    description = models.TextField(max_length=2000, name='Description')
+    description = models.TextField(max_length=2000)
 
     class Meta:
         verbose_name_plural = "Pit scout data"
