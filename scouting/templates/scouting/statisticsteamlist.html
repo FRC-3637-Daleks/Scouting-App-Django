@@ -1,0 +1,24 @@
+{% extends 'scouting/base.html' %}
+
+{% block title %} | Team Statistics {% endblock %}
+
+{% block content %}
+    <div class="container">
+        <h1 class="m-3 text-center">Team Statistics</h1>
+            <table class="table table-striped">
+                <thead>
+                    <th scope="col">Team #</th>
+                    <th scope="col">Team Name</th>
+                    <th scope="col">View Report</th>
+                </thead>
+                <tbody>
+                    {% for team in teams %}
+                            <tr>
+                                <th scope="row">{{ team.team_number }}</th>
+                                <th scope="row">{{ team.team_name }}</th>
+                                <th scope="row"><a href="{% url 'scouting:team_statistics' team_number=team.team_number %}" class="btn btn-primary" role="button">View Report</a></th>
+                            </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+{% endblock %}

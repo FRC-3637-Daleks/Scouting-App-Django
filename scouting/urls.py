@@ -10,4 +10,6 @@ urlpatterns = [
     path('pitscoutteamlist', views.view_pit_scout_team_list, name="pit_scout_teams_list"),
     path('pitscoutteam/<int:team_number>', views.view_pit_scout_team, name="pit_scout_team"),
     path('scouting/test', views.update_teams_and_matches, name="update_event_teams"),
+    path('scouting/teamstatistics/<int:team_number>', views.view_team_statistics, name="team_statistics"),
+    path('scouting/teamstatisticslist', views.view_team_statistics_list, name="team_statistics_list"),
 ]
