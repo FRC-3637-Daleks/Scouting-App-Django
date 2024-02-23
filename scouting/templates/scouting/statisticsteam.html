@@ -43,5 +43,21 @@
                 {% endfor %}
             </tbody>
         </table>
+
+    <h2 class="m-3 text-center">Pit Scouting Data</h2>
+        <table class="table table-striped">
+            <thead>
+                <th scope="col">Field</th>
+                <th scope="col">Value</th>
+            </thead>
+            <tbody>
+                {% for field, value in pit_scout_data.items %}
+                    <tr>
+                        <th scope="row">{{ field }}</th>
+                        <td>{{ value }}</td>
+                    </tr>
+                {% endfor %}
+            </tbody>
+        </table>
     </div>
 {% endblock %}

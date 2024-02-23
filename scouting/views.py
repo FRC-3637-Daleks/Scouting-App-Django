@@ -9,6 +9,7 @@ from .forms import *
 from django.shortcuts import redirect
 from django.db.models import Count, Avg, Min, Max, Sum
 from django.shortcuts import get_object_or_404
+from django.forms.models import model_to_dict
 
 
 def view_index(request):
@@ -180,7 +181,7 @@ def view_team_statistics(request, team_number):
     boolean_fields = ['arrived_on_field_on_time', 'start_with_note', 'dead_on_arrival', 'left_community_zone', 'moved', 'a_stopped', 'e_stopped', 'communication_lost', 'shoots_from_subwoofer_to_speaker', 'shoots_from_podium_to_speaker', 'shoots_from_free_space_to_speaker', 'climbed_solo', 'climbed_with_another_robot', 'scored_high_notes']
     boolean_stats = {}
     for field in boolean_fields:
-        total = matches.aggregate(total=Sum(field))['total']
+        total = int(matches.aggregate(total=Sum(field))['total'])
         percent = (total / match_count) * 100 if match_count > 0 else 0
         boolean_stats[field] = {'total': total, 'percent': percent}
 
@@ -191,11 +192,24 @@ def view_team_statistics(request, team_number):
         stats = matches.aggregate(min=Min(field), max=Max(field), avg=Avg(field))
         integer_stats[field] = {'min': stats['min'], 'max': stats['max'], 'avg': stats['avg']}
 
+    # Include pit scouting information
+    pit_scout_data = PitScoutData.objects.get(team=team, event=Event.objects.get(active=True))
+
+    if pit_scout_data is not None:
+        pit_scout_data_dict = model_to_dict(pit_scout_data)
+        pit_scout_data_dict.pop('team')
+        pit_scout_data_dict.pop('id')
+        pit_scout_data_dict.pop('event')
+        pit_scout_data_dict['assigned_scout'] = pit_scout_data.assigned_scout.first_name + " " + pit_scout_data.assigned_scout.last_name
+    else:
+        pit_scout_data_dict = {}
+
     context = {
         'team': team,
         'match_count': match_count,
         'boolean_stats': boolean_stats,
         'integer_stats': integer_stats,
+        'pit_scout_data': pit_scout_data_dict,
     }
 
     return render(request, 'scouting/statisticsteam.html', context)
