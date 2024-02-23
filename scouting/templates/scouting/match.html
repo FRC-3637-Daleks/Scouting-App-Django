@@ -26,6 +26,37 @@
         <button type="submit" class="btn btn-primary">Submit Match</button>
         </form>
     </div>
+
+      <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
+    <script>
+        $(document).ready(function() {
+            var submitButton = $('button[type="submit"]');
+
+            function checkServerStatus() {
+                $.ajax({
+                    url: '/',
+                    type: 'GET',
+                    success: function() {
+                        // The client can reach the server
+                        // Enable the submit button
+                        submitButton.prop('disabled', false);
+                    },
+                    error: function() {
+                        // The client cannot reach the server
+                        // Disable the submit button
+                        submitButton.prop('disabled', true);
+                    }
+                });
+            }
+
+            // Check the server status every 5 seconds
+            setInterval(checkServerStatus, 5000);
+
+            // Check the server status immediately
+            checkServerStatus();
+        });
+    </script>
+
 {% endblock %}
 
 
