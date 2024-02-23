@@ -7,6 +7,8 @@ from django.forms import formset_factory
 from django.core.exceptions import ObjectDoesNotExist
 from .forms import *
 from django.shortcuts import redirect
+from django.db.models import Count, Avg, Min, Max, Sum
+from django.shortcuts import get_object_or_404
 
 
 def view_index(request):
@@ -165,3 +167,37 @@ def update_teams_and_matches(request):
                 }
             )
     return HttpResponse("Teams updated, check the database in Django admin!")
+
+
+def view_team_statistics(request, team_number):
+    team = get_object_or_404(Team, team_number=team_number)
+    matches = MatchData2024.objects.filter(team=team)
+
+    # Count the number of matches
+    match_count = matches.count()
+
+    # Calculate statistics for boolean fields
+    boolean_fields = ['arrived_on_field_on_time', 'start_with_note', 'dead_on_arrival', 'left_community_zone', 'moved', 'a_stopped', 'e_stopped', 'communication_lost', 'shoots_from_subwoofer_to_speaker', 'shoots_from_podium_to_speaker', 'shoots_from_free_space_to_speaker', 'climbed_solo', 'climbed_with_another_robot', 'scored_high_notes']
+    boolean_stats = {}
+    for field in boolean_fields:
+        total = matches.aggregate(total=Sum(field))['total']
+        percent = (total / match_count) * 100 if match_count > 0 else 0
+        boolean_stats[field] = {'total': total, 'percent': percent}
+
+    # Calculate statistics for integer fields
+    integer_fields = ['amp_notes_scored', 'speaker_notes_scored', 'notes_picked_up_from_wing', 'notes_picked_up_from_center', 'time_to_centerline_note', 'notes_scored_from_subwoofer', 'notes_scored_from_elesewhere', 'speaker_notes_missed', 'defense_scale', 'notes_picked_up_from_floor', 'notes_picked_up_from_player_station', 'notes_dropped', 'notes_scored_in_trap']
+    integer_stats = {}
+    for field in integer_fields:
+        stats = matches.aggregate(min=Min(field), max=Max(field), avg=Avg(field))
+        integer_stats[field] = {'min': stats['min'], 'max': stats['max'], 'avg': stats['avg']}
+
+    context = {
+        'team': team,
+        'match_count': match_count,
+        'boolean_stats': boolean_stats,
+        'integer_stats': integer_stats,
+    }
+
+    return render(request, 'scouting/teamstatistics.html', context)
+
+

@@ -1,0 +1,47 @@
+{% extends 'scouting/base.html' %}
+
+{% block title %} | Team Statistics {{ team.team_number }} {% endblock %}
+
+{% block content %}
+    <div class="container">
+        <h1 class="m-3 text-center">Team Statistics for {{ team.team_number }} - {{ team.team_name }}</h1>
+
+        <h2 class="m-3 text-center">Boolean Fields</h2>
+        <table class="table table-striped">
+            <thead>
+                <th scope="col">Field</th>
+                <th scope="col">Total</th>
+                <th scope="col">Percent of Matches</th>
+            </thead>
+            <tbody>
+                {% for field, stats in boolean_stats.items %}
+                    <tr>
+                        <th scope="row">{{ field }}</th>
+                        <td>{{ stats.total }}</td>
+                        <td>{{ stats.percent }}%</td>
+                    </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+
+        <h2 class="m-3 text-center">Integer Fields</h2>
+        <table class="table table-striped">
+            <thead>
+                <th scope="col">Field</th>
+                <th scope="col">Min</th>
+                <th scope="col">Max</th>
+                <th scope="col">Average</th>
+            </thead>
+            <tbody>
+                {% for field, stats in integer_stats.items %}
+                    <tr>
+                        <th scope="row">{{ field }}</th>
+                        <td>{{ stats.min }}</td>
+                        <td>{{ stats.max }}</td>
+                        <td>{{ stats.avg }}</td>
+                    </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+{% endblock %}
