@@ -150,7 +150,7 @@ class MatchData2024(TimeStampedModel):
     start_with_note = models.BooleanField(default=False)
     dead_on_arrival= models.BooleanField(default=False)
     #strings
-    startingLocation = models.CharField(max_length=20, null=True)
+    starting_location = models.CharField(max_length=20, null=True)
 
     # Auton Tags
     #bools
