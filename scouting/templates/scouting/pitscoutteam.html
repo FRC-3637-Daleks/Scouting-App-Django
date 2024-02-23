@@ -23,11 +23,37 @@
 
         <form method="POST" enctype="multipart/form-data">
             {% csrf_token %}
-{#            {{ form.as_p }}#}
             {{ form | crispy }}
-            <button href="#" class="btn btn-primary">Submit</button>
+            <button href="#" class="btn btn-primary" type="submit">Submit Pit Scouting Report</button>
         </form>
-
-
+    <br>
     </div>
+        <script>
+        $(document).ready(function() {
+            var submitButton = $('button[type="submit"]');
+
+            function checkServerStatus() {
+                $.ajax({
+                    url: '/',
+                    type: 'GET',
+                    success: function() {
+                        // The client can reach the server
+                        // Enable the submit button
+                        submitButton.prop('disabled', false);
+                    },
+                    error: function() {
+                        // The client cannot reach the server
+                        // Disable the submit button
+                        submitButton.prop('disabled', true);
+                    }
+                });
+            }
+
+            // Check the server status every 5 seconds
+            setInterval(checkServerStatus, 5000);
+
+            // Check the server status immediately
+            checkServerStatus();
+        });
+    </script>
 {% endblock %}
