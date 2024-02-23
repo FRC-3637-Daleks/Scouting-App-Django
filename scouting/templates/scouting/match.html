@@ -1,51 +1,62 @@
 {% extends 'scouting/base.html' %}
 {% load crispy_forms_tags %}
+{% load custom_tags %}
+
 
 {% block title %} | Match {{ match.match_number }} {% endblock %}
 
 {% block content %}
     <div class="container">
         <h1 class="m-3 text-center">Match {{ match.match_number }} | Team {{ team.team_number }}</h1>
-
-{#    <form method="post">#}
-{#        {% csrf_token %}#}
-{#        {{ formset.management_form }}#}
-{#        {% for form in formset %}#}
-{#            {{ form.id }}#}
-{#            {{ form | crispy }}#}
-{#            <div class="mb-3">#}
-{#                {{ form.match_field.label_tag }}#}
-{#                {{ form.match_field }}#}
-{#            </div>#}
-{#            <div class="mb-3">#}
-{#                {{ form.response_bool.label_tag }}#}
-{#                {{ form.response_bool }}#}
-{#            </div>#}
-{#            <div class="mb-3">#}
-{#                {{ form.response_int.label_tag }}#}
-{#                {{ form.response_int }}#}
-{#            </div>#}
-{##}
-{#        {% endfor %}#}
-{#        <button type="submit" class="btn btn-primary">Submit</button>#}
-{#    </form>#}
-{#    <form method="post">#}
-{#        {% csrf_token %}#}
-{#        {{ formset.management_form }}#}
-{#        {% for form in formset %}#}
-{#            {{ form.id }}#}
-{#            {{ form.match_field }}#}
-{#            {{ form.response_bool }}#}
-{#            {{ form.response_int }}#}
-{#        {% endfor %}#}
-{#        <input type="submit" value="Submit">#}
-{#    </form>#}
-        <form method="POST" enctype="multipart/form-data">
+        <form method="POST">
             {% csrf_token %}
-{#            {{ form.as_p }}#}
-            {{ form | crispy }}
-            <button href="#" class="btn btn-primary">Submit</button>
+            {% for section, fields in form.field_groups.items %}
+                <div class="card">
+                    <div class="card-header">
+                        {{ section }}
+                    </div>
+                    <div class="card-body">
+                        {% for field in fields %}
+                            {{ form|get_form_field:field|as_crispy_field }}
+                        {% endfor %}
+                    </div>
+                </div>
+                <br>
+            {% endfor %}
+        <button type="submit" class="btn btn-primary">Submit Match</button>
         </form>
-
     </div>
+
+    <script>
+        $(document).ready(function() {
+            var submitButton = $('button[type="submit"]');
+
+            function checkServerStatus() {
+                $.ajax({
+                    url: '/',
+                    type: 'GET',
+                    success: function() {
+                        // The client can reach the server
+                        // Enable the submit button
+                        submitButton.prop('disabled', false);
+                    },
+                    error: function() {
+                        // The client cannot reach the server
+                        // Disable the submit button
+                        submitButton.prop('disabled', true);
+                    }
+                });
+            }
+
+            // Check the server status every 5 seconds
+            setInterval(checkServerStatus, 5000);
+
+            // Check the server status immediately
+            checkServerStatus();
+        });
+    </script>
+
 {% endblock %}
+
+
+
