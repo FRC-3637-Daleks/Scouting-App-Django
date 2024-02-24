@@ -15,9 +15,4 @@ class Migration(migrations.Migration):
             old_name='startingLocation',
             new_name='starting_location',
         ),
-        migrations.RenameField(
-            model_name='pitscoutdata',
-            old_name='Description',
-            new_name='description',
-        ),
     ]

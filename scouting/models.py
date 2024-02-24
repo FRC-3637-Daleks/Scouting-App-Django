@@ -144,6 +144,10 @@ class MatchData2024(TimeStampedModel):
     team = models.ForeignKey('Team', on_delete=models.CASCADE, null=False)
     match = models.ForeignKey('Match', on_delete=models.CASCADE, null=False)
 
+    @property
+    def event(self):
+        return self.match.event_id
+
     # Pre-Match Tags
     #bools
     arrived_on_field_on_time = models.BooleanField(default=True)
