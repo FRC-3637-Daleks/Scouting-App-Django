@@ -10,7 +10,10 @@ from django.shortcuts import redirect
 from django.db.models import Count, Avg, Min, Max, Sum
 from django.shortcuts import get_object_or_404
 from django.forms.models import model_to_dict
-
+from django.core import serializers
+from django.http import JsonResponse
+from django.views.decorators.csrf import csrf_exempt
+from django.contrib.auth.decorators import login_required, permission_required
 
 def view_index(request):
     event = Event.objects.get(active=True)
@@ -224,3 +227,18 @@ def view_team_statistics_list(request):
     }
 
     return render(request, 'scouting/statisticsteamlist.html', context)
+
+
+@csrf_exempt
+@login_required
+# @permission_required(['scouting.add_match_data_2024'])
+def sync_data(request):
+    if request.method == 'POST':
+        # Deserialize the data back into Django objects
+        for obj in serializers.deserialize('json', request.body):
+            # If the object already exists, update it. Otherwise, create a new one.
+            obj.save()
+
+        return JsonResponse({'status': 'success'})
+
+    return JsonResponse({'status': 'error'}, status=400)
