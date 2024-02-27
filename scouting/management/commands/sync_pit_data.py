@@ -17,8 +17,8 @@ class Command(BaseCommand):
         serialized_data = serializers.serialize('json', data)
 
         # Send a POST request to Server B with the serialized data
-        master_server_url = 'http://' + settings.SYNC_MASTER_SERVER + '/sync/matchdata'
-        response = requests.post('http://localhost:8001/sync/matchdata', data=serialized_data, auth=(settings.SYNC_ACCOUNT_USERNAME, settings.SYNC_ACCOUNT_PASSWORD))
+        master_server_url = settings.SYNC_MASTER_SERVER + '/sync/matchdata'
+        response = requests.post(master_server_url, data=serialized_data, auth=(settings.SYNC_ACCOUNT_USERNAME, settings.SYNC_ACCOUNT_PASSWORD))
 
         if response.status_code == 200:
             self.stdout.write(self.style.SUCCESS('Successfully synced data to Server B'))

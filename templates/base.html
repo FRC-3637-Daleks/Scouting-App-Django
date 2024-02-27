@@ -51,10 +51,13 @@
                         </div>
                     </li>
                 {% else %}
-                    <li class="nav-item dropdown">
-                        <a class="nav-link dropdown-toggle" href="#" id="signinDropdown" role="button" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
-                            Sign In <i class="fas fa-sign-in-alt ml-1"></i>
-                        </a>
+                    <li class="navbar-item">
+                        <a href="{% url 'login' %}" class="nav-link">Sign In <i class="fas fa-sign-in-alt ml-1"></i></a>
+                    </li>
+{#                    <li class="nav-item dropdown">#}
+{#                        <a class="nav-link dropdown-toggle" href="#" id="signinDropdown" role="button" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">#}
+{#                            Sign In <i class="fas fa-sign-in-alt ml-1"></i>#}
+{#                        </a>#}
 {#                        <div class="dropdown-menu dropdown-menu-right" aria-labelledby="signinDropdown">#}
 {#                            <a class="dropdown-item" href="{% url 'social:begin' 'google-oauth2' %}"><i class="fab fa-google mr-3"></i>with Google</a>#}
 {#                        </div>#}
