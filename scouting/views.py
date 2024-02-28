@@ -18,6 +18,8 @@ from rest_framework.authentication import TokenAuthentication
 from rest_framework.decorators import api_view, authentication_classes, permission_classes
 from rest_framework.permissions import IsAuthenticated
 
+
+@login_required()
 def view_index(request):
     event = Event.objects.get(active=True)
     matches_list = Match.objects.filter(event_id=event).order_by('match_number')
@@ -29,6 +31,8 @@ def view_index(request):
     return render(request, 'scouting/index.html', context)
 
 
+@login_required()
+@permission_required('scouting.pit_scout_team', raise_exception=True)
 def view_pit_scout_team_list(request):
     event = Event.objects.get(active=True)
     event_teams = event.teams.all().order_by('team_number')
@@ -48,6 +52,8 @@ def view_pit_scout_team_list(request):
     return render(request, 'scouting/pitscoutteamlist.html', context)
 
 
+@login_required()
+@permission_required('scouting.pit_scout_team', raise_exception=True)
 def view_pit_scout_team(request, team_number):
     team = Team.objects.get(team_number=team_number)
     event = Event.objects.get(active=True)
@@ -76,6 +82,8 @@ def view_pit_scout_team(request, team_number):
     return render(request, 'scouting/pitscoutteam.html', context)
 
 
+@login_required()
+@permission_required('scouting.stands_scout_team', raise_exception=True)
 def view_match(request, team_number, match_number):
     team = Team.objects.get(team_number=team_number)
     event = Event.objects.get(active=True)
@@ -109,6 +117,7 @@ def view_match(request, team_number, match_number):
     return render(request, 'scouting/match.html', context)
 
 
+@login_required()
 def view_team_statistics(request, team_number):
     team = get_object_or_404(Team, team_number=team_number)
     matches = MatchData2024.objects.filter(team=team)
@@ -166,6 +175,7 @@ def view_team_statistics(request, team_number):
     return render(request, 'scouting/statisticsteam.html', context)
 
 
+@login_required()
 def view_team_statistics_list(request):
     event = Event.objects.get(active=True)
     teams = event.teams.all()

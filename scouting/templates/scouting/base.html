@@ -5,12 +5,16 @@
 {% endblock %}
 
 {%  block navbar_items %}
-    <div class="navbar-item">
-        <a href="{% url 'scouting:index' %}" class="nav-link">Match Schedule</a>
-    </div>
-    <div class="navbar-item">
-        <a href="{% url 'scouting:pit_scout_teams_list' %}" class="nav-link">Pit Scout</a>
-    </div>
+    {% if perms.scouting.stands_scout_team %}
+        <div class="navbar-item">
+            <a href="{% url 'scouting:index' %}" class="nav-link">Match Schedule</a>
+        </div>
+    {% endif %}
+    {% if perms.scouting.pit_scout_team %}
+        <div class="navbar-item">
+            <a href="{% url 'scouting:pit_scout_teams_list' %}" class="nav-link">Pit Scout</a>
+        </div>
+    {% endif %}
     <div class="navbar-item">
         <a href="{% url 'scouting:team_statistics_list' %}" class="nav-link">Team Statistics</a>
     </div>
