@@ -26,7 +26,10 @@ SECRET_KEY = 'django-insecure-ehi_jfso7%e(zfeuv1_46yxm4nr@-dz-85yhs6eo_a)axaqmp#
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = []
+ALLOWED_HOSTS = ['scoutingapp.logangreif.com', 'localhost', '127.0.0.1']
+
+SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
+LOGIN_REDIRECT_URL = '/'
 
 GIT_VERSION = os.getenv('GIT_VERSION') if os.getenv('GIT_VERSION') else 'unknown'
 
@@ -34,6 +37,8 @@ GIT_VERSION = os.getenv('GIT_VERSION') if os.getenv('GIT_VERSION') else 'unknown
 
 INSTALLED_APPS = [
     'scouting.apps.ScoutingConfig',
+    'rest_framework',
+    'rest_framework.authtoken',
     'crispy_forms',
     "crispy_bootstrap5",
     'django_extensions',
@@ -138,4 +143,5 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 SYNC_ACCOUNT_USERNAME = 'sync'
 SYNC_ACCOUNT_PASSWORD = 'nisfnmsklgopsjfkgnsldfgbkgfskjdfbgksbd'
-SYNC_MASTER_SERVER = 'localhost:8001'
+# SYNC_MASTER_SERVER = 'http://localhost:8001'
+SYNC_MASTER_SERVER = 'https://scoutingapp.logangreif.com'

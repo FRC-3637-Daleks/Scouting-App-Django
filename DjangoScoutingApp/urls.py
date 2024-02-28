@@ -23,6 +23,7 @@ urlpatterns = [
     path('admin/', admin.site.urls),
     path("", include("scouting.urls")),
     path('logout/', logout_then_login, {'login_url': settings.LOGIN_REDIRECT_URL}, name='logout'),
+    path("accounts/", include("django.contrib.auth.urls")),
 ]
 
 admin.site.site_header = "Team 3637 Scouting"

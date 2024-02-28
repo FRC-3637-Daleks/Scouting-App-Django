@@ -14,6 +14,9 @@ from django.core import serializers
 from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
 from django.contrib.auth.decorators import login_required, permission_required
+from rest_framework.authentication import TokenAuthentication
+from rest_framework.decorators import api_view, authentication_classes, permission_classes
+from rest_framework.permissions import IsAuthenticated
 
 def view_index(request):
     event = Event.objects.get(active=True)
@@ -184,16 +187,25 @@ def view_team_statistics(request, team_number):
     boolean_fields = ['arrived_on_field_on_time', 'start_with_note', 'dead_on_arrival', 'left_community_zone', 'moved', 'a_stopped', 'e_stopped', 'communication_lost', 'shoots_from_subwoofer_to_speaker', 'shoots_from_podium_to_speaker', 'shoots_from_free_space_to_speaker', 'climbed_solo', 'climbed_with_another_robot', 'scored_high_notes']
     boolean_stats = {}
     for field in boolean_fields:
-        total = int(matches.aggregate(total=Sum(field))['total'])
+        total = matches.aggregate(total=Sum(field))['total']
+        if total is not None:
+            total = int(matches.aggregate(total=Sum(field))['total'])
         percent = (total / match_count) * 100 if match_count > 0 else 0
-        boolean_stats[field] = {'total': total, 'percent': percent}
+        boolean_stats[field] = {
+            'total': total,
+            'percent': round(percent, 1)
+        }
 
     # Calculate statistics for integer fields
     integer_fields = ['amp_notes_scored', 'speaker_notes_scored', 'notes_picked_up_from_wing', 'notes_picked_up_from_center', 'time_to_centerline_note', 'notes_scored_from_subwoofer', 'notes_scored_from_elesewhere', 'speaker_notes_missed', 'defense_scale', 'notes_picked_up_from_floor', 'notes_picked_up_from_player_station', 'notes_dropped', 'notes_scored_in_trap']
     integer_stats = {}
     for field in integer_fields:
         stats = matches.aggregate(min=Min(field), max=Max(field), avg=Avg(field))
-        integer_stats[field] = {'min': stats['min'], 'max': stats['max'], 'avg': stats['avg']}
+        integer_stats[field] = {
+            'min': round(stats['min'], 1),
+            'max': round(stats['max'], 1),
+            'avg': round(stats['avg'], 1)
+        }
 
     # Include pit scouting information
     pit_scout_data = PitScoutData.objects.get(team=team, event=Event.objects.get(active=True))
@@ -203,7 +215,10 @@ def view_team_statistics(request, team_number):
         pit_scout_data_dict.pop('team')
         pit_scout_data_dict.pop('id')
         pit_scout_data_dict.pop('event')
-        pit_scout_data_dict['assigned_scout'] = pit_scout_data.assigned_scout.first_name + " " + pit_scout_data.assigned_scout.last_name
+        if pit_scout_data.assigned_scout is not None:
+            pit_scout_data_dict['assigned_scout'] = pit_scout_data.assigned_scout.first_name + " " + pit_scout_data.assigned_scout.last_name
+        else:
+            pit_scout_data_dict['assigned_scout'] = "No scout assigned"
     else:
         pit_scout_data_dict = {}
 
@@ -229,9 +244,25 @@ def view_team_statistics_list(request):
     return render(request, 'scouting/statisticsteamlist.html', context)
 
 
-@csrf_exempt
-@login_required
-# @permission_required(['scouting.add_match_data_2024'])
+# @csrf_exempt
+# @login_required
+# # @permission_required(['scouting.add_match_data_2024'])
+# def sync_data(request):
+#     authentication_classes = [TokenAuthentication]
+#     if request.method == 'POST':
+#         # Deserialize the data back into Django objects
+#         for obj in serializers.deserialize('json', request.body):
+#             # If the object already exists, update it. Otherwise, create a new one.
+#             obj.save()
+#
+#         return JsonResponse({'status': 'success'})
+#
+#     return JsonResponse({'status': 'error'}, status=400)
+
+# @csrf_exempt
+@api_view(['POST'])  # Specify the allowed HTTP methods
+@authentication_classes([TokenAuthentication])  # Use TokenAuthentication
+@permission_classes([IsAuthenticated])  # Require authenticated users
 def sync_data(request):
     if request.method == 'POST':
         # Deserialize the data back into Django objects
@@ -240,5 +271,5 @@ def sync_data(request):
             obj.save()
 
         return JsonResponse({'status': 'success'})
-
-    return JsonResponse({'status': 'error'}, status=400)
+    else:
+        return JsonResponse({'status': 'error'}, status=400)

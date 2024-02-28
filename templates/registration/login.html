@@ -1,0 +1,18 @@
+<!-- templates/registration/login.html -->
+{% extends "scouting/base.html" %}
+{% load crispy_forms_tags %}
+
+{% block title %}Login{% endblock %}
+
+{% block content %}
+    <div class="container">
+        <h2>Log In</h2>
+        <form method="post">
+          {% csrf_token %}
+          {{ form | crispy }}
+          <button type="submit" class="btn btn-primary">Log in</button>
+            <br>
+        </form>
+    </div>
+
+{% endblock %}
