@@ -109,73 +109,6 @@ def view_match(request, team_number, match_number):
     return render(request, 'scouting/match.html', context)
 
 
-def update_teams_and_matches(request):
-    try:
-        api_key = TbaApiKey.objects.get(active=True).api_key
-    except ObjectDoesNotExist:
-        print("Active API key not found.")
-        return
-
-    headers = {"X-TBA-Auth-Key": api_key}
-
-    event_key = Event.objects.get(active=True).tba_event_key
-
-    # Get teams
-    response = requests.get("https://www.thebluealliance.com/api/v3/event/" + event_key + "/teams/simple",
-                            headers=headers)
-    teams = response.json()
-
-    event = Event.objects.get(active=True)
-
-    for team in teams:
-        # Create or update the Team object
-        team_obj, created = Team.objects.update_or_create(
-            team_number=team['team_number'],
-            defaults={'team_name': team['nickname']}
-        )
-
-        # Add the team to the event
-        event.teams.add(team_obj)
-
-    # Save the event
-    event.save()
-
-    # # Get matches
-    response = requests.get("https://www.thebluealliance.com/api/v3/event/" + event_key + "/matches/simple",
-                            headers=headers)
-    matches = response.json()
-
-    for match in matches:
-        # Only process qualification matches
-        if match['comp_level'] == 'qm':
-            # Your existing code to create or update Match objects
-            Match.objects.update_or_create(
-                match_number=match['match_number'],
-                event_id=Event.objects.get(active=True),
-                defaults={
-                    'team_red_1': Team.objects.get_or_create(
-                        team_number=match['alliances']['red']['team_keys'][0][3:] if
-                        match['alliances']['red']['team_keys'][0] else 9999)[0],
-                    'team_red_2': Team.objects.get_or_create(
-                        team_number=match['alliances']['red']['team_keys'][1][3:] if
-                        match['alliances']['red']['team_keys'][1] else 9999)[0],
-                    'team_red_3': Team.objects.get_or_create(
-                        team_number=match['alliances']['red']['team_keys'][2][3:] if
-                        match['alliances']['red']['team_keys'][2] else 9999)[0],
-                    'team_blue_1': Team.objects.get_or_create(
-                        team_number=match['alliances']['blue']['team_keys'][0][3:] if
-                        match['alliances']['blue']['team_keys'][0] else 9999)[0],
-                    'team_blue_2': Team.objects.get_or_create(
-                        team_number=match['alliances']['blue']['team_keys'][1][3:] if
-                        match['alliances']['blue']['team_keys'][1] else 9999)[0],
-                    'team_blue_3': Team.objects.get_or_create(
-                        team_number=match['alliances']['blue']['team_keys'][2][3:] if
-                        match['alliances']['blue']['team_keys'][2] else 9999)[0]
-                }
-            )
-    return HttpResponse("Teams updated, check the database in Django admin!")
-
-
 def view_team_statistics(request, team_number):
     team = get_object_or_404(Team, team_number=team_number)
     matches = MatchData2024.objects.filter(team=team)
@@ -244,22 +177,6 @@ def view_team_statistics_list(request):
     return render(request, 'scouting/statisticsteamlist.html', context)
 
 
-# @csrf_exempt
-# @login_required
-# # @permission_required(['scouting.add_match_data_2024'])
-# def sync_data(request):
-#     authentication_classes = [TokenAuthentication]
-#     if request.method == 'POST':
-#         # Deserialize the data back into Django objects
-#         for obj in serializers.deserialize('json', request.body):
-#             # If the object already exists, update it. Otherwise, create a new one.
-#             obj.save()
-#
-#         return JsonResponse({'status': 'success'})
-#
-#     return JsonResponse({'status': 'error'}, status=400)
-
-# @csrf_exempt
 @api_view(['POST'])  # Specify the allowed HTTP methods
 @authentication_classes([TokenAuthentication])  # Use TokenAuthentication
 @permission_classes([IsAuthenticated])  # Require authenticated users

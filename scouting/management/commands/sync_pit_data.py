@@ -5,6 +5,7 @@ from scouting.models import *
 from django.conf import settings
 from rest_framework.authtoken.models import Token  # Import Token model
 from django.contrib.auth.models import User  # Import User model
+from django.core.management.base import BaseCommand
 
 class Command(BaseCommand):
     help = 'Sync MatchData2024 objects to Server B'
