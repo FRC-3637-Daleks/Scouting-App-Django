@@ -29,7 +29,7 @@ DEBUG = True
 ALLOWED_HOSTS = ['scoutingapp.logangreif.com', 'localhost', '127.0.0.1']
 
 SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
-LOGIN_REDIRECT_URL = "/"
+LOGIN_REDIRECT_URL = '/'
 
 GIT_VERSION = os.getenv('GIT_VERSION') if os.getenv('GIT_VERSION') else 'unknown'
 
@@ -37,6 +37,8 @@ GIT_VERSION = os.getenv('GIT_VERSION') if os.getenv('GIT_VERSION') else 'unknown
 
 INSTALLED_APPS = [
     'scouting.apps.ScoutingConfig',
+    'rest_framework',
+    'rest_framework.authtoken',
     'crispy_forms',
     "crispy_bootstrap5",
     'django_extensions',

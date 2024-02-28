@@ -14,6 +14,9 @@ from django.core import serializers
 from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
 from django.contrib.auth.decorators import login_required, permission_required
+from rest_framework.authentication import TokenAuthentication
+from rest_framework.decorators import api_view, authentication_classes, permission_classes
+from rest_framework.permissions import IsAuthenticated
 
 def view_index(request):
     event = Event.objects.get(active=True)
@@ -241,9 +244,25 @@ def view_team_statistics_list(request):
     return render(request, 'scouting/statisticsteamlist.html', context)
 
 
-@csrf_exempt
-@login_required
-# @permission_required(['scouting.add_match_data_2024'])
+# @csrf_exempt
+# @login_required
+# # @permission_required(['scouting.add_match_data_2024'])
+# def sync_data(request):
+#     authentication_classes = [TokenAuthentication]
+#     if request.method == 'POST':
+#         # Deserialize the data back into Django objects
+#         for obj in serializers.deserialize('json', request.body):
+#             # If the object already exists, update it. Otherwise, create a new one.
+#             obj.save()
+#
+#         return JsonResponse({'status': 'success'})
+#
+#     return JsonResponse({'status': 'error'}, status=400)
+
+# @csrf_exempt
+@api_view(['POST'])  # Specify the allowed HTTP methods
+@authentication_classes([TokenAuthentication])  # Use TokenAuthentication
+@permission_classes([IsAuthenticated])  # Require authenticated users
 def sync_data(request):
     if request.method == 'POST':
         # Deserialize the data back into Django objects
@@ -252,5 +271,5 @@ def sync_data(request):
             obj.save()
 
         return JsonResponse({'status': 'success'})
-
-    return JsonResponse({'status': 'error'}, status=400)
+    else:
+        return JsonResponse({'status': 'error'}, status=400)
