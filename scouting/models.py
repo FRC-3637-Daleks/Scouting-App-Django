@@ -75,19 +75,19 @@ class Match(TimeStampedModel):
         return str(self.match_number)
 
 
-class MatchData(TimeStampedModel):
-    match = models.ForeignKey(Match, on_delete=models.CASCADE, null=False, related_name="+")
-    event = models.ForeignKey(Event, on_delete=models.CASCADE, null=False, related_name="+")
-    team = models.ForeignKey(Team, on_delete=models.CASCADE, null=False, related_name="+", limit_choices_to=models.Q(matchdata__match__team_red_1=models.F('id')) | models.Q(matchdata__match__team_red_2=models.F('id')) | models.Q(matchdata__match__team_red_3=models.F('id')) | models.Q(matchdata__match__team_blue_1=models.F('id')) | models.Q(matchdata__match__team_blue_2=models.F('id')) | models.Q(matchdata__match__team_blue_3=models.F('id')))
-    match_field = models.ForeignKey(MatchField, on_delete=models.CASCADE, null=False, related_name="+")
-    response_bool = models.BooleanField(null=True, default=None)
-    response_int = models.IntegerField(null=True, default=None)
-
-    class Meta:
-        verbose_name_plural = "Match data"
-
-    def __str__(self):
-        return str(self.event.event_name + " - Match  " + str(self.match.match_number) + " | Team " + str(self.team.team_number))
+# class MatchData(TimeStampedModel):
+#     match = models.ForeignKey(Match, on_delete=models.CASCADE, null=False, related_name="+")
+#     event = models.ForeignKey(Event, on_delete=models.CASCADE, null=False, related_name="+")
+#     team = models.ForeignKey(Team, on_delete=models.CASCADE, null=False, related_name="+", limit_choices_to=models.Q(matchdata__match__team_red_1=models.F('id')) | models.Q(matchdata__match__team_red_2=models.F('id')) | models.Q(matchdata__match__team_red_3=models.F('id')) | models.Q(matchdata__match__team_blue_1=models.F('id')) | models.Q(matchdata__match__team_blue_2=models.F('id')) | models.Q(matchdata__match__team_blue_3=models.F('id')))
+#     match_field = models.ForeignKey(MatchField, on_delete=models.CASCADE, null=False, related_name="+")
+#     response_bool = models.BooleanField(null=True, default=None)
+#     response_int = models.IntegerField(null=True, default=None)
+#
+#     class Meta:
+#         verbose_name_plural = "Match data"
+#
+#     def __str__(self):
+#         return str(self.event.event_name + " - Match  " + str(self.match.match_number) + " | Team " + str(self.team.team_number))
 
 
 class TbaApiKey(models.Model):
@@ -135,6 +135,9 @@ class PitScoutData(TimeStampedModel):
 
     class Meta:
         verbose_name_plural = "Pit scout data"
+        permissions = (
+            ("pit_scout_teams", "Can pit scout teams"),
+        )
 
     def __str__(self):
         return str(str(self.team.team_number) + " - " + self.team.team_name + " | " + self.event.event_name)
@@ -192,3 +195,7 @@ class MatchData2024(TimeStampedModel):
     scored_high_notes = models.BooleanField(default=False)
     #integer
     notes_scored_in_trap = models.IntegerField(default=0)
+    class Meta:
+        permissions = (
+            ("stands_scout_team", "Can stands scout teams"),
+        )

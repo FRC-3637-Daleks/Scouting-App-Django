@@ -32,6 +32,7 @@ def view_index(request):
 
 
 @login_required()
+@permission_required('scouting.pit_scout_team', raise_exception=True)
 def view_pit_scout_team_list(request):
     event = Event.objects.get(active=True)
     event_teams = event.teams.all().order_by('team_number')
@@ -52,6 +53,7 @@ def view_pit_scout_team_list(request):
 
 
 @login_required()
+@permission_required('scouting.pit_scout_team', raise_exception=True)
 def view_pit_scout_team(request, team_number):
     team = Team.objects.get(team_number=team_number)
     event = Event.objects.get(active=True)
@@ -81,6 +83,7 @@ def view_pit_scout_team(request, team_number):
 
 
 @login_required()
+@permission_required('scouting.stands_scout_team', raise_exception=True)
 def view_match(request, team_number, match_number):
     team = Team.objects.get(team_number=team_number)
     event = Event.objects.get(active=True)
