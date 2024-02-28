@@ -26,7 +26,7 @@ SECRET_KEY = 'django-insecure-ehi_jfso7%e(zfeuv1_46yxm4nr@-dz-85yhs6eo_a)axaqmp#
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = ['scoutingapp.logangreif.com', 'localhost', '127.0.0.1']
+ALLOWED_HOSTS = ['scoutingapp.logangreif.com', 'localhost', '127.0.0.1', '10.36.37.100']
 
 SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
 LOGIN_REDIRECT_URL = '/'
