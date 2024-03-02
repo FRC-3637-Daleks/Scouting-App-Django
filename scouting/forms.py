@@ -8,13 +8,13 @@ from .models import *
 class PitScoutDataForm(forms.ModelForm):
     class Meta:
         model = PitScoutData
-        exclude = ['assigned_scout', 'team', 'event']
+        exclude = ['assigned_scout', 'team', 'event', 'id']
 
 
 class MatchData2024Form(forms.ModelForm):
     class Meta:
         model = MatchData2024
-        exclude = ['team', 'match']
+        exclude = ['team', 'match', 'id']
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)

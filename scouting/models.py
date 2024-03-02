@@ -1,6 +1,7 @@
 from django.db import models
 from django_extensions.db.models import TimeStampedModel
 from django.conf import settings
+import uuid
 
 
 class MatchField(TimeStampedModel):
@@ -104,6 +105,7 @@ class TbaApiKey(models.Model):
 
 
 class PitScoutData(TimeStampedModel):
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     team = models.ForeignKey('Team', on_delete=models.CASCADE, null=False, blank=False)
     event = models.ForeignKey('Event', on_delete=models.CASCADE, null=False)
     assigned_scout = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True)
@@ -144,6 +146,7 @@ class PitScoutData(TimeStampedModel):
 
 
 class MatchData2024(TimeStampedModel):
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     team = models.ForeignKey('Team', on_delete=models.CASCADE, null=False)
     match = models.ForeignKey('Match', on_delete=models.CASCADE, null=False)
 

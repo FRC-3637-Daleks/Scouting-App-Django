@@ -200,3 +200,29 @@ def sync_data(request):
         return JsonResponse({'status': 'success'})
     else:
         return JsonResponse({'status': 'error'}, status=400)
+
+
+@api_view(['POST'])  # Specify the allowed HTTP methods
+@authentication_classes([TokenAuthentication])  # Use TokenAuthentication
+@permission_classes([IsAuthenticated])  # Require authenticated users
+def sync_data_pit(request):
+    if request.method == 'POST':
+        # Deserialize the data back into Django objects
+        for obj in serializers.deserialize('json', request.body):
+            try:
+                existing_obj = MatchData2024.objects.get(team=obj.object.team, event=obj.object.event)
+                # Compare timestamps
+                if obj.object.modified > existing_obj.modified:
+                    # existing_obj.team = obj.object.team
+                    # existing_obj.match = obj.object.match
+                    # # Update other fields as needed
+                    # existing_obj.save()
+                    obj.object.pk = existing_obj.pk
+                    obj.save()
+            except MatchData2024.DoesNotExist:
+                # Object doesn't exist, create a new one
+                obj.save()
+
+        return JsonResponse({'status': 'success'})
+    else:
+        return JsonResponse({'status': 'error'}, status=400)
