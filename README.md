@@ -25,3 +25,35 @@ Team 3637 scouting app for the 2024 FRC game FIRST CRESCENDO!
 2. Ensure the pit server URL is set correctly in settings.py on the stands server
 3. Type the command `python manage.py sync_pit_data` with an activated virtual environment
 4. You should get a message indicating successful data transfer
+
+## Setup app
+
+### Development
+
+#### Step 1
+goto whatever directory and open CMD    <br>
+`python -m venv ScoutingApp`            <br>
+
+#### Step 2                             <br>
+`cd into ScoutingApp`                   <br>
+`cd ScoutingApp`                        <br>
+make sure you have git installed        <br>
+`git clone -b whatever_brach_you_want_to_clone https://github.com/FRC-3637-Daleks/Scouting-App-Django.git`  <br>
+
+#### Step 3                             <br>
+Activate venv                           <br>
+`.\Scripts\activate.bat`                <br>
+
+#### Step 4
+install django                          <br>
+`pip install django`                    <br>
+`pip3 install djangorestframework`      <br>
+`pip install django-crispy-forms`       <br>
+`pip install crispy-bootstrap5`         <br>
+`pip install django-extensions`         <br>
+`pip install requests`                  <br>
+
+#### Step 5
+Start the server                        <br>
+`cd Scouting-App-Django`                <br>
+`py manage.py runserver`                <br>
