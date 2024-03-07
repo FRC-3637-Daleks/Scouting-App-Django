@@ -162,31 +162,21 @@ class MatchData2024(TimeStampedModel):
     # Auton Tags
     #bools
     left_community_zone = models.BooleanField(default=False)
-    moved = models.BooleanField(default=False)
     a_stopped = models.BooleanField(default=False)
     #ints
     amp_notes_scored = models.IntegerField(default=0)
     speaker_notes_scored = models.IntegerField(default=0)
-    notes_picked_up_from_wing = models.IntegerField(default=0)
-    notes_picked_up_from_center = models.IntegerField(default=0)
+    notes_picked_up = models.IntegerField(default=0)
     time_to_centerline_note = models.IntegerField(default=0)
 
     # Teleop Tags
     #bools
     e_stopped = models.BooleanField(default=False)
     communication_lost= models.BooleanField(default=False)
-    shoots_from_subwoofer_to_speaker = models.BooleanField(default=False)
-    shoots_from_podium_to_speaker = models.BooleanField(default=False)
-    shoots_from_free_space_to_speaker = models.BooleanField(default=False)
     #ints
+    speaker_notes_scored = models.IntegerField(default=0)
     amp_notes_scored = models.IntegerField(default=0)
-    notes_scored_from_subwoofer = models.IntegerField(default=0)
-    notes_scored_from_elesewhere = models.IntegerField(default=0)
-    speaker_notes_missed = models.IntegerField(default=0)
-    defense_scale = models.IntegerField(default=0)
-    notes_picked_up_from_floor = models.IntegerField(default=0)
-    notes_picked_up_from_player_station = models.IntegerField(default=0)
-    notes_dropped = models.IntegerField(default=0)
+    notes_missed = models.IntegerField(default=0)
 
     # Endgame Tags
     #bools
