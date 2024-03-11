@@ -152,7 +152,6 @@ class MatchData2024(TimeStampedModel):
     amp_notes_scored = models.IntegerField(default=0)
     speaker_notes_scored = models.IntegerField(default=0)
     notes_picked_up = models.IntegerField(default=0)
-    time_to_centerline_note = models.IntegerField(default=0)
 
     # Teleop Tags
     #bools
