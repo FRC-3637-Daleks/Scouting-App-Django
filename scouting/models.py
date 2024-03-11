@@ -75,21 +75,6 @@ class Match(TimeStampedModel):
         return str(self.match_number)
 
 
-# class MatchData(TimeStampedModel):
-#     match = models.ForeignKey(Match, on_delete=models.CASCADE, null=False, related_name="+")
-#     event = models.ForeignKey(Event, on_delete=models.CASCADE, null=False, related_name="+")
-#     team = models.ForeignKey(Team, on_delete=models.CASCADE, null=False, related_name="+", limit_choices_to=models.Q(matchdata__match__team_red_1=models.F('id')) | models.Q(matchdata__match__team_red_2=models.F('id')) | models.Q(matchdata__match__team_red_3=models.F('id')) | models.Q(matchdata__match__team_blue_1=models.F('id')) | models.Q(matchdata__match__team_blue_2=models.F('id')) | models.Q(matchdata__match__team_blue_3=models.F('id')))
-#     match_field = models.ForeignKey(MatchField, on_delete=models.CASCADE, null=False, related_name="+")
-#     response_bool = models.BooleanField(null=True, default=None)
-#     response_int = models.IntegerField(null=True, default=None)
-#
-#     class Meta:
-#         verbose_name_plural = "Match data"
-#
-#     def __str__(self):
-#         return str(self.event.event_name + " - Match  " + str(self.match.match_number) + " | Team " + str(self.team.team_number))
-
-
 class TbaApiKey(models.Model):
     api_key = models.CharField(max_length=100, null=False, blank=False)
     active = models.BooleanField(default=False)
@@ -155,38 +140,28 @@ class MatchData2024(TimeStampedModel):
     #bools
     arrived_on_field_on_time = models.BooleanField(default=True)
     start_with_note = models.BooleanField(default=False)
-    dead_on_arrival= models.BooleanField(default=False)
+    dead_on_arrival = models.BooleanField(default=False)
     #strings
     starting_location = models.CharField(max_length=20, null=True)
 
     # Auton Tags
     #bools
     left_community_zone = models.BooleanField(default=False)
-    moved = models.BooleanField(default=False)
     a_stopped = models.BooleanField(default=False)
     #ints
     amp_notes_scored = models.IntegerField(default=0)
     speaker_notes_scored = models.IntegerField(default=0)
-    notes_picked_up_from_wing = models.IntegerField(default=0)
-    notes_picked_up_from_center = models.IntegerField(default=0)
+    notes_picked_up = models.IntegerField(default=0)
     time_to_centerline_note = models.IntegerField(default=0)
 
     # Teleop Tags
     #bools
     e_stopped = models.BooleanField(default=False)
     communication_lost= models.BooleanField(default=False)
-    shoots_from_subwoofer_to_speaker = models.BooleanField(default=False)
-    shoots_from_podium_to_speaker = models.BooleanField(default=False)
-    shoots_from_free_space_to_speaker = models.BooleanField(default=False)
     #ints
+    speaker_notes_scored = models.IntegerField(default=0)
     amp_notes_scored = models.IntegerField(default=0)
-    notes_scored_from_subwoofer = models.IntegerField(default=0)
-    notes_scored_from_elesewhere = models.IntegerField(default=0)
-    speaker_notes_missed = models.IntegerField(default=0)
-    defense_scale = models.IntegerField(default=0)
-    notes_picked_up_from_floor = models.IntegerField(default=0)
-    notes_picked_up_from_player_station = models.IntegerField(default=0)
-    notes_dropped = models.IntegerField(default=0)
+    notes_missed = models.IntegerField(default=0)
 
     # Endgame Tags
     #bools
