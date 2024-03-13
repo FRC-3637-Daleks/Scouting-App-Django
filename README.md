@@ -31,29 +31,26 @@ Team 3637 scouting app for the 2024 FRC game FIRST CRESCENDO!
 ### Development
 
 #### Step 1
-goto whatever directory and open CMD    <br>
-`python -m venv ScoutingApp`            <br>
+Open command prompt and `cd` to the directory that you wish to clone the project into.
+`python -m venv ScoutingApp`            
 
-#### Step 2                             <br>
-`cd into ScoutingApp`                   <br>
-`cd ScoutingApp`                        <br>
-make sure you have git installed        <br>
-`git clone -b whatever_brach_you_want_to_clone https://github.com/FRC-3637-Daleks/Scouting-App-Django.git`  <br>
+#### Step 2                             
+cd into ScoutingApp                   
+`cd ScoutingApp`                        
+Make sure you have git installed        
+`git clone https://github.com/FRC-3637-Daleks/Scouting-App-Django.git` <br>
+If you want to git clone a specific branch <br>
+`git clone -b branchname https://github.com/FRC-3637-Daleks/Scouting-App-Django.git` 
 
-#### Step 3                             <br>
-Activate venv                           <br>
-`.\Scripts\activate.bat`                <br>
+#### Step 3                             
+Activate venv                           
+`.\Scripts\activate.bat`                
 
 #### Step 4
-install django                          <br>
-`pip install django`                    <br>
-`pip3 install djangorestframework`      <br>
-`pip install django-crispy-forms`       <br>
-`pip install crispy-bootstrap5`         <br>
-`pip install django-extensions`         <br>
-`pip install requests`                  <br>
+Install Django                          
+`pip install -r requirements.txt`       
 
 #### Step 5
-Start the server                        <br>
-`cd Scouting-App-Django`                <br>
-`py manage.py runserver`                <br>
+Start the server                        
+`cd Scouting-App-Django`                
+`py manage.py runserver`                
