@@ -128,18 +128,18 @@ class MatchData2024(TimeStampedModel):
     left_community_zone = models.BooleanField(default=False)
     a_stopped = models.BooleanField(default=False)
     #ints
-    amp_notes_scored = models.IntegerField(default=0)
-    speaker_notes_scored = models.IntegerField(default=0)
-    notes_picked_up = models.IntegerField(default=0)
+    auton_amp_notes_scored = models.IntegerField(default=0)
+    auton_speaker_notes_scored = models.IntegerField(default=0)
+    auton_notes_picked_up = models.IntegerField(default=0)
 
     # Teleop Tags
     #bools
     e_stopped = models.BooleanField(default=False)
     communication_lost= models.BooleanField(default=False)
     #ints
-    speaker_notes_scored = models.IntegerField(default=0)
-    amp_notes_scored = models.IntegerField(default=0)
-    notes_missed = models.IntegerField(default=0)
+    teleop_speaker_notes_scored = models.IntegerField(default=0)
+    teleop_amp_notes_scored = models.IntegerField(default=0)
+    teleop_notes_missed = models.IntegerField(default=0)
 
     # Endgame Tags
     #bools

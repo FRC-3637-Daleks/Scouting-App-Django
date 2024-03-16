@@ -24,8 +24,8 @@ class MatchData2024Form(forms.ModelForm):
         # Group fields by section
         self.field_groups = {
             'Pre-Match': ['arrived_on_field_on_time', 'start_with_note', 'dead_on_arrival', 'starting_location'],
-            'Auton': ['left_community_zone', 'a_stopped', 'amp_notes_scored', 'speaker_notes_scored', 'notes_picked_up'],
-            'Teleop': ['e_stopped', 'communication_lost', 'speaker_notes_scored', 'amp_notes_scored','notes_missed'],
+            'Auton': ['left_community_zone', 'a_stopped', 'auton_amp_notes_scored', 'auton_speaker_notes_scored', 'auton_notes_picked_up'],
+            'Teleop': ['e_stopped', 'communication_lost', 'teleop_speaker_notes_scored', 'teleop_amp_notes_scored','teleop_notes_missed'],
             'Endgame': ['climbed_solo', 'climbed_with_another_robot', 'scored_high_notes', 'notes_scored_in_trap'],
         }
 
