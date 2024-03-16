@@ -7,7 +7,7 @@
 
 {% block content %}
     <div class="container">
-        <h1 class="m-3 text-center">Match {{ match.match_number }} | Team {{ team.team_number }}</h1>
+        <h1 class="m-3 text-center">Match {{ match.match_number }} | Team {{ team.team_number }} - {{ team.team_name }}</h1>
         <form method="POST">
             {% csrf_token %}
             {% for section, fields in form.field_groups.items %}
@@ -35,6 +35,7 @@
             padding: 0.5em 1em; /* Adjust padding for button width */
             margin-left: 5px;
             cursor: pointer;
+            width: 90px;
         }
 
         /* Style for input fields */
