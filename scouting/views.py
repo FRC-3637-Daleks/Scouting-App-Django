@@ -128,53 +128,56 @@ def view_team_statistics(request, team_number):
 
     # Count the number of matches
     match_count = matches.count()
-
-    # Calculate statistics for boolean fields
-    boolean_fields = ['arrived_on_field_on_time', 'start_with_note', 'dead_on_arrival', 'left_community_zone', 'a_stopped', 'e_stopped', 'communication_lost', 'climbed_solo', 'climbed_with_another_robot', 'scored_high_notes']
     boolean_stats = {}
-    for field in boolean_fields:
-        total = matches.aggregate(total=Sum(field))['total']
-        if total is not None:
-            total = int(matches.aggregate(total=Sum(field))['total'])
-        percent = (total / match_count) * 100 if match_count > 0 else 0
-        boolean_stats[field] = {
-            'total': total,
-            'percent': round(percent, 1)
-        }
-    graphs = {}
-    # Calculate statistics for integer fields
-    integer_fields = ['amp_notes_scored', 'speaker_notes_scored', 'notes_missed', 'notes_scored_in_trap']
     integer_stats = {}
-    for field in integer_fields:
-        stats = matches.aggregate(min=Min(field), max=Max(field), avg=Avg(field))
-        integer_stats[field] = {
-            'min': round(stats['min'], 1),
-            'max': round(stats['max'], 1),
-            'avg': round(stats['avg'], 1)
-        }
-        with plt.style.context('dark_background'):
-            # Create a line graph for this field
-            plt.figure()
-            plt.plot(matches.values_list(field, flat=True))
-            plt.title(field)
-            plt.xlabel('Match')
-            plt.ylabel(field)
+    graphs = {}
+    if match_count > 0:
+        # Calculate statistics for boolean fields
+        boolean_fields = ['arrived_on_field_on_time', 'start_with_note', 'dead_on_arrival', 'left_community_zone', 'a_stopped', 'e_stopped', 'communication_lost', 'climbed_solo', 'climbed_with_another_robot', 'scored_high_notes']
 
-            # Get the match numbers as a range from 1 to the number of matches
-            match_numbers = range(1, matches.count() + 1)
+        for field in boolean_fields:
+            total = matches.aggregate(total=Sum(field))['total']
+            if total is not None:
+                total = int(matches.aggregate(total=Sum(field))['total'])
+            percent = (total / match_count) * 100 if match_count > 0 else 0
+            boolean_stats[field] = {
+                'total': total,
+                'percent': round(percent, 1)
+            }
 
-            # Set the x-ticks to be the match numbers
-            plt.xticks(range(len(match_numbers)), match_numbers)
+        # Calculate statistics for integer fields
+        integer_fields = ['amp_notes_scored', 'speaker_notes_scored', 'notes_missed', 'notes_scored_in_trap']
 
-            # Save it to a BytesIO object
-            buf = BytesIO()
-            plt.savefig(buf, format='png')
-            buf.seek(0)
+        for field in integer_fields:
+            stats = matches.aggregate(min=Min(field), max=Max(field), avg=Avg(field))
+            integer_stats[field] = {
+                'min': round(stats['min'], 1),
+                'max': round(stats['max'], 1),
+                'avg': round(stats['avg'], 1)
+            }
+            with plt.style.context('dark_background'):
+                # Create a line graph for this field
+                plt.figure()
+                plt.plot(matches.values_list(field, flat=True))
+                plt.title(field)
+                plt.xlabel('Match')
+                plt.ylabel(field)
 
-            # Encode the bytes as base64 string
-            string = base64.b64encode(buf.read())
-            uri = 'data:image/png;base64,' + urllib.parse.quote(string)
-            integer_stats[field]['graph'] = uri
+                # Get the match numbers as a range from 1 to the number of matches
+                match_numbers = range(1, matches.count() + 1)
+
+                # Set the x-ticks to be the match numbers
+                plt.xticks(range(len(match_numbers)), match_numbers)
+
+                # Save it to a BytesIO object
+                buf = BytesIO()
+                plt.savefig(buf, format='png')
+                buf.seek(0)
+
+                # Encode the bytes as base64 string
+                string = base64.b64encode(buf.read())
+                uri = 'data:image/png;base64,' + urllib.parse.quote(string)
+                integer_stats[field]['graph'] = uri
 
     # Include pit scouting information
     pit_scout_data = PitScoutData.objects.get(team=team, event=Event.objects.get(active=True))
