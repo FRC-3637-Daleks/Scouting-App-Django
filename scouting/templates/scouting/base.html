@@ -1,5 +1,9 @@
 {% extends 'base.html' %}
 
+{% block brand %}
+    <a class="navbar-brand" href="{% url 'scouting:index' %}"><i class="fas fa-magnifying-glass mx-2"></i> Scouting</a>
+{% endblock %}
+
 {%  block navbar_items %}
     {% if perms.scouting.stands_scout_team %}
         <div class="navbar-item">
