@@ -17,6 +17,10 @@ from django.contrib.auth.decorators import login_required, permission_required
 from rest_framework.authentication import TokenAuthentication
 from rest_framework.decorators import api_view, authentication_classes, permission_classes
 from rest_framework.permissions import IsAuthenticated
+import matplotlib.pyplot as plt
+import base64
+from io import BytesIO
+import urllib
 
 
 @login_required()
@@ -137,7 +141,7 @@ def view_team_statistics(request, team_number):
             'total': total,
             'percent': round(percent, 1)
         }
-
+    graphs = {}
     # Calculate statistics for integer fields
     integer_fields = ['amp_notes_scored', 'speaker_notes_scored', 'notes_missed', 'notes_scored_in_trap']
     integer_stats = {}
@@ -148,6 +152,29 @@ def view_team_statistics(request, team_number):
             'max': round(stats['max'], 1),
             'avg': round(stats['avg'], 1)
         }
+        with plt.style.context('dark_background'):
+            # Create a line graph for this field
+            plt.figure()
+            plt.plot(matches.values_list(field, flat=True))
+            plt.title(field)
+            plt.xlabel('Match')
+            plt.ylabel(field)
+
+            # Get the match numbers as a range from 1 to the number of matches
+            match_numbers = range(1, matches.count() + 1)
+
+            # Set the x-ticks to be the match numbers
+            plt.xticks(range(len(match_numbers)), match_numbers)
+
+            # Save it to a BytesIO object
+            buf = BytesIO()
+            plt.savefig(buf, format='png')
+            buf.seek(0)
+
+            # Encode the bytes as base64 string
+            string = base64.b64encode(buf.read())
+            uri = 'data:image/png;base64,' + urllib.parse.quote(string)
+            integer_stats[field]['graph'] = uri
 
     # Include pit scouting information
     pit_scout_data = PitScoutData.objects.get(team=team, event=Event.objects.get(active=True))
@@ -170,6 +197,7 @@ def view_team_statistics(request, team_number):
         'boolean_stats': boolean_stats,
         'integer_stats': integer_stats,
         'pit_scout_data': pit_scout_data_dict,
+        'graphs': graphs,
     }
 
     return render(request, 'scouting/statisticsteam.html', context)

@@ -31,6 +31,7 @@
                 <th scope="col">Min</th>
                 <th scope="col">Max</th>
                 <th scope="col">Average</th>
+                <th scope="col">Plot</th>
             </thead>
             <tbody>
                 {% for field, stats in integer_stats.items %}
@@ -39,6 +40,7 @@
                         <td>{{ stats.min }}</td>
                         <td>{{ stats.max }}</td>
                         <td>{{ stats.avg }}</td>
+                        <td><img src="{{ stats.graph }}" alt="{{ field }} graph"></td>
                     </tr>
                 {% endfor %}
             </tbody>
@@ -59,5 +61,8 @@
                 {% endfor %}
             </tbody>
         </table>
+    {% for field, graph in graphs.items %}
+        <img src="{{ graph }}" alt="{{ field }} graph">
+    {% endfor %}
     </div>
 {% endblock %}
