@@ -27,6 +27,54 @@
         </form>
     </div>
 
+    <style>
+        /* Style for plus and minus buttons */
+        .plus-btn,
+        .minus-btn {
+            font-size: 1em;
+            padding: 0.5em 1em; /* Adjust padding for button width */
+            margin-left: 5px;
+            cursor: pointer;
+        }
+    
+        /* Style for input fields */
+        input[type="number"] {
+            width: 70px;
+        }
+    </style>
+    
+    <script>
+        $(document).ready(function() {
+            // Find all input fields with type number
+            $('input[type="number"]').each(function() {
+                // Create plus and minus buttons
+                var plusButton = $('<button type="button" class="btn plus-btn btn-success">+</button>');
+                var minusButton = $('<button type="button" class="btn minus-btn btn-danger">-</button>');
+    
+                // Wrap input field and buttons in a container div
+                var container = $('<div class="input-group"></div>');
+                $(this).wrap(container);
+                $(this).after(plusButton, minusButton);
+    
+                // Event handler for plus button
+                plusButton.on('click', function() {
+                    var value = parseInt($(this).prev('input[type="number"]').val()) || 0;
+                    $(this).prev('input[type="number"]').val(value + 1);
+                });
+    
+                // Event handler for minus button
+                minusButton.on('click', function() {
+                    var value = parseInt($(this).prev().prev('input[type="number"]').val()) || 0;
+                    if (value > 0) {
+                        $(this).prev().prev('input[type="number"]').val(value - 1);
+                    }
+                });
+            });
+        });
+    </script>
+
+    
+    
     <script>
         $(document).ready(function() {
             var submitButton = $('button[type="submit"]');
