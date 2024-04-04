@@ -146,7 +146,7 @@ def view_team_statistics(request, team_number):
             }
 
         # Calculate statistics for integer fields
-        integer_fields = ['auton_amp_notes_scored', 'teleop_amp_notes_scored', 'auton_speaker_notes_scored', 'teleop_speaker_notes_scored', 'teleop_notes_missed', 'notes_scored_in_trap']
+        integer_fields = ['auton_amp_notes_scored', 'auton_speaker_notes_scored', 'teleop_amp_notes_scored', 'teleop_speaker_notes_scored', 'teleop_notes_missed', 'notes_scored_in_trap']
 
         for field in integer_fields:
             stats = matches.aggregate(min=Min(field), max=Max(field), avg=Avg(field))
