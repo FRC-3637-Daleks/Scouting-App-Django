@@ -46,6 +46,25 @@
             </tbody>
         </table>
 
+    <h2 class="m-3 text-center">Text Fields</h2>
+    <table class="table table-striped">
+            <thead>
+                <th scope="col">Match Number</th>
+                <th scope="col">Starting Location</th>
+                <th scope="col">Comments</th>
+            </thead>
+            <tbody>
+                {% for match in matches %}
+                    <tr>
+                        <th scope="row">{{ match.match }}</th>
+                        <td>{{ match.starting_location }}</td>
+                        <td>{{ match.comments }}</td>
+                    </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+
+
     <h2 class="m-3 text-center">Pit Scouting Data</h2>
         <table class="table table-striped">
             <thead>

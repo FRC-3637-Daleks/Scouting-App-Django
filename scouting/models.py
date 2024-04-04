@@ -148,6 +148,7 @@ class MatchData2024(TimeStampedModel):
     scored_high_notes = models.BooleanField(default=False)
     #integer
     notes_scored_in_trap = models.IntegerField(default=0)
+    comments = models.TextField(max_length=1000, null=True, blank=True)
     class Meta:
         permissions = (
             ("stands_scout_team", "Can stands scout teams"),

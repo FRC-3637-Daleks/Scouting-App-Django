@@ -201,6 +201,7 @@ def view_team_statistics(request, team_number):
         'integer_stats': integer_stats,
         'pit_scout_data': pit_scout_data_dict,
         'graphs': graphs,
+        'matches': matches,
     }
 
     return render(request, 'scouting/statisticsteam.html', context)
