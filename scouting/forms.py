@@ -25,7 +25,7 @@ class MatchData2024Form(forms.ModelForm):
         self.field_groups = {
             'Pre-Match': ['arrived_on_field_on_time', 'start_with_note', 'dead_on_arrival', 'starting_location'],
             'Auton': ['left_community_zone', 'a_stopped', 'auton_amp_notes_scored', 'auton_speaker_notes_scored', 'auton_notes_picked_up'],
-            'Teleop': ['e_stopped', 'communication_lost', 'teleop_amp_notes_scored', 'teleop_speaker_notes_scored', 'teleop_notes_missed'],
+            'Teleop': ['e_stopped', 'communication_lost', 'teleop_amp_notes_scored', 'teleop_speaker_notes_scored', 'teleop_notes_passed', 'teleop_notes_missed'],
             'Endgame': ['climbed_solo', 'climbed_with_another_robot', 'scored_high_notes', 'notes_scored_in_trap', 'comments'],
         }
 

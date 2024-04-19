@@ -139,6 +139,7 @@ class MatchData2024(TimeStampedModel):
     #ints
     teleop_speaker_notes_scored = models.IntegerField(default=0)
     teleop_amp_notes_scored = models.IntegerField(default=0)
+    teleop_notes_passed = models.IntegerField(default=0)
     teleop_notes_missed = models.IntegerField(default=0)
 
     # Endgame Tags
