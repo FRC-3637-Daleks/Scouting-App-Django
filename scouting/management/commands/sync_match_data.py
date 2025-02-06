@@ -8,12 +8,12 @@ from django.contrib.auth.models import User  # Import User model
 from django.core.management.base import BaseCommand
 
 class Command(BaseCommand):
-    help = 'Sync MatchData2024 objects to Server B'
+    help = 'Sync MatchData2025 objects to Server B'
 
     def handle(self, *args, **options):
-        # Fetch the MatchData2024 objects that need to be synced
+        # Fetch the MatchData2025 objects that need to be synced
         event = Event.objects.get(active=True)
-        data = MatchData2024.objects.all()
+        data = MatchData2025.objects.all()
 
         # Serialize the data into JSON
         serialized_data = serializers.serialize('json', data)

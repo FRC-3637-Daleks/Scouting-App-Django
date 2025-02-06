@@ -72,30 +72,19 @@ class PitScoutData(TimeStampedModel):
     event = models.ForeignKey('Event', on_delete=models.CASCADE, null=False)
     assigned_scout = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True)
     # Boolean Fields
-    has_crisp_boombers = models.BooleanField(default=False, name='Crisp Boombers')
-    has_floor_pickup = models.BooleanField(default=False, name='Floor Pickup')
-    has_player_station_pickup = models.BooleanField(default=False, name='Player Station Pickup')
-    can_go_under_stage = models.BooleanField(default=False, name='Can go under stage')
-    has_april_tag_recognition = models.BooleanField(default=False, name='April Tag Recognition')
-    has_vision_object_detection = models.BooleanField(default=False, name='Can detect obstacles with vision processing')
-    has_variable_angle_shooter = models.BooleanField(default=False, name='Variable Angle Shooter')
-    can_climb = models.BooleanField(default=False, name='Climb')
-    can_climb_2_robots = models.BooleanField(default=False, name='Climb with another robot')
-    can_lift_another_robot = models.BooleanField(default=False, name='Can lift another robot')
-    can_score_amp = models.BooleanField(default=False, name='Can score in amp')
-    shoots_up_into_amp = models.BooleanField(default=False, name='Shoots upwards into amp')
-    shoots_down_into_amp = models.BooleanField(default=False ,name='Shoots downwards into amp')
-    can_score_speaker_from_subwoofer = models.BooleanField(default=False, name='Can score in speaker from subwoofer')
-    can_score_speaker_from_other_position = models.BooleanField(default=False, name='Can score in speaker from elsewhere on field')
-    can_place_note_in_trap = models.BooleanField(default=False, name='Can place note in trap')
+    friendly= models.BooleanField(default=False)
+    crisp_boomers = models.BooleanField(default=False)
+
     # Integer Fields
-    linear_speed = models.IntegerField(default=0, name='Linear speed, (meters per second)')
-    robot_length_in = models.IntegerField(default=0 ,name='Robot length (inches)')
-    robot_width_in = models.IntegerField(default=0, name='Robot width (inches)')
-    robot_height_in = models.IntegerField(default=0, name='Robot height (inches)')
-    robot_weight_lbs = models.IntegerField(default=0, name='Robot weight (lbs)')
+
     # Char Fields
+    intake_type = models.CharField(max_length=100, null=True)
+    type_drivebase= models.CharField(max_length=100, null=True)
+    auton_paths= models.CharField(max_length=1000, null=True)
     description = models.TextField(max_length=2000)
+    #Image Fields
+    auton_picture = models.ImageField(upload_to='images/', null=True)
+    robot_picture = models.ImageField(upload_to='images/', null=True)
 
     class Meta:
         verbose_name_plural = "Pit scout data"
@@ -107,7 +96,7 @@ class PitScoutData(TimeStampedModel):
         return str(str(self.team.team_number) + " - " + self.team.team_name + " | " + self.event.event_name)
 
 
-class MatchData2024(TimeStampedModel):
+class MatchData2025(TimeStampedModel):
     team = models.ForeignKey('Team', on_delete=models.CASCADE, null=False)
     match = models.ForeignKey('Match', on_delete=models.CASCADE, null=False)
 
@@ -115,41 +104,18 @@ class MatchData2024(TimeStampedModel):
     def event(self):
         return self.match.event_id
 
-    # Pre-Match Tags
-    #bools
-    arrived_on_field_on_time = models.BooleanField(default=True)
-    start_with_note = models.BooleanField(default=False)
-    dead_on_arrival = models.BooleanField(default=False)
+    #Match Tags
+
     #strings
-    starting_location = models.CharField(max_length=20, null=True)
+    #starting_location = models.CharField(max_length=20, null=True)
+    defense_text = models.CharField(max_length=1000, null=True)
+    counter_defense_text = models.CharField(max_length=1000, null=True)
+    human_player = models.CharField(max_length=1000, null=True)
+    compatibility = models.CharField(max_length=1000, null=True)
+    other_comments = models.CharField(max_length=1000, null=True)
 
-    # Auton Tags
-    #bools
-    left_community_zone = models.BooleanField(default=False)
-    a_stopped = models.BooleanField(default=False)
-    #ints
-    auton_amp_notes_scored = models.IntegerField(default=0)
-    auton_speaker_notes_scored = models.IntegerField(default=0)
-    auton_notes_picked_up = models.IntegerField(default=0)
 
-    # Teleop Tags
-    #bools
-    e_stopped = models.BooleanField(default=False)
-    communication_lost= models.BooleanField(default=False)
-    #ints
-    teleop_speaker_notes_scored = models.IntegerField(default=0)
-    teleop_amp_notes_scored = models.IntegerField(default=0)
-    teleop_notes_passed = models.IntegerField(default=0)
-    teleop_notes_missed = models.IntegerField(default=0)
 
-    # Endgame Tags
-    #bools
-    climbed_solo = models.BooleanField(default=False)
-    climbed_with_another_robot = models.BooleanField(default=False)
-    scored_high_notes = models.BooleanField(default=False)
-    #integer
-    notes_scored_in_trap = models.IntegerField(default=0)
-    comments = models.TextField(max_length=1000, null=True, blank=True)
     class Meta:
         permissions = (
             ("stands_scout_team", "Can stands scout teams"),

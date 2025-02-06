@@ -12,6 +12,9 @@ https://docs.djangoproject.com/en/5.0/ref/settings/
 
 from pathlib import Path
 import os
+import os
+from django.conf import settings
+from django.conf.urls.static import static
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -84,9 +87,18 @@ TEMPLATES = [
 
 WSGI_APPLICATION = 'DjangoScoutingApp.wsgi.application'
 
+# Static files (CSS, JavaScript, Images)
+# https://docs.djangoproject.com/en/5.0/howto/static-files/
+
+# Media files (uploaded images)
+MEDIA_URL = 'media/'  # Public URL prefix for media files
+MEDIA_ROOT = os.path.join(BASE_DIR, 'media')  # Directory where media files will be stored
+MEDIA_DIRS = [
+    os.path.join(BASE_DIR, 'media/images')
+]
 
 # Database
-# https://docs.djangoproject.com/en/5.0/ref/settings/#databases
+# https://docs.djangoprojec)t.com/en/5.0/ref/settings/#databases
 
 DATABASES = {
     'default': {

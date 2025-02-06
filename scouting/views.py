@@ -65,7 +65,7 @@ def view_pit_scout_team(request, team_number):
 
     if request.method == 'POST':
         # If the form has been submitted, create a form instance with the POST data and the existing PitScoutData object
-        form = PitScoutDataForm(request.POST, instance=pit_scout_data)
+        form = PitScoutDataForm(request.POST, request.FILES, instance=pit_scout_data)
 
         # Validate the form
         if form.is_valid():
@@ -94,11 +94,11 @@ def view_match(request, team_number, match_number):
     match = Match.objects.get(match_number=match_number, event_id=event)
 
     # Check if a PitScoutData object already exists for this team and event
-    match_data, created = MatchData2024.objects.get_or_create(team=team, match=match)
+    match_data, created = MatchData2025.objects.get_or_create(team=team, match=match)
 
     if request.method == 'POST':
         # If the form has been submitted, create a form instance with the POST data and the existing PitScoutData object
-        form = MatchData2024Form(request.POST, instance=match_data)
+        form = MatchData2025Form(request.POST, instance=match_data)
         print("Form POSTed")
 
         # Validate the form
@@ -110,7 +110,7 @@ def view_match(request, team_number, match_number):
             return redirect('scouting:index')
     else:
         # If the form has not been submitted, create a form instance from the PitScoutData object
-        form = MatchData2024Form(instance=match_data)
+        form = MatchData2025Form(instance=match_data)
 
     context = {
         'form': form,
@@ -124,60 +124,61 @@ def view_match(request, team_number, match_number):
 @login_required()
 def view_team_statistics(request, team_number):
     team = get_object_or_404(Team, team_number=team_number)
-    matches = MatchData2024.objects.filter(team=team)
+    matches = MatchData2025.objects.filter(team=team)
 
     # Count the number of matches
     match_count = matches.count()
     boolean_stats = {}
     integer_stats = {}
     graphs = {}
-    if match_count > 0:
+    #if match_count > 0:
+        #
         # Calculate statistics for boolean fields
-        boolean_fields = ['arrived_on_field_on_time', 'start_with_note', 'dead_on_arrival', 'left_community_zone', 'a_stopped', 'e_stopped', 'communication_lost', 'climbed_solo', 'climbed_with_another_robot', 'scored_high_notes']
-
-        for field in boolean_fields:
-            total = matches.aggregate(total=Sum(field))['total']
-            if total is not None:
-                total = int(matches.aggregate(total=Sum(field))['total'])
-            percent = (total / match_count) * 100 if match_count > 0 else 0
-            boolean_stats[field] = {
-                'total': total,
-                'percent': round(percent, 1)
-            }
+        # boolean_fields = ['friendly']
+        #
+        # for field in boolean_fields:
+        #     total = matches.aggregate(total=Sum(field))['total']
+        #     if total is not None:
+        #         total = int(matches.aggregate(total=Sum(field))['total'])
+        #     percent = (total / match_count) * 100 if match_count > 0 else 0
+        #     boolean_stats[field] = {
+        #         'total': total,
+        #         'percent': round(percent, 1)
+        #     }
 
         # Calculate statistics for integer fields
-        integer_fields = ['auton_amp_notes_scored', 'auton_speaker_notes_scored', 'teleop_amp_notes_scored', 'teleop_speaker_notes_scored', 'teleop_notes_passed', 'teleop_notes_missed', 'notes_scored_in_trap']
-
-        for field in integer_fields:
-            stats = matches.aggregate(min=Min(field), max=Max(field), avg=Avg(field))
-            integer_stats[field] = {
-                'min': round(stats['min'], 1),
-                'max': round(stats['max'], 1),
-                'avg': round(stats['avg'], 1)
-            }
-            with plt.style.context('dark_background'):
-                # Create a line graph for this field
-                plt.figure()
-                plt.plot(matches.values_list(field, flat=True))
-                plt.title(field)
-                plt.xlabel('Match')
-                plt.ylabel(field)
-
-                # Get the match numbers as a range from 1 to the number of matches
-                match_numbers = range(1, matches.count() + 1)
-
-                # Set the x-ticks to be the match numbers
-                plt.xticks(range(len(match_numbers)), match_numbers)
-
-                # Save it to a BytesIO object
-                buf = BytesIO()
-                plt.savefig(buf, format='png')
-                buf.seek(0)
-
-                # Encode the bytes as base64 string
-                string = base64.b64encode(buf.read())
-                uri = 'data:image/png;base64,' + urllib.parse.quote(string)
-                integer_stats[field]['graph'] = uri
+        # integer_fields = []
+        #
+        # for field in integer_fields:
+        #     stats = matches.aggregate(min=Min(field), max=Max(field), avg=Avg(field))
+        #     integer_stats[field] = {
+        #         'min': round(stats['min'], 1),
+        #         'max': round(stats['max'], 1),
+        #         'avg': round(stats['avg'], 1)
+        #     }
+        #     with plt.style.context('dark_background'):
+        #         # Create a line graph for this field
+        #         plt.figure()
+        #         plt.plot(matches.values_list(field, flat=True))
+        #         plt.title(field)
+        #         plt.xlabel('Match')
+        #         plt.ylabel(field)
+        #
+        #         # Get the match numbers as a range from 1 to the number of matches
+        #         match_numbers = range(1, matches.count() + 1)
+        #
+        #         # Set the x-ticks to be the match numbers
+        #         plt.xticks(range(len(match_numbers)), match_numbers)
+        #
+        #         # Save it to a BytesIO object
+        #         buf = BytesIO()
+        #         plt.savefig(buf, format='png')
+        #         buf.seek(0)
+        #
+        #         # Encode the bytes as base64 string
+        #         string = base64.b64encode(buf.read())
+        #         uri = 'data:image/png;base64,' + urllib.parse.quote(string)
+        #         integer_stats[field]['graph'] = uri
 
     # Include pit scouting information
     pit_scout_data = PitScoutData.objects.get(team=team, event=Event.objects.get(active=True))
