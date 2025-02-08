@@ -25,19 +25,23 @@
 <body>
     <!-- Navbar -->
     <nav class="navbar navbar-expand-sm bg-dark navbar-dark">
+    {% block brand %}{% endblock %}
+    <!-- This is the button for the hamburger menu -->
+    <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbarToggler" aria-controls="navbarTogglerDemo02" aria-expanded="false" aria-label="Toggle navigation">
+        <span class="navbar-toggler-icon"></span>
+    </button>
 
-        {% block brand %}{% endblock %}
-        <!-- This is the button for the hamburger menu -->
-        <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbarToggler" aria-controls="navbarTogglerDemo02" aria-expanded="false" aria-label="Toggle navigation">
-            <span class="navbar-toggler-icon"></span>
-        </button>
-
-        <!-- Everything that will go into the hamburger menu if the page is on mobile -->
-        <div class="collapse navbar-collapse" id="navbarToggler">
-            <ul class="navbar-nav">
-                {% block navbar_items %}{% endblock %}
-            </ul>
-            <ul class="navbar-nav ml-auto">
+    <!-- Everything that will go into the hamburger menu if the page is on mobile -->
+    <div class="collapse navbar-collapse" id="navbarToggler">
+        <ul class="navbar-nav">
+            {% block navbar_items %}{% endblock %}
+            <!-- Move the Picklist link here -->
+            <li class="nav-item">
+                <a href="{% url 'scouting:picklist' %}" class="nav-link">Picklist</a>
+            </li>
+        </ul>
+        <ul class="navbar-nav ml-auto">
+            <!-- Rest of the code remains the same -->
                 {% if user.is_authenticated %}
                     <li class="nav-item dropdown">
                         <a class="nav-link dropdown-toggle" href="#" id="signinDropdown" role="button" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">

@@ -17,5 +17,7 @@ urlpatterns = [
     path('scouting/teamstatisticslist', views.view_team_statistics_list, name="team_statistics_list"),
     path('sync/matchdata', views.sync_data, name="sync_data"),
     path('sync/pitdata', views.sync_data, name="sync_data"),
+    path('picklist/', views.view_picklist, name='picklist'),
+
 
 ]

@@ -219,6 +219,30 @@ def view_team_statistics_list(request):
 
     return render(request, 'scouting/statisticsteamlist.html', context)
 
+@login_required()
+def view_picklist(request):
+    event = Event.objects.get(active=True)
+    teams = event.teams.all().order_by('team_number')
+
+    context = {
+        'teams': teams,
+    }
+
+    return render(request, 'scouting/picklist.html', context)
+
+
+def your_view(request):
+    event_key = "2024pahat"  # Replace with your event key
+    team_key = "frc3637"  # Replace with your team key
+
+    rank = get_team_rank(event_key, team_key, settings.TBA_API_KEY)
+
+    context = {
+        'team_rank': rank,
+        # ... other context data ...
+    }
+    return render(request, 'picklust.html', context)
+
 
 @api_view(['POST'])  # Specify the allowed HTTP methods
 @authentication_classes([TokenAuthentication])  # Use TokenAuthentication

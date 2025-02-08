@@ -1,0 +1,39 @@
+{% extends 'scouting/base.html' %}
+
+{% block content %}
+<div class="container mt-4">
+    <h1 class="mb-4">Picklist Screen</h1>
+    
+    <div class="table-responsive">
+        <table class="table table-striped table-hover table-bordered">
+            <thead class="table-dark">
+                <tr>
+                    <th>Team Number</th>
+                    <th>Team Name</th>
+                    <th>TBA Rankings</th>
+                    <th>Self Rankings</th>
+                    <th>Pairwise Rankings</th>
+                    <th>OPR</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for team in teams %}
+                <tr>
+                    <td><a href="{% url 'scouting:team_statistics' team.team_number %}">{{ team.team_number }}</a></td>
+                    <td>{{ team.team_name }}</td>
+                    <td class="tba-rank" data-team="{{ team.team_number }}"></td>
+                    <td class="self-rank" data-team="{{ team.team_number }}"></td>
+                    <td class="pairwise-rank" data-team="{{ team.team_number }}"></td>
+
+                    <td class="opr" data-team="{{ team.team_number }}"></td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="6" class="text-center">No teams available</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}
