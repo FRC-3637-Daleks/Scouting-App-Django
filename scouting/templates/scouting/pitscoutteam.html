@@ -26,6 +26,10 @@
             {{ form | crispy }}
             <button href="#" class="btn btn-primary" type="submit">Submit Pit Scouting Report</button>
         </form>
+        {% if pit_scout_data.photo %}
+            <h3>Uploaded Photo:</h3>
+            <img src="{{ pit_scout_data.photo.url }}" alt="Photo for Team {{ pit_scout_data.team.team_number }}" style="max-width: 100%; height: auto;">
+        {% endif %}
     <br>
     </div>
 

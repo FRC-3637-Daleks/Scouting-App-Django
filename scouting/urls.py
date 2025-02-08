@@ -1,7 +1,11 @@
 from django.urls import path
 
 from . import views
-
+from django.contrib import admin
+from django.urls import path, include
+from django.conf import settings
+from django.conf.urls.static import static
+from django.contrib.auth.views import logout_then_login
 app_name = 'scouting'
 
 urlpatterns = [
@@ -13,4 +17,5 @@ urlpatterns = [
     path('scouting/teamstatisticslist', views.view_team_statistics_list, name="team_statistics_list"),
     path('sync/matchdata', views.sync_data, name="sync_data"),
     path('sync/pitdata', views.sync_data, name="sync_data"),
+
 ]

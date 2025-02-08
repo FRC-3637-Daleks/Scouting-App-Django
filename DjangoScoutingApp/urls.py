@@ -14,10 +14,24 @@ Including another URLconf
     1. Import the include() function: from django.urls import include, path
     2. Add a URL to urlpatterns:  path('blog/', include('blog.urls'))
 """
+
 from django.contrib import admin
 from django.urls import path, include
 from django.conf import settings
+from django.conf.urls.static import static
 from django.contrib.auth.views import logout_then_login
+
+urlpatterns = [
+    path('admin/', admin.site.urls),
+    path("", include("scouting.urls")),
+    path('logout/', logout_then_login, {'login_url': settings.LOGIN_REDIRECT_URL}, name='logout'),
+    path("accounts/", include("django.contrib.auth.urls")),
+]
+
+# Serve media files during development
+if settings.DEBUG:  # Only serve media files in development mode
+    urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
+
 
 urlpatterns = [
     path('admin/', admin.site.urls),
