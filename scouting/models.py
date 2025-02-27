@@ -95,7 +95,26 @@ class PitScoutData(TimeStampedModel):
     def __str__(self):
         return str(str(self.team.team_number) + " - " + self.team.team_name + " | " + self.event.event_name)
 
-
+class TeamRanking(models.Model):
+    team = models.ForeignKey(Team, on_delete=models.CASCADE)
+    event = models.ForeignKey(Event, on_delete=models.CASCADE)
+    rank = models.IntegerField()
+    priority = models.IntegerField(null=True, blank=True)
+    ranking_score = models.FloatField()
+    matches_played = models.IntegerField()
+    opr = models.FloatField(default=0.0)
+    dpr = models.FloatField(default=0.0)
+    ccwm = models.FloatField(default=0.0)
+    l1_coral = models.FloatField(default=0.0)
+    l2_coral = models.FloatField(default=0.0)
+    l3_coral = models.FloatField(default=0.0)
+    l4_coral = models.FloatField(default=0.0)
+    net_algae_count = models.FloatField(default=0.0)
+    wall_algae_count = models.FloatField(default=0.0)
+    auto_coral_count = models.FloatField(default=0.0)
+    foul_count = models.FloatField(default=0.0)
+    class Meta:
+        unique_together = ('team', 'event')
 class MatchData2025(TimeStampedModel):
     team = models.ForeignKey('Team', on_delete=models.CASCADE, null=False)
     match = models.ForeignKey('Match', on_delete=models.CASCADE, null=False)
@@ -105,6 +124,7 @@ class MatchData2025(TimeStampedModel):
         return self.match.event_id
 
     #Match Tags
+    #integers
 
     #strings
     #starting_location = models.CharField(max_length=20, null=True)

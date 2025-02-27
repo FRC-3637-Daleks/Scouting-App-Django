@@ -219,29 +219,38 @@ def view_team_statistics_list(request):
 
     return render(request, 'scouting/statisticsteamlist.html', context)
 
-@login_required()
 def view_picklist(request):
     event = Event.objects.get(active=True)
-    teams = event.teams.all().order_by('team_number')
+    sort_by = request.GET.get('sort', 'team_number')
+    direction = request.GET.get('direction', 'asc')
 
-    context = {
+    teams = event.teams.all().select_related().prefetch_related('teamranking_set')
+
+    if sort_by in ['rank', 'opr', 'dpr', 'ccwm', 'priority',
+                   'l1_coral', 'l2_coral', 'l3_coral', 'l4_coral',
+                   'net_algae_count', 'wall_algae_count', 'auto_coral_count', 'foul_count']:
+        order_field = f'teamranking__{sort_by}'
+        if direction == 'desc':
+            order_field = f'-{order_field}'
+        teams = teams.order_by(order_field)
+    else:
+        teams = teams.order_by(f'{"-" if direction == "desc" else ""}team_number')
+
+    for team in teams:
+        team.teamranking = TeamRanking.objects.filter(
+            team=team,
+            event=event
+        ).values(
+            'rank', 'opr', 'dpr', 'ccwm', 'priority',
+            'l1_coral', 'l2_coral', 'l3_coral', 'l4_coral',
+            'net_algae_count', 'wall_algae_count', 'auto_coral_count', 'foul_count'
+        ).first()
+
+    return render(request, 'scouting/picklist.html', {
         'teams': teams,
-    }
-
-    return render(request, 'scouting/picklist.html', context)
-
-
-def your_view(request):
-    event_key = "2024pahat"  # Replace with your event key
-    team_key = "frc3637"  # Replace with your team key
-
-    rank = get_team_rank(event_key, team_key, settings.TBA_API_KEY)
-
-    context = {
-        'team_rank': rank,
-        # ... other context data ...
-    }
-    return render(request, 'picklust.html', context)
+        'current_sort': sort_by,
+        'current_direction': direction,
+    })
 
 
 @api_view(['POST'])  # Specify the allowed HTTP methods
