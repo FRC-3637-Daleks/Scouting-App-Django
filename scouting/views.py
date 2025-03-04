@@ -1,27 +1,19 @@
-from django.shortcuts import render
-from django.http import HttpResponse
-from .models import *
-from django.db.models import Q
-import requests
-from django.forms import formset_factory
-from django.core.exceptions import ObjectDoesNotExist
 from .forms import *
 from django.shortcuts import redirect
-from django.db.models import Count, Avg, Min, Max, Sum
-from django.shortcuts import get_object_or_404
 from django.forms.models import model_to_dict
 from django.core import serializers
-from django.http import JsonResponse
-from django.views.decorators.csrf import csrf_exempt
 from django.contrib.auth.decorators import login_required, permission_required
 from rest_framework.authentication import TokenAuthentication
 from rest_framework.decorators import api_view, authentication_classes, permission_classes
 from rest_framework.permissions import IsAuthenticated
-import matplotlib.pyplot as plt
-import base64
-from io import BytesIO
-import urllib
-
+from .models import Team, Event, PitScoutData
+from .forms import PitScoutDataForm
+from django.shortcuts import render, get_object_or_404
+from django.http import JsonResponse
+from django.core.management import call_command
+from django.contrib.auth.decorators import login_required
+from scouting.models import Alliance, Event
+import json
 
 @login_required()
 def view_index(request):
@@ -64,28 +56,20 @@ def view_pit_scout_team(request, team_number):
     pit_scout_data, created = PitScoutData.objects.get_or_create(team=team, event=event)
 
     if request.method == 'POST':
-        # If the form has been submitted, create a form instance with the POST data and the existing PitScoutData object
         form = PitScoutDataForm(request.POST, request.FILES, instance=pit_scout_data)
-
-        # Validate the form
         if form.is_valid():
-            # Save the form data to the database
             form.save()
-
-            # Redirect to the same page (or wherever you want to redirect to)
             return redirect('scouting:pit_scout_teams_list')
     else:
-        # If the form has not been submitted, create a form instance from the PitScoutData object
         form = PitScoutDataForm(instance=pit_scout_data)
 
     context = {
         'form': form,
         'pit_scout_data': pit_scout_data,
+        'media_url': settings.MEDIA_URL,  # Added to help templates build image URLs
     }
 
     return render(request, 'scouting/pitscoutteam.html', context)
-
-
 @login_required()
 @permission_required('scouting.stands_scout_team', raise_exception=True)
 def view_match(request, team_number, match_number):
@@ -207,6 +191,24 @@ def view_team_statistics(request, team_number):
 
     return render(request, 'scouting/statisticsteam.html', context)
 
+@login_required
+def update_priority(request):
+    team_number = request.POST.get('team_number')
+    priority = request.POST.get('priority')
+    if not team_number or not priority:
+        return JsonResponse({'error': 'Missing parameters'}, status=400)
+    try:
+        priority = int(priority)
+        if priority < 1 or priority > 5:
+            return JsonResponse({'error': 'Priority must be between 1 and 5'}, status=400)
+        team = Team.objects.get(team_number=team_number)
+        event = Event.objects.get(active=True)
+        team_ranking, created = TeamRanking.objects.get_or_create(team=team, event=event)
+        team_ranking.priority = priority
+        team_ranking.save()
+        return JsonResponse({'success': True})
+    except Exception as e:
+        return JsonResponse({'error': str(e)}, status=400)
 
 @login_required()
 def view_team_statistics_list(request):
@@ -251,6 +253,62 @@ def view_picklist(request):
         'current_sort': sort_by,
         'current_direction': direction,
     })
+
+@login_required
+def run_alliance_sync(request):
+    """
+    Triggers the sync_alliances management command and returns a JSON response.
+    """
+    try:
+        call_command('sync_alliances')
+        return JsonResponse({'status': 'success'})
+    except Exception as e:
+        return JsonResponse({'status': 'error', 'message': str(e)}, status=500)
+
+@login_required
+def view_alliances(request):
+    """
+    Renders a page displaying alliance data.
+    Alliances are sorted by:
+      1. The numeric value of the first pick's team number,
+      2. Then by the declines list (joined as a comma-separated string),
+      3. Then by alliance status alphabetically,
+      4. Then by backup playoff average (numerically).
+    """
+    try:
+        event = Event.objects.get(active=True)
+    except Event.DoesNotExist:
+        return JsonResponse({'status': 'error', 'message': 'No active event found'}, status=404)
+
+    alliances = Alliance.objects.filter(event=event)
+    alliance_list = list(alliances)
+
+    def sort_key(alliance):
+        try:
+            picks = alliance.picks or []
+            first_pick = picks[0] if picks else ""
+            first_pick_num = int(first_pick[3:]) if first_pick.startswith("frc") else float('inf')
+        except Exception:
+            first_pick_num = float('inf')
+        declines = ", ".join(alliance.declines or [])
+        status = alliance.status or ""
+        backup_avg = alliance.backup_playoff_average if alliance.backup_playoff_average is not None else float('inf')
+        return (first_pick_num, declines, status, backup_avg)
+
+    alliance_list.sort(key=sort_key)
+
+    return render(request, 'scouting/alliances.html', {'alliances': alliance_list})
+
+@login_required
+def run_alliance_selection(request):
+    """
+    Calls the allianceselection management command and returns JSON.
+    """
+    try:
+        call_command('allianceselection')
+        return JsonResponse({"status": "success", "message": "Alliance selection command triggered."})
+    except Exception as e:
+        return JsonResponse({"status": "error", "message": str(e)}, status=500)
 
 
 @api_view(['POST'])  # Specify the allowed HTTP methods

@@ -7,38 +7,52 @@
     <div class="container">
         <h1 class="m-3 text-center">Pit Scouting | Team {{ pit_scout_data.team.team_number }}</h1>
         <table class="table table-striped">
-                <thead>
+            <thead>
+                <tr>
                     <th scope="col">Team #</th>
                     <th scope="col">Team Name</th>
                     <th scope="col">Scout Assigned</th>
-                </thead>
-                <tbody>
-                    <tr>
-                        <th scope="row">{{ pit_scout_data.team.team_number }}</th>
-                        <th scope="row">{{ pit_scout_data.team.team_name }}</th>
-                        <th scope="row">{{ pit_scout_data.assigned_scout.first_name }} {{ pit_scout_data.assigned_scout.last_name }}</th>
-                    </tr>
-                </tbody>
-            </table>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td>{{ pit_scout_data.team.team_number }}</td>
+                    <td>{{ pit_scout_data.team.team_name }}</td>
+                    <td>{{ pit_scout_data.assigned_scout.first_name }} {{ pit_scout_data.assigned_scout.last_name }}</td>
+                </tr>
+            </tbody>
+        </table>
 
         <form method="POST" enctype="multipart/form-data">
             {% csrf_token %}
-            {{ form | crispy }}
-            <button href="#" class="btn btn-primary" type="submit">Submit Pit Scouting Report</button>
+            {{ form|crispy }}
+            <button class="btn btn-primary" type="submit">Submit Pit Scouting Report</button>
         </form>
-        {% if pit_scout_data.photo %}
-            <h3>Uploaded Photo:</h3>
-            <img src="{{ pit_scout_data.photo.url }}" alt="Photo for Team {{ pit_scout_data.team.team_number }}" style="max-width: 100%; height: auto;">
+
+        <!-- Display Autonomous Picture if available -->
+        {% if pit_scout_data.auton_picture %}
+            <h3 class="mt-4">Autonomous Picture:</h3>
+            <a href="{{ pit_scout_data.auton_picture.url }}" target="_blank">
+                <img src="{{ pit_scout_data.auton_picture.url }}" alt="Autonomous Picture for Team {{ pit_scout_data.team.team_number }}" style="max-width: 100%; height: auto;">
+            </a>
         {% endif %}
-    <br>
+
+        <!-- Display Robot Picture if available -->
+        {% if pit_scout_data.robot_picture %}
+            <h3 class="mt-4">Robot Picture:</h3>
+            <a href="{{ pit_scout_data.robot_picture.url }}" target="_blank">
+                <img src="{{ pit_scout_data.robot_picture.url }}" alt="Robot Picture for Team {{ pit_scout_data.team.team_number }}" style="max-width: 100%; height: auto;">
+            </a>
+        {% endif %}
+        <br>
     </div>
 
-        <style>
+    <style>
         /* Style for plus and minus buttons */
         .plus-btn,
         .minus-btn {
             font-size: 1em;
-            padding: 0.5em 1em; /* Adjust padding for button width */
+            padding: 0.5em 1em;
             margin-left: 5px;
             cursor: pointer;
         }
@@ -88,13 +102,11 @@
                     url: '/',
                     type: 'GET',
                     success: function() {
-                        // The client can reach the server
                         // Enable the submit button
                         submitButton.prop('disabled', false);
                     },
                     error: function() {
-                        // The client cannot reach the server
-                        // Disable the submit button
+                        // Disable the submit button if the server is unreachable
                         submitButton.prop('disabled', true);
                     }
                 });
@@ -102,8 +114,7 @@
 
             // Check the server status every 5 seconds
             setInterval(checkServerStatus, 5000);
-
-            // Check the server status immediately
+            // Check immediately
             checkServerStatus();
         });
     </script>

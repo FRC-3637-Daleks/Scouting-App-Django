@@ -2,7 +2,7 @@
 {% load git_version %}
 
 <!DOCTYPE html>
-<html lang="en" data-bs-theme="dark">
+<html lang="en" data-bs-theme="light">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -26,75 +26,49 @@
     <!-- Navbar -->
     <nav class="navbar navbar-expand-sm bg-dark navbar-dark">
     {% block brand %}{% endblock %}
-    <!-- This is the button for the hamburger menu -->
+    <!-- Hamburger menu button -->
     <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbarToggler" aria-controls="navbarTogglerDemo02" aria-expanded="false" aria-label="Toggle navigation">
         <span class="navbar-toggler-icon"></span>
     </button>
 
-    <!-- Everything that will go into the hamburger menu if the page is on mobile -->
+    <!-- Collapsible navbar -->
     <div class="collapse navbar-collapse" id="navbarToggler">
         <ul class="navbar-nav">
             {% block navbar_items %}{% endblock %}
-            <!-- Move the Picklist link here -->
+            <!-- Existing Picklist link -->
             <li class="nav-item">
                 <a href="{% url 'scouting:picklist' %}" class="nav-link">Picklist</a>
             </li>
+            <!-- New Alliances link -->
+            <li class="nav-item">
+                <a href="{% url 'scouting:view_alliances' %}" class="nav-link">Alliance</a>
+            </li>
         </ul>
         <ul class="navbar-nav ml-auto">
-            <!-- Rest of the code remains the same -->
-                {% if user.is_authenticated %}
-                    <li class="nav-item dropdown">
-                        <a class="nav-link dropdown-toggle" href="#" id="signinDropdown" role="button" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
-                            <i class="fas fa-user mr-1"></i> {{ user.first_name }} {{ user.last_name }}
-                        </a>
-                        <div class="dropdown-menu dropdown-menu-right" aria-labelledby="signinDropdown">
-                            {% if user.is_staff %}
-                                <a class="dropdown-item" href="{% url 'admin:index' %}" target="_blank"><i class="fas fa-user-shield mr-3"></i>Admin</a>
-                            {% endif %}
-                            <a class="dropdown-item" href="{% url 'logout' %}"><i class="fas fa-sign-out-alt mr-3"></i>Sign Out</i></a>
-                        </div>
-                    </li>
-                {% else %}
-                    <li class="navbar-item">
-                        <a href="{% url 'login' %}" class="nav-link">Sign In <i class="fas fa-sign-in-alt ml-1"></i></a>
-                    </li>
-{#                    <li class="nav-item dropdown">#}
-{#                        <a class="nav-link dropdown-toggle" href="#" id="signinDropdown" role="button" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">#}
-{#                            Sign In <i class="fas fa-sign-in-alt ml-1"></i>#}
-{#                        </a>#}
-{#                        <div class="dropdown-menu dropdown-menu-right" aria-labelledby="signinDropdown">#}
-{#                            <a class="dropdown-item" href="{% url 'social:begin' 'google-oauth2' %}"><i class="fab fa-google mr-3"></i>with Google</a>#}
-{#                        </div>#}
-                    </li>
-                {% endif %}
-{#                <li class="nav-item dropdown">#}
-{#                    <a class="nav-link dropdown-toggle" data-toggle="dropdown" href="#">#}
-{#                        <i class="fa fa-th mr-2"></i>#}
-{#                    </a>#}
-{#                    <div class="dropdown-menu dropdown-menu-right">#}
-{#                        <a href="{% url 'index' %}" class="dropdown-item"><i class="fas fa-home mr-3"></i>Home</a>#}
-{#                        <a href="{% url 'tests' %}" class="dropdown-item"><i class="fas fa-edit mr-3"></i>Tests</a>#}
-{#                        <a href="{% url 'trainings' %}" class="dropdown-item"><i class="fas fa-hard-hat mr-3"></i>Trainings</a>#}
-{#                        <a href="{% url 'inventory' %}" class="dropdown-item"><i class="fas fa-boxes mr-3"></i>Inventory</a>#}
-{#                        <a href="{% url 'wiki' %}" class="dropdown-item"><i class="fas fa-book mr-3"></i>Wiki</a>#}
-{#                        {% if perms.worklog.add_workentry %}#}
-{#                            <a href="{% url 'worklog' %}" class="dropdown-item"><i class="fas fa-clock mr-3"></i>Worklog</a>#}
-{#                        {% endif %}#}
-{#                        {% if perms.printcenter.add_printrequest %}#}
-{#                            <a href="{% url 'printcenter' %}" class="dropdown-item"><i class="fas fa-print mr-3"></i>3D Print Center</a>#}
-{#                        {% endif %}#}
-{#                        {% if perms.lockout.use_lockout %}#}
-{#                            <a href="{% url 'lockout' %}" class="dropdown-item"><i class="fas fa-lock mr-3"></i>Lockout</a>#}
-{#                        {% endif %}#}
-{#                    </div>#}
-{#                </li>#}
-            </ul>
-        </div>
+            {% if user.is_authenticated %}
+                <li class="nav-item dropdown">
+                    <a class="nav-link dropdown-toggle" href="#" id="signinDropdown" role="button" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+                        <i class="fas fa-user mr-1"></i> {{ user.first_name }} {{ user.last_name }}
+                    </a>
+                    <div class="dropdown-menu dropdown-menu-right" aria-labelledby="signinDropdown">
+                        {% if user.is_staff %}
+                            <a class="dropdown-item" href="{% url 'admin:index' %}" target="_blank"><i class="fas fa-user-shield mr-3"></i>Admin</a>
+                        {% endif %}
+                        <a class="dropdown-item" href="{% url 'logout' %}"><i class="fas fa-sign-out-alt mr-3"></i>Sign Out</a>
+                    </div>
+                </li>
+            {% else %}
+                <li class="navbar-item">
+                    <a href="{% url 'login' %}" class="nav-link">Sign In <i class="fas fa-sign-in-alt ml-1"></i></a>
+                </li>
+            {% endif %}
+        </ul>
+    </div>
     </nav>
 
     <main role="main">
         <!-- Content -->
-        {% block content %} {% endblock %}
+        {% block content %}{% endblock %}
     </main>
 
     <footer class="footer {% if debug %} bg-warning {% else %} bg-secondary {% endif %} d-flex align-items-start justify-content-between">
@@ -107,20 +81,14 @@
         {% elif debug %}
             <p class="mt-auto mb-3 ml-3 mr-3">YOU ARE RUNNING IN DEVELOPMENT MODE!</p>
         {% endif %}
-
-{#        <div class="w-25 m-3">#}
-{#            <p class="">For support, send an email to#}
-{#                <a class="text-break text-wrap text-dark" href="mailto:support@rowanengr.com">support@rowanengr.com</a></p>#}
-{#                <p>All emails must be sent from a Rowan University email address.</p>#}
-{#        </div>#}
     </footer>
 
-    <script src="{% static 'js/bootstrap.bundle.min.js' %} "></script>
-    <script src="{% static 'js/main.js' %} "></script>
+    <script src="{% static 'js/bootstrap.bundle.min.js' %}"></script>
+    <script src="{% static 'js/main.js' %}"></script>
     <script>
         $(function () {
-            $('[data-toggle="tooltip"]').tooltip()
-        })
+            $('[data-toggle="tooltip"]').tooltip();
+        });
     </script>
 </body>
 </html>

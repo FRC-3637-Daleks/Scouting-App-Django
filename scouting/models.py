@@ -80,11 +80,14 @@ class PitScoutData(TimeStampedModel):
     # Char Fields
     intake_type = models.CharField(max_length=100, null=True)
     type_drivebase= models.CharField(max_length=100, null=True)
-    auton_paths= models.CharField(max_length=1000, null=True)
+    auton_paths= models.TextField(max_length=1000, null=True)
     description = models.TextField(max_length=2000)
     #Image Fields
-    auton_picture = models.ImageField(upload_to='images/', null=True)
-    robot_picture = models.ImageField(upload_to='images/', null=True)
+    auton_picture_1 = models.ImageField(upload_to='images/', null=True)
+    auton_picture_2 = models.ImageField(upload_to='images/', null=True)
+    auton_picture_3 = models.ImageField(upload_to='images/', null=True)
+    robot_picture_1 = models.ImageField(upload_to='images/', null=True)
+    robot_picture_2 = models.ImageField(upload_to='images/', null=True)
 
     class Meta:
         verbose_name_plural = "Pit scout data"
@@ -128,15 +131,32 @@ class MatchData2025(TimeStampedModel):
 
     #strings
     #starting_location = models.CharField(max_length=20, null=True)
-    defense_text = models.CharField(max_length=1000, null=True)
-    counter_defense_text = models.CharField(max_length=1000, null=True)
-    human_player = models.CharField(max_length=1000, null=True)
-    compatibility = models.CharField(max_length=1000, null=True)
+    defense_effectiveness = models.CharField(max_length=1000, null=True)
+    scoring_accuracy_or_effectiveness = models.CharField(max_length=1000, null=True)
+    human_player_accuracy = models.CharField(max_length=1000, null=True)
+    compatibility_with_alliance_members = models.CharField(max_length=1000, null=True)
     other_comments = models.CharField(max_length=1000, null=True)
 
+
+class Alliance(models.Model):
+    event = models.ForeignKey(Event, on_delete=models.CASCADE)
+    name = models.CharField(max_length=100, blank=True, null=True)
+    picks = models.JSONField(blank=True, null=True)  # list of team keys
+    declines = models.JSONField(blank=True, null=True)  # list of team keys
+    status = models.CharField(max_length=50, blank=True, null=True)
+    playoff_average = models.FloatField(default=0.0)
+
+    backup_in = models.CharField(max_length=50, blank=True, null=True)
+    backup_out = models.CharField(max_length=50, blank=True, null=True)
+    backup_status = models.CharField(max_length=50, blank=True, null=True)
+    backup_playoff_average = models.FloatField(default=0.0)
+
+    def __str__(self):
+        return f"Alliance {self.id} for event {self.event}"
 
 
     class Meta:
         permissions = (
             ("stands_scout_team", "Can stands scout teams"),
         )
+        unique_together = ('event', 'picks')
