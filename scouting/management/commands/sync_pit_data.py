@@ -8,7 +8,7 @@ from django.contrib.auth.models import User  # Import User model
 from django.core.management.base import BaseCommand
 
 class Command(BaseCommand):
-    help = 'Sync MatchData2024 objects to Server B'
+    help = 'Sync MatchData2025 objects to Server B'
 
     def handle(self, *args, **options):
         # Fetch the MatchData2024 objects that need to be synced

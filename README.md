@@ -3,6 +3,10 @@ Team 3637 scouting app for the 2024 FRC game FIRST CRESCENDO!
 
 ## Command line utilities
 
+## Double Check Everything is Imported Properly
+run install -r requirement.txt
+pip install tbapy
+
 ### The Blue Alliance Data Import
 
 1. Setup the game and event in the django admin web panel `/admin`

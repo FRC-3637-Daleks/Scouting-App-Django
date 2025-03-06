@@ -1,19 +1,30 @@
 from django import forms
 from crispy_forms.helper import FormHelper
 from crispy_forms.layout import Layout, Div, Field, ButtonHolder, Submit
+from django.forms.widgets import RadioSelect, ClearableFileInput
 
 from .models import *
 
+from django.forms.widgets import RadioSelect
 
 class PitScoutDataForm(forms.ModelForm):
     class Meta:
         model = PitScoutData
+        fields = '__all__'
+        widgets = {
+            'crisp_boomers': RadioSelect(choices=((True, 'Yes'), (False, 'No'))),
+            'friendly': RadioSelect(choices=((True, 'Yes'), (False, 'No'))),
+            'auton_picture1': ClearableFileInput(),
+            'auton_picture2': ClearableFileInput(),  # Explicit widget for image field
+            'auton_picture3': ClearableFileInput(),
+            'robot_picture1': ClearableFileInput(),
+            'robot_picture2': ClearableFileInput(),
+        }
         exclude = ['assigned_scout', 'team', 'event']
 
-
-class MatchData2024Form(forms.ModelForm):
+class MatchData2025Form(forms.ModelForm):
     class Meta:
-        model = MatchData2024
+        model = MatchData2025
         exclude = ['team', 'match']
 
     def __init__(self, *args, **kwargs):
@@ -23,10 +34,7 @@ class MatchData2024Form(forms.ModelForm):
 
         # Group fields by section
         self.field_groups = {
-            'Pre-Match': ['arrived_on_field_on_time', 'start_with_note', 'dead_on_arrival', 'starting_location'],
-            'Auton': ['left_community_zone', 'a_stopped', 'auton_amp_notes_scored', 'auton_speaker_notes_scored', 'auton_notes_picked_up'],
-            'Teleop': ['e_stopped', 'communication_lost', 'teleop_amp_notes_scored', 'teleop_speaker_notes_scored', 'teleop_notes_passed', 'teleop_notes_missed'],
-            'Endgame': ['climbed_solo', 'climbed_with_another_robot', 'scored_high_notes', 'notes_scored_in_trap', 'comments'],
+            'Match': ['defense_effectiveness', 'scoring_accuracy_or_effectiveness', 'human_player_accuracy', 'compatibility_with_alliance_members', 'other_comments']
         }
 
         layout_fields = []
