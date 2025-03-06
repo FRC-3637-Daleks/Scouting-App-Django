@@ -179,44 +179,54 @@
         </div>
     </div>
 
-    <!-- WebSocket script for real-time priority updates -->
+    <!-- AJAX script to update priority immediately on change -->
     <script>
-        // Open a WebSocket connection to the priority endpoint.
-        // (Ensure your Channels routing is set up to route ws://.../ws/priority/ to your consumer.)
-        const prioritySocket = new WebSocket(
-            'ws://' + window.location.host + '/ws/priority/'
-        );
-
-        prioritySocket.onopen = function(e) {
-            console.log("Priority WebSocket connection opened");
-        };
-
-        prioritySocket.onmessage = function(e) {
-            const data = JSON.parse(e.data);
-            const teamNumber = data.team_number;
-            const newPriority = data.priority;
-            // Update the corresponding input field's value
-            const input = document.querySelector('.priority-input[data-team="' + teamNumber + '"]');
-            if (input) {
-                input.value = newPriority;
+        // Function to get CSRF token from cookies
+        function getCookie(name) {
+            let cookieValue = null;
+            if (document.cookie && document.cookie !== '') {
+                const cookies = document.cookie.split(';');
+                for (let i = 0; i < cookies.length; i++) {
+                    const cookie = cookies[i].trim();
+                    if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                        cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                        break;
+                    }
+                }
             }
-        };
+            return cookieValue;
+        }
+        const csrftoken = getCookie('csrftoken');
 
-        prioritySocket.onclose = function(e) {
-            console.error("Priority WebSocket connection closed unexpectedly");
-        };
-
-        // When a priority input changes, send the update via WebSocket.
+        // Listen for changes on all priority input fields
         document.querySelectorAll('.priority-input').forEach(input => {
             input.addEventListener('change', function() {
                 const teamNumber = this.getAttribute('data-team');
                 const priorityValue = this.value;
-                // Construct the message as JSON and send it.
-                const message = JSON.stringify({
-                    'team_number': teamNumber,
-                    'priority': priorityValue
+                console.log("Updating team", teamNumber, "with priority", priorityValue);
+
+                fetch("{% url 'scouting:update_priority' %}", {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/x-www-form-urlencoded',
+                        'X-CSRFToken': csrftoken
+                    },
+                    body: new URLSearchParams({
+                        'team_number': teamNumber,
+                        'priority': priorityValue
+                    })
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        console.log("Priority updated successfully for team", teamNumber);
+                    } else {
+                        console.error("Error updating priority for team", teamNumber, ":", data.error);
+                    }
+                })
+                .catch(error => {
+                    console.error("Fetch error:", error);
                 });
-                prioritySocket.send(message);
             });
         });
     </script>
