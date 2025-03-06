@@ -7,8 +7,7 @@ from django.contrib.auth.views import logout_then_login
 app_name = 'scouting'
 
 urlpatterns = [
-    path('alliances/', views.view_alliances, name='view_alliances'),
-    path('run_alliance_selection/', views.run_alliance_selection, name='run_alliance_selection'),
+
     path('', views.view_index, name="index"),
     path('picklist/', views.view_picklist, name='picklist'),
 

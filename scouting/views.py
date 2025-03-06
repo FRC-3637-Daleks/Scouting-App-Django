@@ -12,7 +12,6 @@ from django.shortcuts import render, get_object_or_404
 from django.http import JsonResponse
 from django.core.management import call_command
 from django.contrib.auth.decorators import login_required
-from scouting.models import Alliance, Event
 import json
 
 @login_required()
@@ -254,61 +253,6 @@ def view_picklist(request):
         'current_direction': direction,
     })
 
-@login_required
-def run_alliance_sync(request):
-    """
-    Triggers the sync_alliances management command and returns a JSON response.
-    """
-    try:
-        call_command('sync_alliances')
-        return JsonResponse({'status': 'success'})
-    except Exception as e:
-        return JsonResponse({'status': 'error', 'message': str(e)}, status=500)
-
-@login_required
-def view_alliances(request):
-    """
-    Renders a page displaying alliance data.
-    Alliances are sorted by:
-      1. The numeric value of the first pick's team number,
-      2. Then by the declines list (joined as a comma-separated string),
-      3. Then by alliance status alphabetically,
-      4. Then by backup playoff average (numerically).
-    """
-    try:
-        event = Event.objects.get(active=True)
-    except Event.DoesNotExist:
-        return JsonResponse({'status': 'error', 'message': 'No active event found'}, status=404)
-
-    alliances = Alliance.objects.filter(event=event)
-    alliance_list = list(alliances)
-
-    def sort_key(alliance):
-        try:
-            picks = alliance.picks or []
-            first_pick = picks[0] if picks else ""
-            first_pick_num = int(first_pick[3:]) if first_pick.startswith("frc") else float('inf')
-        except Exception:
-            first_pick_num = float('inf')
-        declines = ", ".join(alliance.declines or [])
-        status = alliance.status or ""
-        backup_avg = alliance.backup_playoff_average if alliance.backup_playoff_average is not None else float('inf')
-        return (first_pick_num, declines, status, backup_avg)
-
-    alliance_list.sort(key=sort_key)
-
-    return render(request, 'scouting/alliances.html', {'alliances': alliance_list})
-
-@login_required
-def run_alliance_selection(request):
-    """
-    Calls the allianceselection management command and returns JSON.
-    """
-    try:
-        call_command('allianceselection')
-        return JsonResponse({"status": "success", "message": "Alliance selection command triggered."})
-    except Exception as e:
-        return JsonResponse({"status": "error", "message": str(e)}, status=500)
 
 
 @api_view(['POST'])  # Specify the allowed HTTP methods

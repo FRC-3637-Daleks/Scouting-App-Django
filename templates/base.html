@@ -39,10 +39,7 @@
             <li class="nav-item">
                 <a href="{% url 'scouting:picklist' %}" class="nav-link">Picklist</a>
             </li>
-            <!-- New Alliances link -->
-            <li class="nav-item">
-                <a href="{% url 'scouting:view_alliances' %}" class="nav-link">Alliance</a>
-            </li>
+
         </ul>
         <ul class="navbar-nav ml-auto">
             {% if user.is_authenticated %}

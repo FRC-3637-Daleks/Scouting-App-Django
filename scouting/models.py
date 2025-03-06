@@ -103,8 +103,6 @@ class TeamRanking(models.Model):
     event = models.ForeignKey(Event, on_delete=models.CASCADE)
     rank = models.IntegerField()
     priority = models.IntegerField(null=True, blank=True)
-    ranking_score = models.FloatField()
-    matches_played = models.IntegerField()
     opr = models.FloatField(default=0.0)
     dpr = models.FloatField(default=0.0)
     ccwm = models.FloatField(default=0.0)
@@ -138,25 +136,11 @@ class MatchData2025(TimeStampedModel):
     other_comments = models.CharField(max_length=1000, null=True)
 
 
-class Alliance(models.Model):
-    event = models.ForeignKey(Event, on_delete=models.CASCADE)
-    name = models.CharField(max_length=100, blank=True, null=True)
-    picks = models.JSONField(blank=True, null=True)  # list of team keys
-    declines = models.JSONField(blank=True, null=True)  # list of team keys
-    status = models.CharField(max_length=50, blank=True, null=True)
-    playoff_average = models.FloatField(default=0.0)
 
-    backup_in = models.CharField(max_length=50, blank=True, null=True)
-    backup_out = models.CharField(max_length=50, blank=True, null=True)
-    backup_status = models.CharField(max_length=50, blank=True, null=True)
-    backup_playoff_average = models.FloatField(default=0.0)
-
-    def __str__(self):
-        return f"Alliance {self.id} for event {self.event}"
 
 
     class Meta:
         permissions = (
             ("stands_scout_team", "Can stands scout teams"),
         )
-        unique_together = ('event', 'picks')
+

@@ -39,16 +39,6 @@ class Command(BaseCommand):
                     try:
                         team = Team.objects.get(team_number=team_number)
 
-                        # Create extra stats dictionary
-
-
-                        # Handle extra_stats
-
-
-                        # Handle sort_orders
-
-
-                        # Handle record
 
 
                         # Update or create ranking
