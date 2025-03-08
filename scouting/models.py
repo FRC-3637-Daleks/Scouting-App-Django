@@ -101,7 +101,7 @@ class PitScoutData(TimeStampedModel):
 class TeamRanking(models.Model):
     team = models.ForeignKey(Team, on_delete=models.CASCADE)
     event = models.ForeignKey(Event, on_delete=models.CASCADE)
-    rank = models.IntegerField()
+    rank = models.IntegerField(null=True, blank=True)
     priority = models.IntegerField(null=True, blank=True)
     opr = models.FloatField(default=0.0)
     dpr = models.FloatField(default=0.0)

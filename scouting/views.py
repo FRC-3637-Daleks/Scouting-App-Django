@@ -192,22 +192,34 @@ def view_team_statistics(request, team_number):
 
 @login_required
 def update_priority(request):
-    team_number = request.POST.get('team_number')
-    priority = request.POST.get('priority')
-    if not team_number or not priority:
-        return JsonResponse({'error': 'Missing parameters'}, status=400)
-    try:
-        priority = int(priority)
-        if priority < 1 or priority > 5:
-            return JsonResponse({'error': 'Priority must be between 1 and 5'}, status=400)
-        team = Team.objects.get(team_number=team_number)
-        event = Event.objects.get(active=True)
-        team_ranking, created = TeamRanking.objects.get_or_create(team=team, event=event)
-        team_ranking.priority = priority
-        team_ranking.save()
-        return JsonResponse({'success': True})
-    except Exception as e:
-        return JsonResponse({'error': str(e)}, status=400)
+    if request.method == "POST":
+        try:
+            team_number = request.POST.get("team_number")
+            priority_value = request.POST.get("priority")
+
+            if not team_number or not priority_value:
+                return JsonResponse({"success": False, "error": "Missing team_number or priority"})
+
+            priority_value = int(priority_value)  # Convert to integer
+
+            if priority_value < 1 or priority_value > 5:
+                return JsonResponse({"success": False, "error": "Priority must be between 1 and 5"})
+
+            team = get_object_or_404(Team, team_number=team_number)
+            event = get_object_or_404(Event, active=True)
+
+            team_ranking, _ = TeamRanking.objects.get_or_create(team=team, event=event)
+            team_ranking.priority = priority_value
+            team_ranking.save()
+
+            return JsonResponse({"success": True, "priority": priority_value})
+
+        except ValueError:
+            return JsonResponse({"success": False, "error": "Invalid priority value"})
+        except Exception as e:
+            return JsonResponse({"success": False, "error": str(e)})
+
+    return JsonResponse({"success": False, "error": "Invalid request"})
 
 @login_required()
 def view_team_statistics_list(request):
@@ -238,14 +250,11 @@ def view_picklist(request):
         teams = teams.order_by(f'{"-" if direction == "desc" else ""}team_number')
 
     for team in teams:
-        team.teamranking = TeamRanking.objects.filter(
+        team.teamranking, _ = TeamRanking.objects.get_or_create(
             team=team,
-            event=event
-        ).values(
-            'rank', 'opr', 'dpr', 'ccwm', 'priority',
-            'l1_coral', 'l2_coral', 'l3_coral', 'l4_coral',
-            'net_algae_count', 'wall_algae_count', 'auto_coral_count', 'foul_count'
-        ).first()
+            event=event,
+            defaults={'rank': 0}  # Set a default rank
+        )
 
     return render(request, 'scouting/picklist.html', {
         'teams': teams,
