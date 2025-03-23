@@ -72,7 +72,7 @@ class PitScoutData(TimeStampedModel):
     event = models.ForeignKey('Event', on_delete=models.CASCADE, null=False)
     assigned_scout = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True)
     # Boolean Fields
-    friendly= models.BooleanField(default=False)
+    friendly_or_cool= models.BooleanField(default=False)
     crisp_boomers = models.BooleanField(default=False)
 
     # Integer Fields
@@ -80,7 +80,7 @@ class PitScoutData(TimeStampedModel):
     # Char Fields
     intake_type = models.CharField(max_length=100, null=True)
     type_drivebase= models.CharField(max_length=100, null=True)
-    auton_paths= models.TextField(max_length=1000, null=True)
+    auton_paths_or_description= models.TextField(max_length=1000, null=True)
     description = models.TextField(max_length=2000)
     #Image Fields
     auton_picture_1 = models.ImageField(upload_to='images/', blank=True, null=True)
@@ -113,6 +113,7 @@ class TeamRanking(models.Model):
     net_algae_count = models.FloatField(default=0.0)
     wall_algae_count = models.FloatField(default=0.0)
     auto_coral_count = models.FloatField(default=0.0)
+    end_game_barge_points = models.FloatField(default=0.0)
     foul_count = models.FloatField(default=0.0)
     class Meta:
         unique_together = ('team', 'event')

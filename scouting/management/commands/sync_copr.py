@@ -37,9 +37,12 @@ class Command(BaseCommand):
         if not coprs_data:
             self.stdout.write(self.style.ERROR("No COPR data available"))
             return
+#        if response.status_code == 200:
+ #           data = response.json()
+ #           print(data)  # Print entire JSON response to check other copr components
 
         # The JSON response contains four keys: "L1 Coral Count", "L2 Coral Count", etc.
-        categories = ["L1 Coral Count", "L2 Coral Count", "L3 Coral Count", "L4 Coral Count", "netAlgaeCount", "wallAlgaeCount", "autoCoralCount", "foulCount"]
+        categories = ["L1 Coral Count", "L2 Coral Count", "L3 Coral Count", "L4 Coral Count", "netAlgaeCount", "wallAlgaeCount", "autoCoralCount", "endGameBargePoints", "foulCount"]
 
         # Process each category
         for category in categories:
@@ -78,15 +81,17 @@ class Command(BaseCommand):
                     ranking.wall_algae_count = round(value, 2)
                 elif category == "autoCoralCount":
                     ranking.auto_coral_count = round(value, 2)
+                elif category == "endGameBargePoints":
+                    ranking.end_game_barge_points = round(value, 2)
                 elif category == "foulCount":
                     ranking.foul_count = round(value, 2)
 
                 ranking.save()
 
-                self.stdout.write(
-                    self.style.SUCCESS(
-                        f"Updated COPR stats for team {team_number} - {category}: {round(value, 2)}"
-                    )
-                )
+ #               self.stdout.write(
+ #                   self.style.SUCCESS(
+ #                       f"Updated COPR stats for team {team_number} - {category}: {round(value, 2)}"
+ #                   )
+ #              )
 
         self.stdout.write(self.style.SUCCESS("Team COPR stats update completed"))
