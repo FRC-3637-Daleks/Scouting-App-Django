@@ -13,7 +13,8 @@ from django.http import JsonResponse
 from django.core.management import call_command
 from django.contrib.auth.decorators import login_required
 import json
-
+from django.shortcuts import render
+from .models import TeamRanking
 @login_required()
 def view_index(request):
     event = Event.objects.get(active=True)
@@ -262,7 +263,22 @@ def view_picklist(request):
         'current_direction': direction,
     })
 
-
+def picklist_graphs(request):
+    teams = TeamRanking.objects.all().order_by("-rank")  # Sort by rank (low to high)
+    context = {
+        "teams": [team.team.team_number for team in teams],
+        "opr_values": [round(team.opr, 2) if team.opr is not None else 0 for team in teams],
+        "dpr_values": [round(team.dpr, 2) if team.dpr is not None else 0 for team in teams],
+        "rank_values": [team.rank if team.rank is not None else 0 for team in teams],
+        "l1_coral_values": [team.l1_coral if team.l1_coral is not None else 0 for team in teams],
+        "l2_coral_values": [team.l2_coral if team.l2_coral is not None else 0 for team in teams],
+        "l3_coral_values": [team.l3_coral if team.l3_coral is not None else 0 for team in teams],
+        "l4_coral_values": [team.l4_coral if team.l4_coral is not None else 0 for team in teams],
+        "net_algae_values": [team.net_algae_count if team.net_algae_count is not None else 0 for team in teams],
+        "wall_algae_values": [team.wall_algae_count if team.wall_algae_count is not None else 0 for team in teams],
+        "barge_points_values": [team.end_game_barge_points if team.end_game_barge_points is not None else 0 for team in teams],
+    }
+    return render(request, "scouting/picklist_graphs.html", context)
 
 @api_view(['POST'])  # Specify the allowed HTTP methods
 @authentication_classes([TokenAuthentication])  # Use TokenAuthentication
