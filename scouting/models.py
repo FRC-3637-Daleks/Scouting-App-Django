@@ -83,11 +83,11 @@ class PitScoutData(TimeStampedModel):
     auton_paths= models.TextField(max_length=1000, null=True)
     description = models.TextField(max_length=2000)
     #Image Fields
-    auton_picture_1 = models.ImageField(upload_to='images/', null=True)
-    auton_picture_2 = models.ImageField(upload_to='images/', null=True)
-    auton_picture_3 = models.ImageField(upload_to='images/', null=True)
-    robot_picture_1 = models.ImageField(upload_to='images/', null=True)
-    robot_picture_2 = models.ImageField(upload_to='images/', null=True)
+    auton_picture_1 = models.ImageField(upload_to='images/', blank=True, null=True)
+    auton_picture_2 = models.ImageField(upload_to='images/', blank=True, null=True)
+    auton_picture_3 = models.ImageField(upload_to='images/', blank=True, null=True)
+    robot_picture_1 = models.ImageField(upload_to='images/', blank=True, null=True)
+    robot_picture_2 = models.ImageField(upload_to='images/', blank=True, null=True)
 
     class Meta:
         verbose_name_plural = "Pit scout data"
