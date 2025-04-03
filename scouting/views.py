@@ -222,47 +222,34 @@ def team_statistics_list(request):
 from django.db.models import OuterRef, Subquery, Value
 
 def view_picklist(request):
-    currentevent = Event.objects.get(active=True)
     event = Event.objects.get(active=True)
     sort_by = request.GET.get('sort', 'team_number')
     direction = request.GET.get('direction', 'asc')
 
-    teams_qs = currentevent.teams.all()  # get the queryset of teams
     teams = event.teams.all().select_related().prefetch_related('teamranking_set')
 
     if sort_by in ['rank', 'opr', 'dpr', 'ccwm', 'priority',
                    'l1_coral', 'l2_coral', 'l3_coral', 'l4_coral',
                    'net_algae_count', 'wall_algae_count', 'auto_coral_count', 'foul_count']:
-        # Use the related name 'teamranking' to join on the TeamRanking table.
         order_field = f'teamranking__{sort_by}'
         if direction == 'desc':
             order_field = f'-{order_field}'
-        teams = teams_qs.order_by(order_field)
         teams = teams.order_by(order_field)
     else:
-        # Sorting by team_number (with a dynamic direction)
-        teams = teams_qs.order_by(f'{"-" if direction == "desc" else ""}team_number')
         teams = teams.order_by(f'{"-" if direction == "desc" else ""}team_number')
 
-    # For each team, attach its ranking for the event so templates can access ranking fields.
     for team in teams:
-        ranking, created = TeamRanking.objects.get_or_create(
         team.teamranking, _ = TeamRanking.objects.get_or_create(
             team=team,
-            event=currentevent,
-            defaults={'rank': 0}  # Set a default rank if none exists
             event=event,
             defaults={'rank': 0}  # Set a default rank
         )
-        team.ranking = ranking
 
     return render(request, 'scouting/picklist.html', {
         'teams': teams,
         'current_sort': sort_by,
         'current_direction': direction,
     })
-
-
 def picklist_graphs(request):
     currentevent = Event.objects.get(active=True)
     teams_qs = currentevent.teams.all()
@@ -288,6 +275,9 @@ def picklist_graphs(request):
             'barge_points': ranking.end_game_barge_points or 0,
             'auto_coral': ranking.auto_coral_count or 0,
         })
+
+    # Sort the teams_data by rank
+    teams_data.sort(key=lambda x: x['rank'], reverse=True)
 
     # Now prepare lists for the graph context.
     context = {
