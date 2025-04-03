@@ -15,6 +15,8 @@ from django.contrib.auth.decorators import login_required
 import json
 from django.shortcuts import render
 from .models import TeamRanking
+from django.db.models import F
+from django.db.models import OuterRef, Subquery, Value, FloatField, IntegerField
 @login_required()
 def view_index(request):
     event = Event.objects.get(active=True)
@@ -217,12 +219,16 @@ def team_statistics_list(request):
     }
     return render(request, 'scouting/team_statistics_list.html', context)
 
+from django.db.models import OuterRef, Subquery, Value
+
 def view_picklist(request):
     currentevent = Event.objects.get(active=True)
+    event = Event.objects.get(active=True)
     sort_by = request.GET.get('sort', 'team_number')
     direction = request.GET.get('direction', 'asc')
 
     teams_qs = currentevent.teams.all()  # get the queryset of teams
+    teams = event.teams.all().select_related().prefetch_related('teamranking_set')
 
     if sort_by in ['rank', 'opr', 'dpr', 'ccwm', 'priority',
                    'l1_coral', 'l2_coral', 'l3_coral', 'l4_coral',
@@ -232,16 +238,21 @@ def view_picklist(request):
         if direction == 'desc':
             order_field = f'-{order_field}'
         teams = teams_qs.order_by(order_field)
+        teams = teams.order_by(order_field)
     else:
         # Sorting by team_number (with a dynamic direction)
         teams = teams_qs.order_by(f'{"-" if direction == "desc" else ""}team_number')
+        teams = teams.order_by(f'{"-" if direction == "desc" else ""}team_number')
 
     # For each team, attach its ranking for the event so templates can access ranking fields.
     for team in teams:
         ranking, created = TeamRanking.objects.get_or_create(
+        team.teamranking, _ = TeamRanking.objects.get_or_create(
             team=team,
             event=currentevent,
             defaults={'rank': 0}  # Set a default rank if none exists
+            event=event,
+            defaults={'rank': 0}  # Set a default rank
         )
         team.ranking = ranking
 
