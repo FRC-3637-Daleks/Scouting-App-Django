@@ -250,6 +250,7 @@ def view_picklist(request):
         'current_sort': sort_by,
         'current_direction': direction,
     })
+
 def picklist_graphs(request):
     currentevent = Event.objects.get(active=True)
     teams_qs = currentevent.teams.all()
