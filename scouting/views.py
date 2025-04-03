@@ -108,85 +108,57 @@ def view_match(request, team_number, match_number):
 @login_required()
 def view_team_statistics(request, team_number):
     team = get_object_or_404(Team, team_number=team_number)
-    matches = MatchData2025.objects.filter(team=team)
 
-    # Count the number of matches
-    match_count = matches.count()
-    boolean_stats = {}
-    integer_stats = {}
-    graphs = {}
-    #if match_count > 0:
-        #
-        # Calculate statistics for boolean fields
-        # boolean_fields = ['friendly']
-        #
-        # for field in boolean_fields:
-        #     total = matches.aggregate(total=Sum(field))['total']
-        #     if total is not None:
-        #         total = int(matches.aggregate(total=Sum(field))['total'])
-        #     percent = (total / match_count) * 100 if match_count > 0 else 0
-        #     boolean_stats[field] = {
-        #         'total': total,
-        #         'percent': round(percent, 1)
-        #     }
+    # Get active event
+    active_event = Event.objects.filter(active=True).first()
 
-        # Calculate statistics for integer fields
-        # integer_fields = []
-        #
-        # for field in integer_fields:
-        #     stats = matches.aggregate(min=Min(field), max=Max(field), avg=Avg(field))
-        #     integer_stats[field] = {
-        #         'min': round(stats['min'], 1),
-        #         'max': round(stats['max'], 1),
-        #         'avg': round(stats['avg'], 1)
-        #     }
-        #     with plt.style.context('dark_background'):
-        #         # Create a line graph for this field
-        #         plt.figure()
-        #         plt.plot(matches.values_list(field, flat=True))
-        #         plt.title(field)
-        #         plt.xlabel('Match')
-        #         plt.ylabel(field)
-        #
-        #         # Get the match numbers as a range from 1 to the number of matches
-        #         match_numbers = range(1, matches.count() + 1)
-        #
-        #         # Set the x-ticks to be the match numbers
-        #         plt.xticks(range(len(match_numbers)), match_numbers)
-        #
-        #         # Save it to a BytesIO object
-        #         buf = BytesIO()
-        #         plt.savefig(buf, format='png')
-        #         buf.seek(0)
-        #
-        #         # Encode the bytes as base64 string
-        #         string = base64.b64encode(buf.read())
-        #         uri = 'data:image/png;base64,' + urllib.parse.quote(string)
-        #         integer_stats[field]['graph'] = uri
+    # Fetch match data for the team
+    match_data = MatchData2025.objects.filter(team=team)
 
-    # Include pit scouting information
-    pit_scout_data = PitScoutData.objects.get(team=team, event=Event.objects.get(active=True))
+    # Count the number of matches played
+    match_count = match_data.count()
 
-    if pit_scout_data is not None:
+    # Get pit scouting data for the active event
+    pit_scout_data = PitScoutData.objects.filter(team=team, event=active_event).first()
+
+    if pit_scout_data:
         pit_scout_data_dict = model_to_dict(pit_scout_data)
-        pit_scout_data_dict.pop('team')
-        pit_scout_data_dict.pop('id')
-        pit_scout_data_dict.pop('event')
-        if pit_scout_data.assigned_scout is not None:
-            pit_scout_data_dict['assigned_scout'] = pit_scout_data.assigned_scout.first_name + " " + pit_scout_data.assigned_scout.last_name
+        # Remove unnecessary fields
+        pit_scout_data_dict.pop('id', None)
+        pit_scout_data_dict.pop('team', None)
+        pit_scout_data_dict.pop('event', None)
+
+        # Format assigned scout name
+        if pit_scout_data.assigned_scout:
+            pit_scout_data_dict[
+                'assigned_scout'] = f"{pit_scout_data.assigned_scout.first_name} {pit_scout_data.assigned_scout.last_name}"
         else:
             pit_scout_data_dict['assigned_scout'] = "No scout assigned"
+
+        # Gather images
+        pit_scout_images = [
+            pit_scout_data.auton_picture_1,
+            pit_scout_data.auton_picture_2,
+            pit_scout_data.auton_picture_3,
+            pit_scout_data.robot_picture_1,
+            pit_scout_data.robot_picture_2,
+        ]
+        # Filter out any `None` values
+        pit_scout_images = [img for img in pit_scout_images if img]
     else:
         pit_scout_data_dict = {}
+        pit_scout_images = []
+
+    # Get team ranking for the active event
+    team_ranking = TeamRanking.objects.filter(team=team, event=active_event).first()
 
     context = {
         'team': team,
         'match_count': match_count,
-        'boolean_stats': boolean_stats,
-        'integer_stats': integer_stats,
         'pit_scout_data': pit_scout_data_dict,
-        'graphs': graphs,
-        'matches': matches,
+        'pit_scout_images': pit_scout_images,
+        'match_data': match_data,
+        'team_ranking': team_ranking,
     }
 
     return render(request, 'scouting/statisticsteam.html', context)
@@ -223,16 +195,27 @@ def update_priority(request):
     return JsonResponse({"success": False, "error": "Invalid request"})
 
 @login_required()
-def view_team_statistics_list(request):
-    event = Event.objects.get(active=True)
-    teams = event.teams.all()
+def team_statistics_list(request):
+    # Get sorting parameters from the request
+    order_by = request.GET.get('order_by', 'team_number')  # Default to team_number
+    direction = request.GET.get('direction', 'asc')
+
+    # Validate order direction
+    if direction not in ['asc', 'desc']:
+        direction = 'asc'
+
+    # Adjust ordering dynamically
+    ordering = order_by if direction == 'asc' else f"-{order_by}"
+
+    # Fetch and order teams
+    teams = Team.objects.all().order_by(ordering)
 
     context = {
         'teams': teams,
+        'order_by': order_by,
+        'direction': direction,
     }
-
-    return render(request, 'scouting/statisticsteamlist.html', context)
-
+    return render(request, 'scouting/team_statistics_list.html', context)
 
 def view_picklist(request):
     currentevent = Event.objects.get(active=True)

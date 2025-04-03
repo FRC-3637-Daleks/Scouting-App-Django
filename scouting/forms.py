@@ -34,7 +34,7 @@ class MatchData2025Form(forms.ModelForm):
 
         # Group fields by section
         self.field_groups = {
-            'Match': ['defense_effectiveness', 'scoring_accuracy_or_effectiveness', 'human_player_accuracy', 'compatibility_with_alliance_members', 'other_comments']
+            'Match': ['defense_effectiveness', 'scoring_accuracy_or_effectiveness', 'human_player_accuracy', 'compatibility_with_alliance_members', 'climb_time','other_comments']
         }
 
         layout_fields = []

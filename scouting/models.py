@@ -139,7 +139,7 @@ class MatchData2025(TimeStampedModel):
     human_player_accuracy = models.CharField(max_length=1000, null=True)
     compatibility_with_alliance_members = models.CharField(max_length=1000, null=True)
     other_comments = models.CharField(max_length=1000, null=True)
-
+    climb_time = models.IntegerField(null=True, blank=True)
 
 
 
