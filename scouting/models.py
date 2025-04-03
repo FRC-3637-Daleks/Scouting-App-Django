@@ -99,7 +99,7 @@ class PitScoutData(TimeStampedModel):
         return str(str(self.team.team_number) + " - " + self.team.team_name + " | " + self.event.event_name)
 
 class TeamRanking(models.Model):
-    team = models.ForeignKey(Team, on_delete=models.CASCADE)
+    team = models.ForeignKey(Team, on_delete=models.CASCADE, related_name='teamranking')
     event = models.ForeignKey(Event, on_delete=models.CASCADE)
     rank = models.IntegerField(null=True, blank=True)
     priority = models.IntegerField(null=True, blank=True)
@@ -115,11 +115,15 @@ class TeamRanking(models.Model):
     auto_coral_count = models.FloatField(default=0.0)
     end_game_barge_points = models.FloatField(default=0.0)
     foul_count = models.FloatField(default=0.0)
+    alliance_number = models.IntegerField(default=0)
+
     class Meta:
         unique_together = ('team', 'event')
+
 class MatchData2025(TimeStampedModel):
     team = models.ForeignKey('Team', on_delete=models.CASCADE, null=False)
     match = models.ForeignKey('Match', on_delete=models.CASCADE, null=False)
+
 
     @property
     def event(self):

@@ -233,29 +233,34 @@ def view_team_statistics_list(request):
 
     return render(request, 'scouting/statisticsteamlist.html', context)
 
+
 def view_picklist(request):
-    event = Event.objects.get(active=True)
+    currentevent = Event.objects.get(active=True)
     sort_by = request.GET.get('sort', 'team_number')
     direction = request.GET.get('direction', 'asc')
 
-    teams = event.teams.all().select_related().prefetch_related('teamranking_set')
+    teams_qs = currentevent.teams.all()  # get the queryset of teams
 
     if sort_by in ['rank', 'opr', 'dpr', 'ccwm', 'priority',
                    'l1_coral', 'l2_coral', 'l3_coral', 'l4_coral',
                    'net_algae_count', 'wall_algae_count', 'auto_coral_count', 'foul_count']:
+        # Use the related name 'teamranking' to join on the TeamRanking table.
         order_field = f'teamranking__{sort_by}'
         if direction == 'desc':
             order_field = f'-{order_field}'
-        teams = teams.order_by(order_field)
+        teams = teams_qs.order_by(order_field)
     else:
-        teams = teams.order_by(f'{"-" if direction == "desc" else ""}team_number')
+        # Sorting by team_number (with a dynamic direction)
+        teams = teams_qs.order_by(f'{"-" if direction == "desc" else ""}team_number')
 
+    # For each team, attach its ranking for the event so templates can access ranking fields.
     for team in teams:
-        team.teamranking, _ = TeamRanking.objects.get_or_create(
+        ranking, created = TeamRanking.objects.get_or_create(
             team=team,
-            event=event,
-            defaults={'rank': 0}  # Set a default rank
+            event=currentevent,
+            defaults={'rank': 0}  # Set a default rank if none exists
         )
+        team.ranking = ranking
 
     return render(request, 'scouting/picklist.html', {
         'teams': teams,
@@ -263,22 +268,50 @@ def view_picklist(request):
         'current_direction': direction,
     })
 
+
 def picklist_graphs(request):
-    teams = TeamRanking.objects.all().order_by("-rank")  # Sort by rank (low to high)
+    currentevent = Event.objects.get(active=True)
+    teams_qs = currentevent.teams.all()
+    teams_data = []
+
+    for team in teams_qs:
+        ranking, created = TeamRanking.objects.get_or_create(
+            team=team,
+            event=currentevent,
+            defaults={'rank': 0}
+        )
+        teams_data.append({
+            'team_number': team.team_number,
+            'opr': ranking.opr or 0,
+            'dpr': ranking.dpr or 0,
+            'rank': ranking.rank or 0,
+            'l1_coral': ranking.l1_coral or 0,
+            'l2_coral': ranking.l2_coral or 0,
+            'l3_coral': ranking.l3_coral or 0,
+            'l4_coral': ranking.l4_coral or 0,
+            'net_algae': ranking.net_algae_count or 0,
+            'wall_algae': ranking.wall_algae_count or 0,
+            'barge_points': ranking.end_game_barge_points or 0,
+            'auto_coral': ranking.auto_coral_count or 0,
+        })
+
+    # Now prepare lists for the graph context.
     context = {
-        "teams": [team.team.team_number for team in teams],
-        "opr_values": [round(team.opr, 2) if team.opr is not None else 0 for team in teams],
-        "dpr_values": [round(team.dpr, 2) if team.dpr is not None else 0 for team in teams],
-        "rank_values": [team.rank if team.rank is not None else 0 for team in teams],
-        "l1_coral_values": [team.l1_coral if team.l1_coral is not None else 0 for team in teams],
-        "l2_coral_values": [team.l2_coral if team.l2_coral is not None else 0 for team in teams],
-        "l3_coral_values": [team.l3_coral if team.l3_coral is not None else 0 for team in teams],
-        "l4_coral_values": [team.l4_coral if team.l4_coral is not None else 0 for team in teams],
-        "net_algae_values": [team.net_algae_count if team.net_algae_count is not None else 0 for team in teams],
-        "wall_algae_values": [team.wall_algae_count if team.wall_algae_count is not None else 0 for team in teams],
-        "barge_points_values": [team.end_game_barge_points if team.end_game_barge_points is not None else 0 for team in teams],
+        "teams": [d['team_number'] for d in teams_data],
+        "opr_values": [round(d['opr'], 2) for d in teams_data],
+        "dpr_values": [round(d['dpr'], 2) for d in teams_data],
+        "rank_values": [d['rank'] for d in teams_data],
+        "l1_coral_values": [d['l1_coral'] for d in teams_data],
+        "l2_coral_values": [d['l2_coral'] for d in teams_data],
+        "l3_coral_values": [d['l3_coral'] for d in teams_data],
+        "l4_coral_values": [d['l4_coral'] for d in teams_data],
+        "net_algae_values": [d['net_algae'] for d in teams_data],
+        "wall_algae_values": [d['wall_algae'] for d in teams_data],
+        "barge_points_values": [d['barge_points'] for d in teams_data],
+        "auto_coral_values": [d['auto_coral'] for d in teams_data],
     }
     return render(request, "scouting/picklist_graphs.html", context)
+
 
 @api_view(['POST'])  # Specify the allowed HTTP methods
 @authentication_classes([TokenAuthentication])  # Use TokenAuthentication

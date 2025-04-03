@@ -5,9 +5,8 @@
     <h1 class="mb-4">Graphs</h1>
     
     <canvas id="oprDprRankChart"></canvas>
-    <canvas id="coralLevelsOneTwoChart" class="mt-4"></canvas>
-    <canvas id="coralLevelsThreeFourChart" class="mt-4"></canvas>
-    <canvas id="algaeBargeChart" class="mt-4"></canvas>
+    <canvas id="coralLevelsChart" class="mt-4"></canvas>
+    <canvas id="algaeBargeCoralChart" class="mt-4"></canvas>
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
@@ -24,10 +23,11 @@
         const netAlgae = {{ net_algae_values|safe }};
         const wallAlgae = {{ wall_algae_values|safe }};
         const bargePoints = {{ barge_points_values|safe }};
-        
+        const autoCoral = {{ auto_coral_values|safe }};
+
         function createChart(canvasId, datasets) {
             new Chart(document.getElementById(canvasId).getContext('2d'), {
-                type: 'line',
+                type: 'bar',
                 data: {
                     labels: teamNumbers,
                     datasets: datasets
@@ -48,24 +48,23 @@
         }
 
         createChart("oprDprRankChart", [
-            { label: "OPR", data: oprData, borderColor: '#F72585', fill: false, tension: 0.4 },
-            { label: "DPR", data: dprData, borderColor: "#4CC9F0", fill: false, tension: 0.4 },
+            { label: "OPR", data: oprData, borderColor: '#F72585',backgroundColor: '#F72585', fill: true, tension: 0.4 },
+            { label: "DPR", data: dprData, borderColor: "#4CC9F0", backgroundColor: '#4CC9F0',fill: true, tension: 0.4 },
         ]);
 
-        createChart("coralLevelsOneTwoChart", [
-            { label: "L1 Coral", data: l1Data, borderColor: "#001219", fill: false, tension: 0.4 },
-            { label: "L2 Coral", data: l2Data, borderColor: "#4895EF", fill: false, tension: 0.4},
-        ]);
-        createChart("coralLevelsThreeFourChart", [
-            { label: "L3 Coral", data: l3Data, borderColor: "#CDB4DB", fill: false, tension: 0.4 },
-            { label: "L4 Coral", data: l4Data, borderColor: "#03045E", fill: false, tension: 0.4},
+        createChart("coralLevelsChart", [
+            { label: "L1 Coral", data: l1Data, borderColor: "#001219", backgroundColor: '#001219',fill: true, tension: 0.4 },
+            { label: "L2 Coral", data: l2Data, borderColor: "#4895EF", backgroundColor: '#4895EF',fill: true, tension: 0.4},
+            { label: "L3 Coral", data: l3Data, borderColor: "#CDB4DB", backgroundColor: '#CDB4DB',fill: true, tension: 0.4 },
+            { label: "L4 Coral", data: l4Data, borderColor: "#03045E", backgroundColor: '#03045E',fill: true, tension: 0.4},
         ]);
 
 
-        createChart("algaeBargeChart", [
-            { label: "Net Algae", data: netAlgae, borderColor: "#560BAD", fill: false, tension: 0.4 },
-            { label: "Wall Algae", data: wallAlgae, borderColor: "#4CC9F0", fill: false, tension: 0.4 },
-            { label: "Barge Points", data: bargePoints, borderColor: "#F72585", fill: false, tension: 0.4 }
+        createChart("algaeBargeCoralChart", [
+            { label: "Net Algae", data: netAlgae, borderColor: "#560BAD", backgroundColor: '#560BAD',fill: true, tension: 0.4 },
+            { label: "Wall Algae", data: wallAlgae, borderColor: "#4CC9F0", backgroundColor: '#4CC9F0',fill: true, tension: 0.4 },
+            { label: "Barge Points", data: bargePoints, borderColor: "#F72585", backgroundColor: '#F72585',fill: true, tension: 0.4 },
+            { label: "Auto Coral", data: autoCoral, borderColor: "#001219", backgroundColor: '#001219',fill: true, tension: 0.4 }
         ]);
     });
 </script>
