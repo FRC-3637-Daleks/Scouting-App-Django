@@ -175,9 +175,9 @@ def update_priority(request):
             if not team_number or not priority_value:
                 return JsonResponse({"success": False, "error": "Missing team_number or priority"})
 
-            priority_value = int(priority_value)  # Convert to integer
+            priority_value = float(priority_value)  # Convert to integer
 
-            if priority_value < 1 or priority_value > 5:
+            if priority_value < 1 or priority_value > 10:
                 return JsonResponse({"success": False, "error": "Priority must be between 1 and 5"})
 
             team = get_object_or_404(Team, team_number=team_number)

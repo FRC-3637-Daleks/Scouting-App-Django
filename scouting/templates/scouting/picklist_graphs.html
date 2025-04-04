@@ -34,6 +34,22 @@
                 },
                 options: {
                     responsive: true,
+                    maintainAspectRatio: true,
+                    scales: {
+                        x: {
+                            ticks: {
+                                autoSkip: false,
+                                maxRotation: 90,
+                                minRotation: 45,
+                                font: {
+                                    size: 10
+                                }
+                            }
+                        },
+                        y: {
+                            beginAtZero: true
+                        }
+                    },
                     plugins: {
                         tooltip: {
                             callbacks: {
@@ -41,6 +57,9 @@
                                     return `Team ${teamNumbers[context.dataIndex]}: ${context.dataset.label} - ${context.raw}`;
                                 }
                             }
+                        },
+                        legend: {
+                            position: 'top'
                         }
                     }
                 }
@@ -48,23 +67,22 @@
         }
 
         createChart("oprDprRankChart", [
-            { label: "OPR", data: oprData, borderColor: '#F72585',backgroundColor: '#F72585', fill: true, tension: 0.4 },
-            { label: "DPR", data: dprData, borderColor: "#4CC9F0", backgroundColor: '#4CC9F0',fill: true, tension: 0.4 },
+            { label: "OPR", data: oprData, backgroundColor: '#E63946' }, // red
+            { label: "DPR", data: dprData, backgroundColor: '#1D3557' }  // navy
         ]);
 
         createChart("coralLevelsChart", [
-            { label: "L1 Coral", data: l1Data, borderColor: "#001219", backgroundColor: '#001219',fill: true, tension: 0.4 },
-            { label: "L2 Coral", data: l2Data, borderColor: "#4895EF", backgroundColor: '#4895EF',fill: true, tension: 0.4},
-            { label: "L3 Coral", data: l3Data, borderColor: "#CDB4DB", backgroundColor: '#CDB4DB',fill: true, tension: 0.4 },
-            { label: "L4 Coral", data: l4Data, borderColor: "#03045E", backgroundColor: '#03045E',fill: true, tension: 0.4},
+            { label: "L1 Coral", data: l1Data, backgroundColor: '#06D6A0' }, // teal
+            { label: "L2 Coral", data: l2Data, backgroundColor: '#FFD166' }, // yellow
+            { label: "L3 Coral", data: l3Data, backgroundColor: '#EF476F' }, // pink-red
+            { label: "L4 Coral", data: l4Data, backgroundColor: '#118AB2' }  // blue
         ]);
 
-
         createChart("algaeBargeCoralChart", [
-            { label: "Net Algae", data: netAlgae, borderColor: "#560BAD", backgroundColor: '#560BAD',fill: true, tension: 0.4 },
-            { label: "Wall Algae", data: wallAlgae, borderColor: "#4CC9F0", backgroundColor: '#4CC9F0',fill: true, tension: 0.4 },
-            { label: "Barge Points", data: bargePoints, borderColor: "#F72585", backgroundColor: '#F72585',fill: true, tension: 0.4 },
-            { label: "Auto Coral", data: autoCoral, borderColor: "#001219", backgroundColor: '#001219',fill: true, tension: 0.4 }
+            { label: "Net Algae", data: netAlgae, backgroundColor: '#073B4C' },   // deep blue
+            { label: "Wall Algae", data: wallAlgae, backgroundColor: '#FF9F1C' }, // orange
+            { label: "Barge Points", data: bargePoints, backgroundColor: '#2EC4B6' }, // aqua
+            { label: "Auto Coral", data: autoCoral, backgroundColor: '#D7263D' }  // bold red
         ]);
     });
 </script>
