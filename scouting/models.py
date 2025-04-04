@@ -102,7 +102,7 @@ class TeamRanking(models.Model):
     team = models.ForeignKey(Team, on_delete=models.CASCADE, related_name='teamranking')
     event = models.ForeignKey(Event, on_delete=models.CASCADE)
     rank = models.IntegerField(null=True, blank=True)
-    priority = models.IntegerField(null=True, blank=True)
+    priority = models.FloatField(null=True, blank=True)
     opr = models.FloatField(default=0.0)
     dpr = models.FloatField(default=0.0)
     ccwm = models.FloatField(default=0.0)

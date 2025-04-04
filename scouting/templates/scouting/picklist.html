@@ -1,193 +1,169 @@
 {% extends 'scouting/base.html' %}
 
 {% block content %}
-    {% csrf_token %}
-    <div class="container mt-4">
-        <h1 class="mb-4">Picklist Screen</h1>
+{% csrf_token %}
+<div class="container mt-4">
+    <h1 class="mb-4">Picklist Screen</h1>
 
-        <table class="table table-striped table-hover table-full">
-            <thead class="table-dark" style="position: sticky; top: 0; z-index: 1000;">
-                <tr>
-                    <!-- Priority -->
-                    <th>
-                        <a href="?sort=priority&direction={% if current_sort == 'priority' and current_direction == 'asc' %}desc{% else %}asc{% endif %}" class="text-white">
-                            Priority
-                            {% if current_sort == 'priority' %}
-                                {% if current_direction == 'asc' %}↑{% else %}↓{% endif %}
-                            {% endif %}
-                        </a>
-                    </th>
-                    <!-- Team Number -->
-                    <th>
-                        <a href="?sort=team_number&direction={% if current_sort == 'team_number' and current_direction == 'asc' %}desc{% else %}asc{% endif %}" class="text-white">
-                            Team Number
-                            {% if current_sort == 'team_number' %}
-                                {% if current_direction == 'asc' %}↑{% else %}↓{% endif %}
-                            {% endif %}
-                        </a>
-                    </th>
-                    <!-- Team Name -->
-                    <th>Team Name</th>
-                    <!-- TBA Rankings -->
-                    <th>
-                        <a href="?sort=rank&direction={% if current_sort == 'rank' and current_direction == 'asc' %}desc{% else %}asc{% endif %}" class="text-white">
-                            TBA Rankings
-                            {% if current_sort == 'rank' %}
-                                {% if current_direction == 'asc' %}↑{% else %}↓{% endif %}
-                            {% endif %}
-                        </a>
-                    </th>
-                    <!-- OPR -->
-                    <th>
-                        <a href="?sort=opr&direction={% if current_sort == 'opr' and current_direction == 'asc' %}desc{% else %}asc{% endif %}" class="text-white">
-                            OPR
-                            {% if current_sort == 'opr' %}
-                                {% if current_direction == 'asc' %}↑{% else %}↓{% endif %}
-                            {% endif %}
-                        </a>
-                    </th>
-                    <!-- Barge Points -->
-                    <th>
-                        <a href="?sort=end_game_barge_points&direction={% if current_sort == 'end_game_barge_points' and current_direction == 'asc' %}desc{% else %}asc{% endif %}" class="text-white">
-                            Barge Points
-                            {% if current_sort == 'end_game_barge_points' %}
-                                {% if current_direction == 'asc' %}↑{% else %}↓{% endif %}
-                            {% endif %}
-                        </a>
-                    </th>
-                    <!-- L1-L4 Coral -->
-                    <th>
-                        <a href="?sort=l1_coral&direction={% if current_sort == 'l1_coral' and current_direction == 'asc' %}desc{% else %}asc{% endif %}" class="text-white">
-                            L1 Coral
-                            {% if current_sort == 'l1_coral' %}
-                                {% if current_direction == 'asc' %}↑{% else %}↓{% endif %}
-                            {% endif %}
-                        </a>
-                    </th>
-                    <th>
-                        <a href="?sort=l2_coral&direction={% if current_sort == 'l2_coral' and current_direction == 'asc' %}desc{% else %}asc{% endif %}" class="text-white">
-                            L2 Coral
-                            {% if current_sort == 'l2_coral' %}
-                                {% if current_direction == 'asc' %}↑{% else %}↓{% endif %}
-                            {% endif %}
-                        </a>
-                    </th>
-                    <th>
-                        <a href="?sort=l3_coral&direction={% if current_sort == 'l3_coral' and current_direction == 'asc' %}desc{% else %}asc{% endif %}" class="text-white">
-                            L3 Coral
-                            {% if current_sort == 'l3_coral' %}
-                                {% if current_direction == 'asc' %}↑{% else %}↓{% endif %}
-                            {% endif %}
-                        </a>
-                    </th>
-                    <th>
-                        <a href="?sort=l4_coral&direction={% if current_sort == 'l4_coral' and current_direction == 'asc' %}desc{% else %}asc{% endif %}" class="text-white">
-                            L4 Coral
-                            {% if current_sort == 'l4_coral' %}
-                                {% if current_direction == 'asc' %}↑{% else %}↓{% endif %}
-                            {% endif %}
-                        </a>
-                    </th>
-                    <!-- Net Algae Count -->
-                    <th>
-                        <a href="?sort=net_algae_count&direction={% if current_sort == 'net_algae_count' and current_direction == 'asc' %}desc{% else %}asc{% endif %}" class="text-white">
-                            Net Algae
-                            {% if current_sort == 'net_algae_count' %}
-                                {% if current_direction == 'asc' %}↑{% else %}↓{% endif %}
-                            {% endif %}
-                        </a>
-                    </th>
-                    <!-- Wall Algae Count -->
-                    <th>
-                        <a href="?sort=wall_algae_count&direction={% if current_sort == 'wall_algae_count' and current_direction == 'asc' %}desc{% else %}asc{% endif %}" class="text-white">
-                            Wall Algae
-                            {% if current_sort == 'wall_algae_count' %}
-                                {% if current_direction == 'asc' %}↑{% else %}↓{% endif %}
-                            {% endif %}
-                        </a>
-                    </th>
-                    <!-- Auto Coral Count -->
-                    <th>
-                        <a href="?sort=auto_coral_count&direction={% if current_sort == 'auto_coral_count' and current_direction == 'asc' %}desc{% else %}asc{% endif %}" class="text-white">
-                            Auto Coral
-                            {% if current_sort == 'auto_coral_count' %}
-                                {% if current_direction == 'asc' %}↑{% else %}↓{% endif %}
-                            {% endif %}
-                        </a>
-                    </th>
-                    <!-- Foul Count -->
-                    <th>
-                        <a href="?sort=foul_count&direction={% if current_sort == 'foul_count' and current_direction == 'asc' %}desc{% else %}asc{% endif %}" class="text-white">
-                            Foul Count
-                            {% if current_sort == 'foul_count' %}
-                                {% if current_direction == 'asc' %}↑{% else %}↓{% endif %}
-                            {% endif %}
-                        </a>
-{#                    </th>#}
-{#                    <!-- Auto Algae (placeholder) -->#}
-{#                    <th>Auto Algae</th>#}
-                </tr>
-            </thead>
-            <tbody>
-                {% for team in teams %}
-                <tr>
-                    <td>
-                        <input type="number" class="form-control priority-input" min="1" max="5" value="{{ team.teamranking.priority|default_if_none:'' }}" data-team="{{ team.team_number }}" data-event="{{ event.id|default:'' }}" style="width: 70px;">
-                    </td>
-                    <td><a href="{% url 'scouting:team_statistics' team.team_number %}">{{ team.team_number }}</a></td>
-                    <td>{{ team.team_name }}</td>
-                    <td>{{ team.teamranking.rank|default:"-" }}</td>
-                    <td>{{ team.teamranking.opr|default:"-" }}</td>
-                    <td>{{ team.teamranking.end_game_barge_points|default:"-" }}</td>
-                    <td>{{ team.teamranking.l1_coral|default:"-" }}</td>
-                    <td>{{ team.teamranking.l2_coral|default:"-" }}</td>
-                    <td>{{ team.teamranking.l3_coral|default:"-" }}</td>
-                    <td>{{ team.teamranking.l4_coral|default:"-" }}</td>
-                    <td>{{ team.teamranking.net_algae_count|default:"-" }}</td>
-                    <td>{{ team.teamranking.wall_algae_count|default:"-" }}</td>
-                    <td>{{ team.teamranking.auto_coral_count|default:"-" }}</td>
-                    <td>{{ team.teamranking.foul_count|default:"-" }}</td>
-{#                    <td>Placeholder</td>#}
-                </tr>
-                {% empty %}
-                <tr>
-                    <td colspan="16" class="text-center">No teams available</td>
-                </tr>
-                {% endfor %}
-            </tbody>
-        </table>
-    </div>
+    <table class="table table-striped table-hover table-full">
+        <thead class="table-dark" style="position: sticky; top: 0; z-index: 1000;">
+            <tr>
+                <th>
+                    <a href="?sort=priority&direction={% if current_sort == 'priority' and current_direction == 'asc' %}desc{% else %}asc{% endif %}" class="text-white">
+                        Priority
+                        {% if current_sort == 'priority' %}
+                            {% if current_direction == 'asc' %}↑{% else %}↓{% endif %}
+                        {% endif %}
+                    </a>
+                </th>
+                <th>
+                    <a href="?sort=team_number&direction={% if current_sort == 'team_number' and current_direction == 'asc' %}desc{% else %}asc{% endif %}" class="text-white">
+                        Team Number
+                        {% if current_sort == 'team_number' %}
+                            {% if current_direction == 'asc' %}↑{% else %}↓{% endif %}
+                        {% endif %}
+                    </a>
+                </th>
+                <th>Team Name</th>
+                <th>
+                    <a href="?sort=rank&direction={% if current_sort == 'rank' and current_direction == 'asc' %}desc{% else %}asc{% endif %}" class="text-white">
+                        TBA Rankings
+                        {% if current_sort == 'rank' %}
+                            {% if current_direction == 'asc' %}↑{% else %}↓{% endif %}
+                        {% endif %}
+                    </a>
+                </th>
+                <th>
+                    <a href="?sort=opr&direction={% if current_sort == 'opr' and current_direction == 'asc' %}desc{% else %}asc{% endif %}" class="text-white">
+                        OPR
+                        {% if current_sort == 'opr' %}
+                            {% if current_direction == 'asc' %}↑{% else %}↓{% endif %}
+                        {% endif %}
+                    </a>
+                </th>
+                <th>
+                    <a href="?sort=end_game_barge_points&direction={% if current_sort == 'end_game_barge_points' and current_direction == 'asc' %}desc{% else %}asc{% endif %}" class="text-white">
+                        Barge Points
+                        {% if current_sort == 'end_game_barge_points' %}
+                            {% if current_direction == 'asc' %}↑{% else %}↓{% endif %}
+                        {% endif %}
+                    </a>
+                </th>
+                <th><a href="?sort=l1_coral&direction={% if current_sort == 'l1_coral' and current_direction == 'asc' %}desc{% else %}asc{% endif %}" class="text-white">
+                        L1 Coral
+                        {% if current_sort == 'l1_coral' %}
+                            {% if current_direction == 'asc' %}↑{% else %}↓{% endif %}
+                        {% endif %}
+                    </a>
+                </th>
+                <th><a href="?sort=l2_coral&direction={% if current_sort == 'l2_coral' and current_direction == 'asc' %}desc{% else %}asc{% endif %}" class="text-white">
+                        L2 Coral
+                        {% if current_sort == 'l2_coral' %}
+                            {% if current_direction == 'asc' %}↑{% else %}↓{% endif %}
+                        {% endif %}
+                    </a>
+                </th>
+                <th><a href="?sort=l3_coral&direction={% if current_sort == 'l3_coral' and current_direction == 'asc' %}desc{% else %}asc{% endif %}" class="text-white">
+                        L3 Coral
+                        {% if current_sort == 'l3_coral' %}
+                            {% if current_direction == 'asc' %}↑{% else %}↓{% endif %}
+                        {% endif %}
+                    </a>
+                </th>
+                <th><a href="?sort=l4_coral&direction={% if current_sort == 'l4_coral' and current_direction == 'asc' %}desc{% else %}asc{% endif %}" class="text-white">
+                        L4 Coral
+                        {% if current_sort == 'l4_coral' %}
+                            {% if current_direction == 'asc' %}↑{% else %}↓{% endif %}
+                        {% endif %}
+                    </a>
+                </th>
+                <th><a href="?sort=net_algae_count&direction={% if current_sort == 'net_algae_count' and current_direction == 'asc' %}desc{% else %}asc{% endif %}" class="text-white">
+                        Net Algae
+                        {% if current_sort == 'net_algae_count' %}
+                            {% if current_direction == 'asc' %}↑{% else %}↓{% endif %}
+                        {% endif %}
+                    </a>
+                </th>
+                <th><a href="?sort=wall_algae_count&direction={% if current_sort == 'wall_algae_count' and current_direction == 'asc' %}desc{% else %}asc{% endif %}" class="text-white">
+                        Wall Algae
+                        {% if current_sort == 'wall_algae_count' %}
+                            {% if current_direction == 'asc' %}↑{% else %}↓{% endif %}
+                        {% endif %}
+                    </a>
+                </th>
+                <th><a href="?sort=auto_coral_count&direction={% if current_sort == 'auto_coral_count' and current_direction == 'asc' %}desc{% else %}asc{% endif %}" class="text-white">
+                        Auto Coral
+                        {% if current_sort == 'auto_coral_count' %}
+                            {% if current_direction == 'asc' %}↑{% else %}↓{% endif %}
+                        {% endif %}
+                    </a>
+                </th>
+                <th><a href="?sort=foul_count&direction={% if current_sort == 'foul_count' and current_direction == 'asc' %}desc{% else %}asc{% endif %}" class="text-white">
+                        Foul Count
+                        {% if current_sort == 'foul_count' %}
+                            {% if current_direction == 'asc' %}↑{% else %}↓{% endif %}
+                        {% endif %}
+                    </a>
+                </th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for team in teams %}
+            <tr>
+                <td>
+                    <input type="number" class="form-control priority-input" min="1" max="5" value="{{ team.ranking.priority|default_if_none:'' }}" data-team="{{ team.team_number }}" data-event="{{ event.id|default:'' }}" style="width: 70px;">
+                </td>
+                <td><a href="{% url 'scouting:team_statistics' team.team_number %}">{{ team.team_number }}</a></td>
+                <td>{{ team.team_name }}</td>
+                <td>{{ team.ranking.rank|default:"-" }}</td>
+                <td>{{ team.ranking.opr|default:"-" }}</td>
+                <td>{{ team.ranking.end_game_barge_points|default:"-" }}</td>
+                <td>{{ team.ranking.l1_coral|default:"-" }}</td>
+                <td>{{ team.ranking.l2_coral|default:"-" }}</td>
+                <td>{{ team.ranking.l3_coral|default:"-" }}</td>
+                <td>{{ team.ranking.l4_coral|default:"-" }}</td>
+                <td>{{ team.ranking.net_algae_count|default:"-" }}</td>
+                <td>{{ team.ranking.wall_algae_count|default:"-" }}</td>
+                <td>{{ team.ranking.auto_coral_count|default:"-" }}</td>
+                <td>{{ team.ranking.foul_count|default:"-" }}</td>
+            </tr>
+            {% empty %}
+            <tr>
+                <td colspan="16" class="text-center">No teams available</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
 
-    <!-- AJAX script to update priority immediately on change -->
-    <script>
-        document.addEventListener("DOMContentLoaded", function () {
-            document.querySelectorAll('.priority-input').forEach(input => {
-                input.addEventListener('change', function () {
-                    const teamNumber = this.getAttribute('data-team');
-                    const priorityValue = this.value;
+<!-- AJAX for priority -->
+<script>
+    document.addEventListener("DOMContentLoaded", function () {
+        document.querySelectorAll('.priority-input').forEach(input => {
+            input.addEventListener('change', function () {
+                const teamNumber = this.getAttribute('data-team');
+                const priorityValue = this.value;
 
-                    console.log(`Updating priority for Team ${teamNumber} with value: ${priorityValue}`);  // Debugging log
-
-                    fetch("{% url 'scouting:update_priority' %}", {
-                        method: "POST",
-                        headers: {
-                            "Content-Type": "application/x-www-form-urlencoded",
-                            "X-CSRFToken": document.querySelector("[name=csrfmiddlewaretoken]").value
-                        },
-                        body: `team_number=${teamNumber}&priority=${priorityValue}`
-                    })
-                    .then(response => response.json())
-                    .then(data => {
-                        if (data.success) {
-                            console.log(`Priority updated successfully for Team ${teamNumber}: ${priorityValue}`);
-                        } else {
-                            console.error("Error updating priority:", data.error);
-                        }
-                    })
-                    .catch(error => console.error("Request failed:", error));
-                });
+                fetch("{% url 'scouting:update_priority' %}", {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/x-www-form-urlencoded",
+                        "X-CSRFToken": document.querySelector("[name=csrfmiddlewaretoken]").value
+                    },
+                    body: `team_number=${teamNumber}&priority=${priorityValue}`
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        console.log(`Priority updated successfully for Team ${teamNumber}: ${priorityValue}`);
+                    } else {
+                        console.error("Error updating priority:", data.error);
+                    }
+                })
+                .catch(error => console.error("Request failed:", error));
             });
         });
-    </script>
+    });
+</script>
 
 {% endblock content %}

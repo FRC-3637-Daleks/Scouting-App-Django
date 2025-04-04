@@ -15,6 +15,8 @@ from django.contrib.auth.decorators import login_required
 import json
 from django.shortcuts import render
 from .models import TeamRanking
+from django.db.models import F
+from django.db.models import OuterRef, Subquery, Value, FloatField, IntegerField
 @login_required()
 def view_index(request):
     event = Event.objects.get(active=True)
@@ -173,9 +175,9 @@ def update_priority(request):
             if not team_number or not priority_value:
                 return JsonResponse({"success": False, "error": "Missing team_number or priority"})
 
-            priority_value = int(priority_value)  # Convert to integer
+            priority_value = float(priority_value)  # Convert to integer
 
-            if priority_value < 1 or priority_value > 5:
+            if priority_value < 1 or priority_value > 10:
                 return JsonResponse({"success": False, "error": "Priority must be between 1 and 5"})
 
             team = get_object_or_404(Team, team_number=team_number)
@@ -216,6 +218,8 @@ def team_statistics_list(request):
         'direction': direction,
     }
     return render(request, 'scouting/team_statistics_list.html', context)
+
+from django.db.models import OuterRef, Subquery, Value
 
 def view_picklist(request):
     currentevent = Event.objects.get(active=True)
@@ -277,6 +281,9 @@ def picklist_graphs(request):
             'barge_points': ranking.end_game_barge_points or 0,
             'auto_coral': ranking.auto_coral_count or 0,
         })
+
+    # Sort the teams_data by rank
+    teams_data.sort(key=lambda x: x['rank'], reverse=True)
 
     # Now prepare lists for the graph context.
     context = {
