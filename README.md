@@ -1,31 +1,110 @@
 # Scouting-App-Django
-Team 3637 scouting app for the 2024 FRC game FIRST CRESCENDO!
 
-## Command line utilities
+Team 3637 scouting app for the 2026 FRC game.
 
-## Double Check Everything is Imported Properly
-run install -r requirement.txt
-pip install tbapy
+## Setup
 
-### The Blue Alliance Data Import
+### Prerequisites
 
-1. Setup the game and event in the django admin web panel `/admin`
-2. Ensure the current event is marked as active in the admin panel, and the tba event key is correct (ex. `2024pahat`)
-3. Check The Blue Alliance page for the event to see what is listed, it may be just teams, or teams and qualification matches
-4. Open a command line with python virtual environment activated
-5. Type the command `python manage.py sync_teams_matches_tba`
-6. This will import the teams and matches (if available) from the blue alliance website
+- Python 3.12+
+- pip
+
+### Installation
+
+```bash
+# Clone the repository
+git clone https://github.com/FRC-3637-Daleks/Scouting-App-Django.git
+cd Scouting-App-Django
+
+# Create and activate a virtual environment
+python -m venv .venv
+
+# Windows
+.venv\Scripts\activate
+
+# macOS/Linux
+source .venv/bin/activate
+
+# Install dependencies
+pip install -r requirements.txt
+
+# Apply database migrations
+python manage.py migrate
+
+# Create a superuser account for the admin panel
+python manage.py createsuperuser
+
+# Start the development server
+python manage.py runserver
+```
+
+The app will be running at `http://127.0.0.1:8000/`. The admin panel is at `/admin`.
+
+## Admin Panel Setup
+
+Before using the app at an event:
+
+1. Go to `/admin` and log in with your superuser account
+2. **Add a Game** — set the year (e.g. `2026`) and name
+3. **Add an Event** — link it to the game, set the TBA event key (e.g. `2026pahat`), and mark it as **Active**
+4. **Add a TBA API Key** — get one from [thebluealliance.com/account](https://www.thebluealliance.com/account), paste it in, and mark it as **Active**
+
+## Management Commands
+
+All commands require the virtual environment to be activated and should be run from the project root.
+
+### Import Teams & Matches from TBA
+
+```bash
+python manage.py sync_teams_matches_tba
+```
+
+Imports teams and match schedule (if available) from The Blue Alliance for the active event.
+
+### Sync OPR / DPR / CCWM
+
+```bash
+python manage.py sync_opr
+```
+
+Fetches OPR, DPR, and CCWM stats from TBA for the active event.
+
+### Sync Component OPRs (COPRs)
+
+```bash
+python manage.py sync_copr
+```
+
+Fetches Component OPRs (tower points, hub fuel counts, foul stats, etc.) from TBA for the active event.
+
+### Sync Rankings
+
+```bash
+python manage.py sync_rank
+```
+
+Fetches team rankings from TBA for the active event.
 
 ### Sync Stands Scouting Match Data
 
-1. Ensure the stands server is running the same event as the pit server
-2. Ensure the pit server URL is set correctly in settings.py on the stands server
-3. Type the command `python manage.py sync_match_data` with an activated virtual environment
-4. You should get a message indicating successful data transfer
+```bash
+python manage.py sync_match_data
+```
+
+Syncs stands scouting data from a remote server. Requires `SYNC_MASTER_SERVER` to be set in `settings.py`.
 
 ### Sync Pit Scouting Data
 
-1. Ensure the stands server is running the same event as the pit server
-2. Ensure the pit server URL is set correctly in settings.py on the stands server
-3. Type the command `python manage.py sync_pit_data` with an activated virtual environment
-4. You should get a message indicating successful data transfer
+```bash
+python manage.py sync_pit_data
+```
+
+Syncs pit scouting data from a remote server. Requires `SYNC_MASTER_SERVER` to be set in `settings.py`.
+
+### Sync Priority Rankings
+
+```bash
+python manage.py sync_priority
+```
+
+Syncs team priority rankings from a remote server.

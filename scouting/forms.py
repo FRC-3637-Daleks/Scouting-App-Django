@@ -22,10 +22,18 @@ class PitScoutDataForm(forms.ModelForm):
         }
         exclude = ['assigned_scout', 'team', 'event']
 
-class MatchData2025Form(forms.ModelForm):
+class MatchData2026Form(forms.ModelForm):
     class Meta:
-        model = MatchData2025
+        model = MatchData2026
         exclude = ['team', 'match']
+        labels = {
+            'defense_effectiveness': 'Defense Effectiveness (Tower/Hub Denial)',
+            'scoring_accuracy_or_effectiveness': 'Fuel Scoring Accuracy / Effectiveness',
+            'human_player_accuracy': 'Human Player Fuel Handling',
+            'compatibility_with_alliance_members': 'Alliance Compatibility',
+            'tower_climb_time': 'Tower Climb Time (seconds)',
+            'other_comments': 'Other Match Notes',
+        }
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -34,7 +42,14 @@ class MatchData2025Form(forms.ModelForm):
 
         # Group fields by section
         self.field_groups = {
-            'Match': ['defense_effectiveness', 'scoring_accuracy_or_effectiveness', 'human_player_accuracy', 'compatibility_with_alliance_members', 'climb_time','other_comments']
+            'Match': [
+                'defense_effectiveness',
+                'scoring_accuracy_or_effectiveness',
+                'human_player_accuracy',
+                'compatibility_with_alliance_members',
+                'tower_climb_time',
+                'other_comments',
+            ]
         }
 
         layout_fields = []

@@ -5,8 +5,8 @@
     <h1 class="mb-4">Graphs</h1>
     
     <canvas id="oprDprRankChart"></canvas>
-    <canvas id="coralLevelsChart" class="mt-4"></canvas>
-    <canvas id="algaeBargeCoralChart" class="mt-4"></canvas>
+    <canvas id="towerScoringChart" class="mt-4"></canvas>
+    <canvas id="hubAndFoulsChart" class="mt-4"></canvas>
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
@@ -15,15 +15,20 @@
         const teamNumbers = {{ teams|safe }};
         const oprData = {{ opr_values|safe }};
         const dprData = {{ dpr_values|safe }};
+        const ccwmData = {{ ccwm_values|safe }};
         const rankData = {{ rank_values|safe }};
-        const l1Data = {{ l1_coral_values|safe }};
-        const l2Data = {{ l2_coral_values|safe }};
-        const l3Data = {{ l3_coral_values|safe }};
-        const l4Data = {{ l4_coral_values|safe }};
-        const netAlgae = {{ net_algae_values|safe }};
-        const wallAlgae = {{ wall_algae_values|safe }};
-        const bargePoints = {{ barge_points_values|safe }};
-        const autoCoral = {{ auto_coral_values|safe }};
+        const autoTowerPoints = {{ auto_tower_points_values|safe }};
+        const totalAutoPoints = {{ total_auto_points_values|safe }};
+        const totalTeleopPoints = {{ total_teleop_points_values|safe }};
+        const endgameTowerPoints = {{ endgame_tower_points_values|safe }};
+        const totalTowerPoints = {{ total_tower_points_values|safe }};
+        const hubAutoFuelCount = {{ hub_auto_fuel_count_values|safe }};
+        const hubTeleopFuelCount = {{ hub_teleop_fuel_count_values|safe }};
+        const hubEndgameFuelCount = {{ hub_endgame_fuel_count_values|safe }};
+        const hubTotalFuelCount = {{ hub_total_fuel_count_values|safe }};
+        const minorFoulCount = {{ minor_foul_count_values|safe }};
+        const majorFoulCount = {{ major_foul_count_values|safe }};
+        const foulPoints = {{ foul_points_values|safe }};
 
         function createChart(canvasId, datasets) {
             new Chart(document.getElementById(canvasId).getContext('2d'), {
@@ -68,21 +73,26 @@
 
         createChart("oprDprRankChart", [
             { label: "OPR", data: oprData, backgroundColor: '#E63946' }, // red
-            { label: "DPR", data: dprData, backgroundColor: '#1D3557' }  // navy
+            { label: "DPR", data: dprData, backgroundColor: '#1D3557' },  // navy
+            { label: "CCWM", data: ccwmData, backgroundColor: '#2A9D8F' }
         ]);
 
-        createChart("coralLevelsChart", [
-            { label: "L1 Coral", data: l1Data, backgroundColor: '#06D6A0' }, // teal
-            { label: "L2 Coral", data: l2Data, backgroundColor: '#FFD166' }, // yellow
-            { label: "L3 Coral", data: l3Data, backgroundColor: '#EF476F' }, // pink-red
-            { label: "L4 Coral", data: l4Data, backgroundColor: '#118AB2' }  // blue
+        createChart("towerScoringChart", [
+            { label: "Auto Tower Points", data: autoTowerPoints, backgroundColor: '#06D6A0' },
+            { label: "Total Auto Points", data: totalAutoPoints, backgroundColor: '#FFD166' },
+            { label: "Total Teleop Points", data: totalTeleopPoints, backgroundColor: '#EF476F' },
+            { label: "Endgame Tower Points", data: endgameTowerPoints, backgroundColor: '#118AB2' },
+            { label: "Total Tower Points", data: totalTowerPoints, backgroundColor: '#8E44AD' }
         ]);
 
-        createChart("algaeBargeCoralChart", [
-            { label: "Net Algae", data: netAlgae, backgroundColor: '#073B4C' },   // deep blue
-            { label: "Wall Algae", data: wallAlgae, backgroundColor: '#FF9F1C' }, // orange
-            { label: "Barge Points", data: bargePoints, backgroundColor: '#2EC4B6' }, // aqua
-            { label: "Auto Coral", data: autoCoral, backgroundColor: '#D7263D' }  // bold red
+        createChart("hubAndFoulsChart", [
+            { label: "Hub Total Fuel", data: hubTotalFuelCount, backgroundColor: '#073B4C' },
+            { label: "Hub Auto Fuel", data: hubAutoFuelCount, backgroundColor: '#FF9F1C' },
+            { label: "Hub Teleop Fuel", data: hubTeleopFuelCount, backgroundColor: '#2EC4B6' },
+            { label: "Hub Endgame Fuel", data: hubEndgameFuelCount, backgroundColor: '#D7263D' },
+            { label: "Minor Fouls", data: minorFoulCount, backgroundColor: '#6C757D' },
+            { label: "Major Fouls", data: majorFoulCount, backgroundColor: '#343A40' },
+            { label: "Foul Points", data: foulPoints, backgroundColor: '#F4A261' }
         ]);
     });
 </script>

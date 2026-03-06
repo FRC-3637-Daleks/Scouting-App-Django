@@ -41,95 +41,42 @@
                         {% endif %}
                     </a>
                 </th>
-                <th>
-                    <a href="?sort=end_game_barge_points&direction={% if current_sort == 'end_game_barge_points' and current_direction == 'asc' %}desc{% else %}asc{% endif %}" class="text-white">
-                        Barge Points
-                        {% if current_sort == 'end_game_barge_points' %}
-                            {% if current_direction == 'asc' %}↑{% else %}↓{% endif %}
-                        {% endif %}
-                    </a>
-                </th>
-                <th><a href="?sort=l1_coral&direction={% if current_sort == 'l1_coral' and current_direction == 'asc' %}desc{% else %}asc{% endif %}" class="text-white">
-                        L1 Coral
-                        {% if current_sort == 'l1_coral' %}
-                            {% if current_direction == 'asc' %}↑{% else %}↓{% endif %}
-                        {% endif %}
-                    </a>
-                </th>
-                <th><a href="?sort=l2_coral&direction={% if current_sort == 'l2_coral' and current_direction == 'asc' %}desc{% else %}asc{% endif %}" class="text-white">
-                        L2 Coral
-                        {% if current_sort == 'l2_coral' %}
-                            {% if current_direction == 'asc' %}↑{% else %}↓{% endif %}
-                        {% endif %}
-                    </a>
-                </th>
-                <th><a href="?sort=l3_coral&direction={% if current_sort == 'l3_coral' and current_direction == 'asc' %}desc{% else %}asc{% endif %}" class="text-white">
-                        L3 Coral
-                        {% if current_sort == 'l3_coral' %}
-                            {% if current_direction == 'asc' %}↑{% else %}↓{% endif %}
-                        {% endif %}
-                    </a>
-                </th>
-                <th><a href="?sort=l4_coral&direction={% if current_sort == 'l4_coral' and current_direction == 'asc' %}desc{% else %}asc{% endif %}" class="text-white">
-                        L4 Coral
-                        {% if current_sort == 'l4_coral' %}
-                            {% if current_direction == 'asc' %}↑{% else %}↓{% endif %}
-                        {% endif %}
-                    </a>
-                </th>
-                <th><a href="?sort=net_algae_count&direction={% if current_sort == 'net_algae_count' and current_direction == 'asc' %}desc{% else %}asc{% endif %}" class="text-white">
-                        Net Algae
-                        {% if current_sort == 'net_algae_count' %}
-                            {% if current_direction == 'asc' %}↑{% else %}↓{% endif %}
-                        {% endif %}
-                    </a>
-                </th>
-                <th><a href="?sort=wall_algae_count&direction={% if current_sort == 'wall_algae_count' and current_direction == 'asc' %}desc{% else %}asc{% endif %}" class="text-white">
-                        Wall Algae
-                        {% if current_sort == 'wall_algae_count' %}
-                            {% if current_direction == 'asc' %}↑{% else %}↓{% endif %}
-                        {% endif %}
-                    </a>
-                </th>
-                <th><a href="?sort=auto_coral_count&direction={% if current_sort == 'auto_coral_count' and current_direction == 'asc' %}desc{% else %}asc{% endif %}" class="text-white">
-                        Auto Coral
-                        {% if current_sort == 'auto_coral_count' %}
-                            {% if current_direction == 'asc' %}↑{% else %}↓{% endif %}
-                        {% endif %}
-                    </a>
-                </th>
-                <th><a href="?sort=foul_count&direction={% if current_sort == 'foul_count' and current_direction == 'asc' %}desc{% else %}asc{% endif %}" class="text-white">
-                        Foul Count
-                        {% if current_sort == 'foul_count' %}
-                            {% if current_direction == 'asc' %}↑{% else %}↓{% endif %}
-                        {% endif %}
-                    </a>
-                </th>
+                <th><a href="?sort=auto_tower_points&direction={% if current_sort == 'auto_tower_points' and current_direction == 'asc' %}desc{% else %}asc{% endif %}" class="text-white">Auto Tower</a></th>
+                <th><a href="?sort=total_auto_points&direction={% if current_sort == 'total_auto_points' and current_direction == 'asc' %}desc{% else %}asc{% endif %}" class="text-white">Total Auto</a></th>
+                <th><a href="?sort=total_teleop_points&direction={% if current_sort == 'total_teleop_points' and current_direction == 'asc' %}desc{% else %}asc{% endif %}" class="text-white">Total Teleop</a></th>
+                <th><a href="?sort=total_tower_points&direction={% if current_sort == 'total_tower_points' and current_direction == 'asc' %}desc{% else %}asc{% endif %}" class="text-white">Tower Points</a></th>
+                <th><a href="?sort=hub_total_fuel_count&direction={% if current_sort == 'hub_total_fuel_count' and current_direction == 'asc' %}desc{% else %}asc{% endif %}" class="text-white">Hub Total Fuel</a></th>
+                <th><a href="?sort=hub_teleop_fuel_count&direction={% if current_sort == 'hub_teleop_fuel_count' and current_direction == 'asc' %}desc{% else %}asc{% endif %}" class="text-white">Hub Teleop Fuel</a></th>
+                <th><a href="?sort=hub_endgame_fuel_count&direction={% if current_sort == 'hub_endgame_fuel_count' and current_direction == 'asc' %}desc{% else %}asc{% endif %}" class="text-white">Hub Endgame Fuel</a></th>
+                <th><a href="?sort=minor_foul_count&direction={% if current_sort == 'minor_foul_count' and current_direction == 'asc' %}desc{% else %}asc{% endif %}" class="text-white">Minor Fouls</a></th>
+                <th><a href="?sort=major_foul_count&direction={% if current_sort == 'major_foul_count' and current_direction == 'asc' %}desc{% else %}asc{% endif %}" class="text-white">Major Fouls</a></th>
+                <th><a href="?sort=foul_points&direction={% if current_sort == 'foul_points' and current_direction == 'asc' %}desc{% else %}asc{% endif %}" class="text-white">Foul Points</a></th>
             </tr>
         </thead>
         <tbody>
             {% for team in teams %}
             <tr>
                 <td>
-                    <input type="number" class="form-control priority-input" min="1" max="5" value="{{ team.ranking.priority|default_if_none:'' }}" data-team="{{ team.team_number }}" data-event="{{ event.id|default:'' }}" style="width: 70px;">
+                    <input type="number" class="form-control priority-input" min="1" max="10" value="{{ team.ranking.priority|default_if_none:'' }}" data-team="{{ team.team_number }}" data-event="{{ event.id|default:'' }}" style="width: 70px;">
                 </td>
                 <td><a href="{% url 'scouting:team_statistics' team.team_number %}">{{ team.team_number }}</a></td>
                 <td>{{ team.team_name }}</td>
                 <td>{{ team.ranking.rank|default:"-" }}</td>
                 <td>{{ team.ranking.opr|default:"-" }}</td>
-                <td>{{ team.ranking.end_game_barge_points|default:"-" }}</td>
-                <td>{{ team.ranking.l1_coral|default:"-" }}</td>
-                <td>{{ team.ranking.l2_coral|default:"-" }}</td>
-                <td>{{ team.ranking.l3_coral|default:"-" }}</td>
-                <td>{{ team.ranking.l4_coral|default:"-" }}</td>
-                <td>{{ team.ranking.net_algae_count|default:"-" }}</td>
-                <td>{{ team.ranking.wall_algae_count|default:"-" }}</td>
-                <td>{{ team.ranking.auto_coral_count|default:"-" }}</td>
-                <td>{{ team.ranking.foul_count|default:"-" }}</td>
+                <td>{{ team.ranking.auto_tower_points|default:"-" }}</td>
+                <td>{{ team.ranking.total_auto_points|default:"-" }}</td>
+                <td>{{ team.ranking.total_teleop_points|default:"-" }}</td>
+                <td>{{ team.ranking.total_tower_points|default:"-" }}</td>
+                <td>{{ team.ranking.hub_total_fuel_count|default:"-" }}</td>
+                <td>{{ team.ranking.hub_teleop_fuel_count|default:"-" }}</td>
+                <td>{{ team.ranking.hub_endgame_fuel_count|default:"-" }}</td>
+                <td>{{ team.ranking.minor_foul_count|default:"-" }}</td>
+                <td>{{ team.ranking.major_foul_count|default:"-" }}</td>
+                <td>{{ team.ranking.foul_points|default:"-" }}</td>
             </tr>
             {% empty %}
             <tr>
-                <td colspan="16" class="text-center">No teams available</td>
+                <td colspan="15" class="text-center">No teams available</td>
             </tr>
             {% endfor %}
         </tbody>

@@ -46,7 +46,7 @@ class PriorityConsumer(AsyncWebsocketConsumer):
     def update_priority(self, team_number, priority_value):
         try:
             priority_value = int(priority_value)
-            if priority_value < 1 or priority_value > 5:
+            if priority_value < 1 or priority_value > 10:
                 print("PriorityConsumer: Priority value out of range")
                 return False
             team = Team.objects.get(team_number=team_number)

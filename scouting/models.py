@@ -106,21 +106,36 @@ class TeamRanking(models.Model):
     opr = models.FloatField(default=0.0)
     dpr = models.FloatField(default=0.0)
     ccwm = models.FloatField(default=0.0)
-    l1_coral = models.FloatField(default=0.0)
-    l2_coral = models.FloatField(default=0.0)
-    l3_coral = models.FloatField(default=0.0)
-    l4_coral = models.FloatField(default=0.0)
-    net_algae_count = models.FloatField(default=0.0)
-    wall_algae_count = models.FloatField(default=0.0)
-    auto_coral_count = models.FloatField(default=0.0)
-    end_game_barge_points = models.FloatField(default=0.0)
-    foul_count = models.FloatField(default=0.0)
+    auto_tower_points = models.FloatField(default=0.0)
+    total_auto_points = models.FloatField(default=0.0)
+    total_teleop_points = models.FloatField(default=0.0)
+    endgame_tower_points = models.FloatField(default=0.0)
+    total_tower_points = models.FloatField(default=0.0)
+
+    hub_auto_fuel_count = models.FloatField(default=0.0)
+    hub_teleop_fuel_count = models.FloatField(default=0.0)
+    hub_endgame_fuel_count = models.FloatField(default=0.0)
+    hub_total_fuel_count = models.FloatField(default=0.0)
+    hub_transition_fuel_count = models.FloatField(default=0.0)
+    hub_shift_1_fuel_count = models.FloatField(default=0.0)
+    hub_shift_2_fuel_count = models.FloatField(default=0.0)
+    hub_shift_3_fuel_count = models.FloatField(default=0.0)
+    hub_shift_4_fuel_count = models.FloatField(default=0.0)
+
+    energized_achieved = models.FloatField(default=0.0)
+    supercharged_achieved = models.FloatField(default=0.0)
+    traversal_achieved = models.FloatField(default=0.0)
+    minor_foul_count = models.FloatField(default=0.0)
+    major_foul_count = models.FloatField(default=0.0)
+    foul_points = models.FloatField(default=0.0)
+    g206_penalty = models.FloatField(default=0.0)
     alliance_number = models.IntegerField(default=0)
+    copr_breakdown = models.JSONField(default=dict, blank=True)
 
     class Meta:
         unique_together = ('team', 'event')
 
-class MatchData2025(TimeStampedModel):
+class MatchData2026(TimeStampedModel):
     team = models.ForeignKey('Team', on_delete=models.CASCADE, null=False)
     match = models.ForeignKey('Match', on_delete=models.CASCADE, null=False)
 
@@ -139,7 +154,7 @@ class MatchData2025(TimeStampedModel):
     human_player_accuracy = models.CharField(max_length=1000, null=True)
     compatibility_with_alliance_members = models.CharField(max_length=1000, null=True)
     other_comments = models.CharField(max_length=1000, null=True)
-    climb_time = models.IntegerField(null=True, blank=True)
+    tower_climb_time = models.IntegerField(null=True, blank=True)
 
 
 

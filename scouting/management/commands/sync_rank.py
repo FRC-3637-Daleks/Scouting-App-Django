@@ -47,13 +47,6 @@ class Command(BaseCommand):
                             event=event,
                             defaults={
                                 'rank': rank_data.get('rank', 0),
-                                'matches_played': rank_data.get('matches_played', 0),
-                                'ranking_score': (
-                                    rank_data['sort_orders'][0]
-                                    if rank_data.get('sort_orders')
-                                    else 0
-                                ),
-
                             }
                         )
 

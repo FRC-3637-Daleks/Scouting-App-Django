@@ -80,11 +80,11 @@ def view_match(request, team_number, match_number):
     match = Match.objects.get(match_number=match_number, event_id=event)
 
     # Check if a PitScoutData object already exists for this team and event
-    match_data, created = MatchData2025.objects.get_or_create(team=team, match=match)
+    match_data, created = MatchData2026.objects.get_or_create(team=team, match=match)
 
     if request.method == 'POST':
         # If the form has been submitted, create a form instance with the POST data and the existing PitScoutData object
-        form = MatchData2025Form(request.POST, instance=match_data)
+        form = MatchData2026Form(request.POST, instance=match_data)
         print("Form POSTed")
 
         # Validate the form
@@ -96,7 +96,7 @@ def view_match(request, team_number, match_number):
             return redirect('scouting:index')
     else:
         # If the form has not been submitted, create a form instance from the PitScoutData object
-        form = MatchData2025Form(instance=match_data)
+        form = MatchData2026Form(instance=match_data)
 
     context = {
         'form': form,
@@ -115,7 +115,7 @@ def view_team_statistics(request, team_number):
     active_event = Event.objects.filter(active=True).first()
 
     # Fetch match data for the team
-    match_data = MatchData2025.objects.filter(team=team)
+    match_data = MatchData2026.objects.filter(team=team)
 
     # Count the number of matches played
     match_count = match_data.count()
@@ -178,7 +178,7 @@ def update_priority(request):
             priority_value = float(priority_value)  # Convert to integer
 
             if priority_value < 1 or priority_value > 10:
-                return JsonResponse({"success": False, "error": "Priority must be between 1 and 5"})
+                return JsonResponse({"success": False, "error": "Priority must be between 1 and 10"})
 
             team = get_object_or_404(Team, team_number=team_number)
             event = get_object_or_404(Event, active=True)
@@ -226,27 +226,45 @@ def view_picklist(request):
     sort_by = request.GET.get('sort', 'team_number')
     direction = request.GET.get('direction', 'asc')
 
-    teams = event.teams.all().select_related().prefetch_related('teamranking_set')
+    teams = list(event.teams.all())
 
-    if sort_by in ['rank', 'opr', 'dpr', 'ccwm', 'priority',
-                   'l1_coral', 'l2_coral', 'l3_coral', 'l4_coral',
-                   'net_algae_count', 'wall_algae_count', 'auto_coral_count', 'foul_count']:
-        order_field = f'teamranking__{sort_by}'
-        if direction == 'desc':
-            order_field = f'-{order_field}'
-        teams = teams.order_by(order_field)
-    else:
-        teams = teams.order_by(f'{"-" if direction == "desc" else ""}team_number')
+    sortable_fields = [
+        'rank',
+        'opr',
+        'dpr',
+        'ccwm',
+        'priority',
+        'auto_tower_points',
+        'total_auto_points',
+        'total_teleop_points',
+        'endgame_tower_points',
+        'total_tower_points',
+        'hub_total_fuel_count',
+        'hub_teleop_fuel_count',
+        'hub_endgame_fuel_count',
+        'minor_foul_count',
+        'major_foul_count',
+        'foul_points',
+    ]
 
     for team in teams:
-        team.teamranking, _ = TeamRanking.objects.get_or_create(
+        team.ranking, _ = TeamRanking.objects.get_or_create(
             team=team,
             event=event,
             defaults={'rank': 0}  # Set a default rank
         )
 
+    reverse = direction == 'desc'
+    if sort_by in sortable_fields:
+        teams.sort(key=lambda t: getattr(t.ranking, sort_by) or 0, reverse=reverse)
+    elif sort_by == 'team_number':
+        teams.sort(key=lambda t: t.team_number, reverse=reverse)
+    else:
+        teams.sort(key=lambda t: t.team_number)
+
     return render(request, 'scouting/picklist.html', {
         'teams': teams,
+        'event': event,
         'current_sort': sort_by,
         'current_direction': direction,
     })
@@ -266,15 +284,20 @@ def picklist_graphs(request):
             'team_number': team.team_number,
             'opr': ranking.opr or 0,
             'dpr': ranking.dpr or 0,
+            'ccwm': ranking.ccwm or 0,
             'rank': ranking.rank or 0,
-            'l1_coral': ranking.l1_coral or 0,
-            'l2_coral': ranking.l2_coral or 0,
-            'l3_coral': ranking.l3_coral or 0,
-            'l4_coral': ranking.l4_coral or 0,
-            'net_algae': ranking.net_algae_count or 0,
-            'wall_algae': ranking.wall_algae_count or 0,
-            'barge_points': ranking.end_game_barge_points or 0,
-            'auto_coral': ranking.auto_coral_count or 0,
+            'auto_tower_points': ranking.auto_tower_points or 0,
+            'total_auto_points': ranking.total_auto_points or 0,
+            'total_teleop_points': ranking.total_teleop_points or 0,
+            'endgame_tower_points': ranking.endgame_tower_points or 0,
+            'total_tower_points': ranking.total_tower_points or 0,
+            'hub_auto_fuel_count': ranking.hub_auto_fuel_count or 0,
+            'hub_teleop_fuel_count': ranking.hub_teleop_fuel_count or 0,
+            'hub_endgame_fuel_count': ranking.hub_endgame_fuel_count or 0,
+            'hub_total_fuel_count': ranking.hub_total_fuel_count or 0,
+            'minor_foul_count': ranking.minor_foul_count or 0,
+            'major_foul_count': ranking.major_foul_count or 0,
+            'foul_points': ranking.foul_points or 0,
         })
 
     # Sort the teams_data by rank
@@ -285,15 +308,20 @@ def picklist_graphs(request):
         "teams": [d['team_number'] for d in teams_data],
         "opr_values": [round(d['opr'], 2) for d in teams_data],
         "dpr_values": [round(d['dpr'], 2) for d in teams_data],
+        "ccwm_values": [round(d['ccwm'], 2) for d in teams_data],
         "rank_values": [d['rank'] for d in teams_data],
-        "l1_coral_values": [d['l1_coral'] for d in teams_data],
-        "l2_coral_values": [d['l2_coral'] for d in teams_data],
-        "l3_coral_values": [d['l3_coral'] for d in teams_data],
-        "l4_coral_values": [d['l4_coral'] for d in teams_data],
-        "net_algae_values": [d['net_algae'] for d in teams_data],
-        "wall_algae_values": [d['wall_algae'] for d in teams_data],
-        "barge_points_values": [d['barge_points'] for d in teams_data],
-        "auto_coral_values": [d['auto_coral'] for d in teams_data],
+        "auto_tower_points_values": [round(d['auto_tower_points'], 2) for d in teams_data],
+        "total_auto_points_values": [round(d['total_auto_points'], 2) for d in teams_data],
+        "total_teleop_points_values": [round(d['total_teleop_points'], 2) for d in teams_data],
+        "endgame_tower_points_values": [round(d['endgame_tower_points'], 2) for d in teams_data],
+        "total_tower_points_values": [round(d['total_tower_points'], 2) for d in teams_data],
+        "hub_auto_fuel_count_values": [round(d['hub_auto_fuel_count'], 2) for d in teams_data],
+        "hub_teleop_fuel_count_values": [round(d['hub_teleop_fuel_count'], 2) for d in teams_data],
+        "hub_endgame_fuel_count_values": [round(d['hub_endgame_fuel_count'], 2) for d in teams_data],
+        "hub_total_fuel_count_values": [round(d['hub_total_fuel_count'], 2) for d in teams_data],
+        "minor_foul_count_values": [round(d['minor_foul_count'], 2) for d in teams_data],
+        "major_foul_count_values": [round(d['major_foul_count'], 2) for d in teams_data],
+        "foul_points_values": [round(d['foul_points'], 2) for d in teams_data],
     }
     return render(request, "scouting/picklist_graphs.html", context)
 
