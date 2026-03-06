@@ -6,70 +6,14 @@
     <div class="container">
         <h1 class="m-3 text-center">Team Statistics for {{ team.team_number }} - {{ team.team_name }}</h1>
 
-        <h2 class="m-3 text-center">Boolean Fields</h2>
+        <!-- Pit Scouting Data -->
+        <h2 class="m-3 text-center">Pit Scouting Data</h2>
         <table class="table table-striped">
             <thead>
-                <th scope="col">Field</th>
-                <th scope="col">Total</th>
-                <th scope="col">Percent of Matches</th>
-            </thead>
-            <tbody>
-                {% for field, stats in boolean_stats.items %}
-                    <tr>
-                        <th scope="row">{{ field }}</th>
-                        <td>{{ stats.total }}</td>
-                        <td>{{ stats.percent }}%</td>
-                    </tr>
-                {% endfor %}
-            </tbody>
-        </table>
-
-        <h2 class="m-3 text-center">Integer Fields</h2>
-        <table class="table table-striped">
-            <thead>
-                <th scope="col">Field</th>
-                <th scope="col">Min</th>
-                <th scope="col">Max</th>
-                <th scope="col">Average</th>
-                <th scope="col">Plot</th>
-            </thead>
-            <tbody>
-                {% for field, stats in integer_stats.items %}
-                    <tr>
-                        <th scope="row">{{ field }}</th>
-                        <td>{{ stats.min }}</td>
-                        <td>{{ stats.max }}</td>
-                        <td>{{ stats.avg }}</td>
-                        <td><img src="{{ stats.graph }}" alt="{{ field }} graph"></td>
-                    </tr>
-                {% endfor %}
-            </tbody>
-        </table>
-
-    <h2 class="m-3 text-center">Text Fields</h2>
-    <table class="table table-striped">
-            <thead>
-                <th scope="col">Match Number</th>
-                <th scope="col">Starting Location</th>
-                <th scope="col">Comments</th>
-            </thead>
-            <tbody>
-                {% for match in matches %}
-                    <tr>
-                        <th scope="row">{{ match.match }}</th>
-                        <td>{{ match.starting_location }}</td>
-                        <td>{{ match.comments }}</td>
-                    </tr>
-                {% endfor %}
-            </tbody>
-        </table>
-
-
-    <h2 class="m-3 text-center">Pit Scouting Data</h2>
-        <table class="table table-striped">
-            <thead>
-                <th scope="col">Field</th>
-                <th scope="col">Value</th>
+                <tr>
+                    <th scope="col">Field</th>
+                    <th scope="col">Value</th>
+                </tr>
             </thead>
             <tbody>
                 {% for field, value in pit_scout_data.items %}
@@ -77,11 +21,116 @@
                         <th scope="row">{{ field }}</th>
                         <td>{{ value }}</td>
                     </tr>
+                {% empty %}
+                    <tr>
+                        <td colspan="2" class="text-center">No pit scouting data available</td>
+                    </tr>
                 {% endfor %}
             </tbody>
         </table>
-    {% for field, graph in graphs.items %}
-        <img src="{{ graph }}" alt="{{ field }} graph">
-    {% endfor %}
-    </div>
+
+        <!-- Pit Scouting Images -->
+        {% if pit_scout_images %}
+            <h2 class="m-3 text-center">Pit Scouting Images</h2>
+            <div class="d-flex flex-wrap justify-content-center">
+                {% for image in pit_scout_images %}
+                    <div class="m-3">
+                        <img src="{{ image.url }}" alt="Pit Scouting Image" class="img-fluid rounded shadow">
+                    </div>
+                {% endfor %}
+            </div>
+        {% endif %}
+
+        <!-- Match Data -->
+        <h2 class="m-3 text-center">Match Data</h2>
+        <table class="table table-striped">
+            <thead>
+                <tr>
+                    <th scope="col">Match Number</th>
+                    <th scope="col">Event</th>
+                    <th scope="col">Defense Effectiveness</th>
+                    <th scope="col">Scoring Accuracy</th>
+                    <th scope="col">Human Player Accuracy</th>
+                    <th scope="col">Alliance Compatibility</th>
+                    <th scope="col">Tower Climb Time</th>
+                    <th scope="col">Other Comments</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for match in match_data %}
+                    <tr>
+                        <td>{{ match.match.match_number }}</td>
+                        <td>{{ match.event.event_name }}</td>
+                        <td>{{ match.defense_effectiveness }}</td>
+                        <td>{{ match.scoring_accuracy_or_effectiveness }}</td>
+                        <td>{{ match.human_player_accuracy }}</td>
+                        <td>{{ match.compatibility_with_alliance_members }}</td>
+                        <td>{{ match.tower_climb_time }}</td>
+                        <td>{{ match.other_comments }}</td>
+                    </tr>
+                {% empty %}
+                    <tr>
+                        <td colspan="7" class="text-center">No match data available</td>
+                    </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+
+        <!-- Team Rankings -->
+        {% if team_ranking %}
+            <h2 class="m-3 text-center">Team Rankings</h2>
+            <table class="table table-striped">
+                <thead>
+                    <tr>
+                        <th scope="col">Event</th>
+                        <th scope="col">Rank</th>
+                        <th scope="col">OPR</th>
+                        <th scope="col">DPR</th>
+                        <th scope="col">CCWM</th>
+                        <th scope="col">Total Auto</th>
+                        <th scope="col">Total Teleop</th>
+                        <th scope="col">Total Tower</th>
+                        <th scope="col">Hub Total Fuel</th>
+                        <th scope="col">Foul Points</th>
+                        <th scope="col">Alliance #</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>{{ team_ranking.event.event_name }}</td>
+                        <td>{{ team_ranking.rank }}</td>
+                        <td>{{ team_ranking.opr }}</td>
+                        <td>{{ team_ranking.dpr }}</td>
+                        <td>{{ team_ranking.ccwm }}</td>
+                        <td>{{ team_ranking.total_auto_points }}</td>
+                        <td>{{ team_ranking.total_teleop_points }}</td>
+                        <td>{{ team_ranking.total_tower_points }}</td>
+                        <td>{{ team_ranking.hub_total_fuel_count }}</td>
+                        <td>{{ team_ranking.foul_points }}</td>
+                        <td>{{ team_ranking.alliance_number }}</td>
+                    </tr>
+                </tbody>
+            </table>
+
+            {% if team_ranking.copr_breakdown %}
+                <h3 class="m-3 text-center">Detailed Component OPRs</h3>
+                <table class="table table-striped">
+                    <thead>
+                        <tr>
+                            <th scope="col">Component</th>
+                            <th scope="col">Value</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for component, value in team_ranking.copr_breakdown.items %}
+                            <tr>
+                                <td>{{ component }}</td>
+                                <td>{{ value }}</td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            {% endif %}
+        {% endif %}
+        </div>
 {% endblock %}

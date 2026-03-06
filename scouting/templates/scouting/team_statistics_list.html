@@ -1,0 +1,35 @@
+{% extends 'scouting/base.html' %}
+
+{% block title %} | Team Statistics {% endblock %}
+
+{% block content %}
+    <div class="container">
+        <h1 class="m-3 text-center">Team Statistics</h1>
+        <table class="table table-striped">
+            <thead>
+                <tr>
+                    <th scope="col">
+                        <a href="?order_by=team_number&direction={% if direction == 'asc' %}desc{% else %}asc{% endif %}">
+                            Team # {% if order_by == "team_number" %}{% if direction == "asc" %}↑{% else %}↓{% endif %}{% endif %}
+                        </a>
+                    </th>
+                    <th scope="col">Team Name</th>
+                    <th scope="col">View Report</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for team in teams %}
+                    <tr>
+                        <td>{{ team.team_number }}</td>
+                        <td>{{ team.team_name }}</td>
+                        <td>
+                            <a href="{% url 'scouting:team_statistics' team_number=team.team_number %}" class="btn btn-primary" role="button">
+                                View Report
+                            </a>
+                        </td>
+                    </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+{% endblock %}

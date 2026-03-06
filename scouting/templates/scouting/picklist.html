@@ -1,0 +1,116 @@
+{% extends 'scouting/base.html' %}
+
+{% block content %}
+{% csrf_token %}
+<div class="container mt-4">
+    <h1 class="mb-4">Picklist Screen</h1>
+
+    <table class="table table-striped table-hover table-full">
+        <thead class="table-dark" style="position: sticky; top: 0; z-index: 1000;">
+            <tr>
+                <th>
+                    <a href="?sort=priority&direction={% if current_sort == 'priority' and current_direction == 'asc' %}desc{% else %}asc{% endif %}" class="text-white">
+                        Priority
+                        {% if current_sort == 'priority' %}
+                            {% if current_direction == 'asc' %}↑{% else %}↓{% endif %}
+                        {% endif %}
+                    </a>
+                </th>
+                <th>
+                    <a href="?sort=team_number&direction={% if current_sort == 'team_number' and current_direction == 'asc' %}desc{% else %}asc{% endif %}" class="text-white">
+                        Team Number
+                        {% if current_sort == 'team_number' %}
+                            {% if current_direction == 'asc' %}↑{% else %}↓{% endif %}
+                        {% endif %}
+                    </a>
+                </th>
+                <th>Team Name</th>
+                <th>
+                    <a href="?sort=rank&direction={% if current_sort == 'rank' and current_direction == 'asc' %}desc{% else %}asc{% endif %}" class="text-white">
+                        TBA Rankings
+                        {% if current_sort == 'rank' %}
+                            {% if current_direction == 'asc' %}↑{% else %}↓{% endif %}
+                        {% endif %}
+                    </a>
+                </th>
+                <th>
+                    <a href="?sort=opr&direction={% if current_sort == 'opr' and current_direction == 'asc' %}desc{% else %}asc{% endif %}" class="text-white">
+                        OPR
+                        {% if current_sort == 'opr' %}
+                            {% if current_direction == 'asc' %}↑{% else %}↓{% endif %}
+                        {% endif %}
+                    </a>
+                </th>
+                <th><a href="?sort=auto_tower_points&direction={% if current_sort == 'auto_tower_points' and current_direction == 'asc' %}desc{% else %}asc{% endif %}" class="text-white">Auto Tower</a></th>
+                <th><a href="?sort=total_auto_points&direction={% if current_sort == 'total_auto_points' and current_direction == 'asc' %}desc{% else %}asc{% endif %}" class="text-white">Total Auto</a></th>
+                <th><a href="?sort=total_teleop_points&direction={% if current_sort == 'total_teleop_points' and current_direction == 'asc' %}desc{% else %}asc{% endif %}" class="text-white">Total Teleop</a></th>
+                <th><a href="?sort=total_tower_points&direction={% if current_sort == 'total_tower_points' and current_direction == 'asc' %}desc{% else %}asc{% endif %}" class="text-white">Tower Points</a></th>
+                <th><a href="?sort=hub_total_fuel_count&direction={% if current_sort == 'hub_total_fuel_count' and current_direction == 'asc' %}desc{% else %}asc{% endif %}" class="text-white">Hub Total Fuel</a></th>
+                <th><a href="?sort=hub_teleop_fuel_count&direction={% if current_sort == 'hub_teleop_fuel_count' and current_direction == 'asc' %}desc{% else %}asc{% endif %}" class="text-white">Hub Teleop Fuel</a></th>
+                <th><a href="?sort=hub_endgame_fuel_count&direction={% if current_sort == 'hub_endgame_fuel_count' and current_direction == 'asc' %}desc{% else %}asc{% endif %}" class="text-white">Hub Endgame Fuel</a></th>
+                <th><a href="?sort=minor_foul_count&direction={% if current_sort == 'minor_foul_count' and current_direction == 'asc' %}desc{% else %}asc{% endif %}" class="text-white">Minor Fouls</a></th>
+                <th><a href="?sort=major_foul_count&direction={% if current_sort == 'major_foul_count' and current_direction == 'asc' %}desc{% else %}asc{% endif %}" class="text-white">Major Fouls</a></th>
+                <th><a href="?sort=foul_points&direction={% if current_sort == 'foul_points' and current_direction == 'asc' %}desc{% else %}asc{% endif %}" class="text-white">Foul Points</a></th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for team in teams %}
+            <tr>
+                <td>
+                    <input type="number" class="form-control priority-input" min="1" max="10" value="{{ team.ranking.priority|default_if_none:'' }}" data-team="{{ team.team_number }}" data-event="{{ event.id|default:'' }}" style="width: 70px;">
+                </td>
+                <td><a href="{% url 'scouting:team_statistics' team.team_number %}">{{ team.team_number }}</a></td>
+                <td>{{ team.team_name }}</td>
+                <td>{{ team.ranking.rank|default:"-" }}</td>
+                <td>{{ team.ranking.opr|default:"-" }}</td>
+                <td>{{ team.ranking.auto_tower_points|default:"-" }}</td>
+                <td>{{ team.ranking.total_auto_points|default:"-" }}</td>
+                <td>{{ team.ranking.total_teleop_points|default:"-" }}</td>
+                <td>{{ team.ranking.total_tower_points|default:"-" }}</td>
+                <td>{{ team.ranking.hub_total_fuel_count|default:"-" }}</td>
+                <td>{{ team.ranking.hub_teleop_fuel_count|default:"-" }}</td>
+                <td>{{ team.ranking.hub_endgame_fuel_count|default:"-" }}</td>
+                <td>{{ team.ranking.minor_foul_count|default:"-" }}</td>
+                <td>{{ team.ranking.major_foul_count|default:"-" }}</td>
+                <td>{{ team.ranking.foul_points|default:"-" }}</td>
+            </tr>
+            {% empty %}
+            <tr>
+                <td colspan="15" class="text-center">No teams available</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+
+<!-- AJAX for priority -->
+<script>
+    document.addEventListener("DOMContentLoaded", function () {
+        document.querySelectorAll('.priority-input').forEach(input => {
+            input.addEventListener('change', function () {
+                const teamNumber = this.getAttribute('data-team');
+                const priorityValue = this.value;
+
+                fetch("{% url 'scouting:update_priority' %}", {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/x-www-form-urlencoded",
+                        "X-CSRFToken": document.querySelector("[name=csrfmiddlewaretoken]").value
+                    },
+                    body: `team_number=${teamNumber}&priority=${priorityValue}`
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        console.log(`Priority updated successfully for Team ${teamNumber}: ${priorityValue}`);
+                    } else {
+                        console.error("Error updating priority:", data.error);
+                    }
+                })
+                .catch(error => console.error("Request failed:", error));
+            });
+        });
+    });
+</script>
+
+{% endblock content %}
