@@ -19,13 +19,13 @@ from django.contrib import admin
 from django.urls import path, include
 from django.conf import settings
 from django.conf.urls.static import static
-from django.contrib.auth.views import logout_then_login
+from django.contrib.auth.views import LogoutView
 from scouting import views
 
 urlpatterns = [
     path('admin/', admin.site.urls),
     path("", include("scouting.urls")),
-    path('logout/', logout_then_login, {'login_url': settings.LOGIN_REDIRECT_URL}, name='logout'),
+    path('logout/', LogoutView.as_view(next_page=settings.LOGIN_REDIRECT_URL), name='logout'),
     path("accounts/", include("django.contrib.auth.urls")),
 
 ]
@@ -39,7 +39,7 @@ if settings.DEBUG:  # Only serve media files in development mode
 urlpatterns = [
     path('admin/', admin.site.urls),
     path("", include("scouting.urls")),
-    path('logout/', logout_then_login, {'login_url': settings.LOGIN_REDIRECT_URL}, name='logout'),
+    path('logout/', LogoutView.as_view(next_page=settings.LOGIN_REDIRECT_URL), name='logout'),
     path("accounts/", include("django.contrib.auth.urls")),
 ]
 
