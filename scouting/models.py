@@ -79,8 +79,11 @@ class PitScoutData(TimeStampedModel):
     event = models.ForeignKey('Event', on_delete=models.CASCADE, null=False)
     assigned_scout = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True)
     # Boolean Fields
-    friendly_or_cool= models.BooleanField(default=False)
-    crisp_boomers = models.BooleanField(default=False)
+    friendly_or_cool = models.BooleanField(default=False)
+    crisp_boompers = models.BooleanField(default=False)
+    can_robot_l3_climb = models.BooleanField(default=False)
+    can_robot_l1_climb = models.BooleanField(default=False)
+    can_robot_l1_climb_in_auto = models.BooleanField(default=False)
 
     # Integer Fields
 

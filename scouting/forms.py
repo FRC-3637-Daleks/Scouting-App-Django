@@ -12,13 +12,21 @@ class PitScoutDataForm(forms.ModelForm):
         model = PitScoutData
         fields = '__all__'
         widgets = {
-            'crisp_boomers': RadioSelect(choices=((True, 'Yes'), (False, 'No'))),
-            'friendly': RadioSelect(choices=((True, 'Yes'), (False, 'No'))),
-            'auton_picture1': ClearableFileInput(),
-            'auton_picture2': ClearableFileInput(),  # Explicit widget for image field
-            'auton_picture3': ClearableFileInput(),
-            'robot_picture1': ClearableFileInput(),
-            'robot_picture2': ClearableFileInput(),
+            'friendly_or_cool': RadioSelect(choices=((True, 'Yes'), (False, 'No'))),
+            'crisp_boompers': RadioSelect(choices=((True, 'Yes'), (False, 'No'))),
+            'can_robot_l3_climb': RadioSelect(choices=((True, 'Yes'), (False, 'No'))),
+            'can_robot_l1_climb': RadioSelect(choices=((True, 'Yes'), (False, 'No'))),
+            'can_robot_l1_climb_in_auto': RadioSelect(choices=((True, 'Yes'), (False, 'No'))),
+            'auton_picture_1': ClearableFileInput(),
+            'auton_picture_2': ClearableFileInput(),
+            'auton_picture_3': ClearableFileInput(),
+            'robot_picture_1': ClearableFileInput(),
+            'robot_picture_2': ClearableFileInput(),
+        }
+        labels = {
+            'can_robot_l3_climb': 'Can robot L3 climb',
+            'can_robot_l1_climb': 'Can robot L1 climb',
+            'can_robot_l1_climb_in_auto': 'Can robot L1 climb in AUTO',
         }
         exclude = ['assigned_scout', 'team', 'event']
 
