@@ -2,6 +2,7 @@ from .forms import *
 from django.shortcuts import redirect
 from django.forms.models import model_to_dict
 from django.core import serializers
+from django.conf import settings
 from django.contrib.auth.decorators import login_required, permission_required
 from rest_framework.authentication import TokenAuthentication
 from rest_framework.decorators import api_view, authentication_classes, permission_classes
@@ -17,6 +18,43 @@ from django.shortcuts import render
 from .models import TeamRanking
 from django.db.models import F
 from django.db.models import OuterRef, Subquery, Value, FloatField, IntegerField
+from pathlib import Path
+from PIL import Image
+
+
+def _get_standscout_compressed_url(image_field, max_width=900, quality=65):
+    """
+    Build and cache a compressed JPEG copy for stand scout screens.
+    Returns a media URL or None when source image does not exist.
+    """
+    if not image_field:
+        return None
+
+    try:
+        source_path = Path(image_field.path)
+    except Exception:
+        return None
+
+    if not source_path.exists():
+        return None
+
+    cache_dir = Path(settings.MEDIA_ROOT) / "cache" / "standscout"
+    cache_dir.mkdir(parents=True, exist_ok=True)
+
+    stamp = int(source_path.stat().st_mtime)
+    cache_name = f"{source_path.stem}_{stamp}.jpg"
+    cache_path = cache_dir / cache_name
+
+    if not cache_path.exists():
+        with Image.open(source_path) as img:
+            if img.mode in ("RGBA", "P"):
+                img = img.convert("RGB")
+            img.thumbnail((max_width, max_width), Image.Resampling.LANCZOS)
+            img.save(cache_path, format="JPEG", quality=quality, optimize=True, progressive=True)
+
+    return f"{settings.MEDIA_URL}cache/standscout/{cache_name}"
+
+
 @login_required()
 def view_index(request):
     event = Event.objects.get(active=True)
@@ -78,6 +116,7 @@ def view_match(request, team_number, match_number):
     team = Team.objects.get(team_number=team_number)
     event = Event.objects.get(active=True)
     match = Match.objects.get(match_number=match_number, event_id=event)
+    pit_scout_data = PitScoutData.objects.filter(team=team, event=event).first()
 
     # Check if a PitScoutData object already exists for this team and event
     match_data, created = MatchData2026.objects.get_or_create(team=team, match=match)
@@ -98,10 +137,21 @@ def view_match(request, team_number, match_number):
         # If the form has not been submitted, create a form instance from the PitScoutData object
         form = MatchData2026Form(instance=match_data)
 
+    robot_photo_urls = []
+    if pit_scout_data:
+        robot_photos = [pit_scout_data.robot_picture_1, pit_scout_data.robot_picture_2]
+        robot_photo_urls = [
+            _get_standscout_compressed_url(photo)
+            for photo in robot_photos
+            if photo
+        ]
+        robot_photo_urls = [url for url in robot_photo_urls if url]
+
     context = {
         'form': form,
         'match': match,
         'team': team,
+        'robot_photo_urls': robot_photo_urls,
     }
 
     return render(request, 'scouting/match.html', context)
