@@ -24,7 +24,13 @@
                 {% for row in pit_scout_data %}
                     <tr>
                         <th scope="row">{{ row.label }}</th>
-                        <td>{{ row.value }}</td>
+                        <td>
+                            {% if row.link_url %}
+                                <a href="{{ row.link_url }}" target="_blank" rel="noopener noreferrer">{{ row.value }}</a>
+                            {% else %}
+                                {{ row.value }}
+                            {% endif %}
+                        </td>
                     </tr>
                 {% empty %}
                     <tr>

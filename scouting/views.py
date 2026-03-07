@@ -198,13 +198,23 @@ def view_team_statistics(request, team_number):
         # Build display rows using field verbose names instead of raw db keys.
         pit_scout_data_rows = []
         for field_name, value in pit_scout_data_dict.items():
+            if field_name == 'frc_nexus_url':
+                # Show Nexus link via the pit_location row instead of raw URL row.
+                continue
+
             label = pit_scout_data._meta.get_field(field_name).verbose_name
             if isinstance(value, bool):
                 value = "Yes" if value else "No"
-            pit_scout_data_rows.append({
+
+            row = {
                 'label': str(label).title(),
                 'value': value,
-            })
+            }
+
+            if field_name == 'pit_location' and value and pit_scout_data.frc_nexus_url:
+                row['link_url'] = pit_scout_data.frc_nexus_url
+
+            pit_scout_data_rows.append(row)
 
         # Gather images
         pit_scout_images = [
