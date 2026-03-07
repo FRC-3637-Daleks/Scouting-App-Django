@@ -5,6 +5,11 @@
 {% block content %}
     <div class="container">
         <h1 class="m-3 text-center">Team Statistics for {{ team.team_number }} - {{ team.team_name }}</h1>
+        {% if team.team_logo %}
+            <div class="text-center mb-3">
+                <img src="{{ team.team_logo.url }}" alt="Team {{ team.team_number }} logo" class="img-thumbnail" style="height: 84px; width: 84px; object-fit: cover;">
+            </div>
+        {% endif %}
 
         <!-- Pit Scouting Data -->
         <h2 class="m-3 text-center">Pit Scouting Data</h2>

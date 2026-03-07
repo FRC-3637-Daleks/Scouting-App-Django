@@ -10,6 +10,7 @@
                 <thead>
                     <tr>
                         <th scope="col" class="text-nowrap">Team #</th>
+                        <th scope="col" class="text-nowrap">Logo</th>
                         <th scope="col" class="text-nowrap">Team Name</th>
                         <th scope="col" class="text-nowrap">Scout Assigned</th>
                         <th scope="col" class="text-nowrap">Scout</th>
@@ -20,6 +21,11 @@
                         {% if report.description == '' and report.assigned_scout == current_user%}
                             <tr>
                                 <th scope="row">{{ report.team.team_number }}</th>
+                                <td>
+                                    {% if report.team.team_logo %}
+                                        <img src="{{ report.team.team_logo.url }}" alt="Team {{ report.team.team_number }} logo" class="img-thumbnail" style="height: 40px; width: 40px; object-fit: cover;">
+                                    {% endif %}
+                                </td>
                                 <td>{{ report.team.team_name }}</td>
                                 <td>
                                     {% if report.assigned_scout %}
@@ -46,6 +52,7 @@
                 <thead>
                     <tr>
                         <th scope="col" class="text-nowrap">Team #</th>
+                        <th scope="col" class="text-nowrap">Logo</th>
                         <th scope="col" class="text-nowrap">Team Name</th>
                         <th scope="col" class="text-nowrap">Scout Assigned</th>
                         <th scope="col" class="text-nowrap">Scout</th>
@@ -56,6 +63,11 @@
                         {% if report.description == '' and not report.assigned_scout == current_user%}
                             <tr>
                                 <th scope="row">{{ report.team.team_number }}</th>
+                                <td>
+                                    {% if report.team.team_logo %}
+                                        <img src="{{ report.team.team_logo.url }}" alt="Team {{ report.team.team_number }} logo" class="img-thumbnail" style="height: 40px; width: 40px; object-fit: cover;">
+                                    {% endif %}
+                                </td>
                                 <td>{{ report.team.team_name }}</td>
                                 <td>
                                     {% if report.assigned_scout %}
@@ -82,6 +94,7 @@
                 <thead>
                     <tr>
                         <th scope="col" class="text-nowrap">Team #</th>
+                        <th scope="col" class="text-nowrap">Logo</th>
                         <th scope="col" class="text-nowrap">Team Name</th>
                         <th scope="col" class="text-nowrap">Scout</th>
                         <th scope="col" class="text-nowrap">Report</th>
@@ -92,6 +105,11 @@
                         {% if report.description != '' %}
                             <tr>
                                 <th scope="row">{{ report.team.team_number }}</th>
+                                <td>
+                                    {% if report.team.team_logo %}
+                                        <img src="{{ report.team.team_logo.url }}" alt="Team {{ report.team.team_number }} logo" class="img-thumbnail" style="height: 40px; width: 40px; object-fit: cover;">
+                                    {% endif %}
+                                </td>
                                 <td>{{ report.team.team_name }}</td>
                                 <td>
                                     {% if report.assigned_scout %}

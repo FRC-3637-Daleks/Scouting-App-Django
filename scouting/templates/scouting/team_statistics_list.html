@@ -13,6 +13,7 @@
                             Team # {% if order_by == "team_number" %}{% if direction == "asc" %}↑{% else %}↓{% endif %}{% endif %}
                         </a>
                     </th>
+                    <th scope="col">Logo</th>
                     <th scope="col">Team Name</th>
                     <th scope="col">View Report</th>
                 </tr>
@@ -21,6 +22,11 @@
                 {% for team in teams %}
                     <tr>
                         <td>{{ team.team_number }}</td>
+                        <td>
+                            {% if team.team_logo %}
+                                <img src="{{ team.team_logo.url }}" alt="Team {{ team.team_number }} logo" class="img-thumbnail" style="height: 40px; width: 40px; object-fit: cover;">
+                            {% endif %}
+                        </td>
                         <td>{{ team.team_name }}</td>
                         <td>
                             <a href="{% url 'scouting:team_statistics' team_number=team.team_number %}" class="btn btn-primary" role="button">

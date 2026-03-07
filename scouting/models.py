@@ -10,6 +10,11 @@ def unique_pit_image_path(instance, filename):
     return f"images/{uuid.uuid4().hex}{ext}"
 
 
+def unique_team_logo_path(instance, filename):
+    ext = os.path.splitext(filename)[1].lower() or ".png"
+    return f"team_logos/{instance.team_number}_{uuid.uuid4().hex}{ext}"
+
+
 class Game(TimeStampedModel):
     year = models.IntegerField(unique=True)
     name = models.CharField(max_length=20)
@@ -21,6 +26,7 @@ class Game(TimeStampedModel):
 class Team(TimeStampedModel):
     team_name = models.CharField(max_length=30)
     team_number = models.IntegerField()
+    team_logo = models.ImageField(upload_to=unique_team_logo_path, blank=True, null=True)
 
     def __str__(self):
         return str(self.team_number) + " - " + self.team_name
