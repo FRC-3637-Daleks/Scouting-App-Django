@@ -794,7 +794,17 @@ def view_pit_dashboard(request):
     if current_qual_match_num:
         team_matches = team_matches.filter(match_number__gte=max(1, current_qual_match_num - 3))
 
-    shown_matches = list(team_matches)
+    completed_match_numbers = set(
+        MatchResult.objects.filter(
+            match__event_id=event,
+            is_final=True,
+            match__match_number__isnull=False,
+        ).values_list("match__match_number", flat=True)
+    )
+    shown_matches = [
+        match_obj for match_obj in team_matches
+        if match_obj.match_number not in completed_match_numbers
+    ]
     win_chance_by_match, statbotics_error = _load_statbotics_rest_win_chances(
         event_key=event.tba_event_key,
         team_number=team_number,
