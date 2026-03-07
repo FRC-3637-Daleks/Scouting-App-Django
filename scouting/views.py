@@ -734,6 +734,7 @@ def view_pit_dashboard(request):
     now_queuing = None
     nexus_error = None
     current_qual_match_num = None
+    queueing_match_numbers = set()
     queue_time_by_match = {}
     display_tz = ZoneInfo("America/New_York")
     statbotics_error = None
@@ -774,6 +775,14 @@ def view_pit_dashboard(request):
                 continue
 
             match_number = int(match.group(1))
+            status_text = str(nexus_match.get("status") or "").lower().strip()
+            # Treat only actively queued/on-deck matches as "in queue".
+            # Do not flag "queuing soon" as in queue.
+            if (
+                ("queue" in status_text or "queu" in status_text or "on deck" in status_text)
+                and "soon" not in status_text
+            ):
+                queueing_match_numbers.add(match_number)
             queue_time_ms = (nexus_match.get("times") or {}).get("estimatedQueueTime")
             if not queue_time_ms:
                 continue
@@ -793,6 +802,10 @@ def view_pit_dashboard(request):
     # Show a rolling window: 3 matches before now-queuing plus current/upcoming.
     if current_qual_match_num:
         team_matches = team_matches.filter(match_number__gte=max(1, current_qual_match_num - 3))
+
+    # If no explicit queue status is available, fall back to the derived current qualification match.
+    if not queueing_match_numbers and current_qual_match_num:
+        queueing_match_numbers.add(current_qual_match_num)
 
     completed_match_numbers = set(
         MatchResult.objects.filter(
@@ -817,6 +830,7 @@ def view_pit_dashboard(request):
             "queue_time": queue_time_by_match.get(m.match_number, "-"),
             "win_chance": win_chance_by_match.get(m.match_number, "-"),
             "statbotics_match_url": f"https://www.statbotics.io/match/{event.tba_event_key}_qm{m.match_number}",
+            "is_queueing": m.match_number in queueing_match_numbers,
         }
         for m in shown_matches
     ]

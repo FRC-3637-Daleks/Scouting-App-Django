@@ -46,7 +46,7 @@
                                 <tbody>
                                     {% for row in match_rows %}
                                         {% with match=row.match %}
-                                        <tr>
+                                        <tr class="{% if row.is_queueing %}queueing-row{% endif %}">
                                             <th scope="row">{{ match.match_number }}</th>
                                             <td>{{ row.queue_time }}</td>
                                             <td>
@@ -254,6 +254,16 @@
             border-radius: 4px;
             border: 1px solid rgba(0, 0, 0, 0.15);
             background: #fff;
+        }
+        [data-bs-theme="light"] .queueing-row td,
+        [data-bs-theme="light"] .queueing-row th {
+            background-color: #fff3b0 !important;
+            color: #3d3000 !important;
+        }
+        [data-bs-theme="dark"] .queueing-row td,
+        [data-bs-theme="dark"] .queueing-row th {
+            background-color: #6b5a00 !important;
+            color: #fff6cf !important;
         }
     </style>
 
