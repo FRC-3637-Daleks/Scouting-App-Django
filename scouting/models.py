@@ -73,6 +73,8 @@ class MatchResult(TimeStampedModel):
     blue_score = models.IntegerField(null=True, blank=True)
     red_rp = models.FloatField(null=True, blank=True)
     blue_rp = models.FloatField(null=True, blank=True)
+    red_climb_success = models.BooleanField(null=True, blank=True)
+    blue_climb_success = models.BooleanField(null=True, blank=True)
     is_final = models.BooleanField(default=False)
 
     class Meta:

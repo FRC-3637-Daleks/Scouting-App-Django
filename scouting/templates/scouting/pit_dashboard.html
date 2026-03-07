@@ -7,6 +7,13 @@
         <div class="text-center mb-3">
             <h1 class="m-0">Pit Dashboard | Team {{ team_number }} | {{ event.event_name }}</h1>
             <h2 class="mt-2 mb-0">
+                Current Match:
+                {% if current_match %}
+                    <span class="badge bg-primary">{{ current_match }}</span>
+                {% else %}
+                    <span class="badge bg-secondary">Unavailable</span>
+                {% endif %}
+                <span class="mx-2">|</span>
                 Now Queueing:
                 {% if now_queuing %}
                     <span class="badge bg-success">{{ now_queuing }}</span>
@@ -123,7 +130,7 @@
                     <div class="card-header"><strong>Event Stats</strong></div>
                     <div class="card-body">
                         <div class="row g-2">
-                            <div class="col-6">
+                            <div class="col-12 col-md-4">
                                 <div class="border rounded p-2 text-center h-100">
                                     <div class="small text-muted">Our Rank</div>
                                     <div class="fs-4 fw-bold">
@@ -135,10 +142,16 @@
                                     </div>
                                 </div>
                             </div>
-                            <div class="col-6">
+                            <div class="col-12 col-md-4">
                                 <div class="border rounded p-2 text-center h-100">
                                     <div class="small text-muted">Matches Played</div>
                                     <div class="fs-4 fw-bold">{{ matches_played }}</div>
+                                </div>
+                            </div>
+                            <div class="col-12 col-md-4">
+                                <div class="border rounded p-2 text-center h-100">
+                                    <div class="small text-muted">Climb Success</div>
+                                    <div class="fs-4 fw-bold">{{ climb_success_rate }}</div>
                                 </div>
                             </div>
                         </div>

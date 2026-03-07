@@ -5,7 +5,7 @@ from scouting.models import *
 from django.core.exceptions import ObjectDoesNotExist
 
 class Command(BaseCommand):
-    help = 'Update team rank and COPRs (Component OPRs) from The Blue Alliance API'
+    help = 'Update team rank, COPRs, and match climb success from The Blue Alliance API'
 
     CATEGORY_TO_FIELD = {
         # 2026 top-level score breakdown components
@@ -33,6 +33,44 @@ class Command(BaseCommand):
         'Hub Shift 3 Fuel Count': 'hub_shift_3_fuel_count',
         'Hub Shift 4 Fuel Count': 'hub_shift_4_fuel_count',
     }
+
+    def _extract_alliance_climb_success(self, score_breakdown, alliance):
+        if not isinstance(score_breakdown, dict):
+            return None
+        alliance_data = score_breakdown.get(alliance)
+        if not isinstance(alliance_data, dict):
+            return None
+
+        for key in (
+            "didClimb",
+            "did_climb",
+            "climbSuccess",
+            "climb_success",
+            "climbed",
+            "successfulClimb",
+            "successful_climb",
+        ):
+            value = alliance_data.get(key)
+            if isinstance(value, bool):
+                return value
+
+        for key, raw_value in alliance_data.items():
+            key_lower = str(key).lower()
+            if "climb" in key_lower:
+                try:
+                    return float(raw_value) > 0
+                except (TypeError, ValueError):
+                    continue
+
+        for key in ("endGameTowerPoints", "endgameTowerPoints", "end_game_tower_points"):
+            value = alliance_data.get(key)
+            try:
+                if value is not None:
+                    return float(value) > 0
+            except (TypeError, ValueError):
+                continue
+
+        return None
 
     def handle(self, *args, **options):
         # Get active API key
@@ -128,5 +166,35 @@ class Command(BaseCommand):
  #                       f"Updated COPR stats for team {team_number} - {category}: {round(value, 2)}"
  #                   )
  #              )
+
+        matches_url = f'https://www.thebluealliance.com/api/v3/event/{event.tba_event_key}/matches'
+        matches_response = session.get(matches_url, headers=headers)
+        if matches_response.status_code == 200:
+            matches_data = matches_response.json() or []
+            for match_data in matches_data:
+                if match_data.get("comp_level") != "qm":
+                    continue
+
+                match_number = match_data.get("match_number")
+                if match_number is None:
+                    continue
+
+                try:
+                    match_obj = Match.objects.get(event_id=event, match_number=match_number)
+                except Match.DoesNotExist:
+                    continue
+
+                red_climb_success = self._extract_alliance_climb_success(match_data.get("score_breakdown"), "red")
+                blue_climb_success = self._extract_alliance_climb_success(match_data.get("score_breakdown"), "blue")
+                is_final = match_data.get("actual_time") is not None
+
+                MatchResult.objects.update_or_create(
+                    match=match_obj,
+                    defaults={
+                        "red_climb_success": red_climb_success if is_final else None,
+                        "blue_climb_success": blue_climb_success if is_final else None,
+                        "is_final": is_final,
+                    },
+                )
 
         self.stdout.write(self.style.SUCCESS("Team rank + COPR stats update completed"))

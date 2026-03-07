@@ -96,6 +96,47 @@ class Command(BaseCommand):
 
         return rp_total if found_any else None
 
+    def _extract_alliance_climb_success(self, score_breakdown, alliance):
+        if not isinstance(score_breakdown, dict):
+            return None
+        alliance_data = score_breakdown.get(alliance)
+        if not isinstance(alliance_data, dict):
+            return None
+
+        # Direct boolean climb flags.
+        for key in (
+            "didClimb",
+            "did_climb",
+            "climbSuccess",
+            "climb_success",
+            "climbed",
+            "successfulClimb",
+            "successful_climb",
+        ):
+            value = alliance_data.get(key)
+            if isinstance(value, bool):
+                return value
+
+        # Numeric climb indicators.
+        for key, raw_value in alliance_data.items():
+            key_lower = str(key).lower()
+            if "climb" in key_lower:
+                try:
+                    return float(raw_value) > 0
+                except (TypeError, ValueError):
+                    continue
+
+        # Generic endgame tower points fallback.
+        for key in ("endGameTowerPoints", "endgameTowerPoints", "end_game_tower_points"):
+            value = alliance_data.get(key)
+            try:
+                if value is not None:
+                    return float(value) > 0
+            except (TypeError, ValueError):
+                continue
+
+        return None
+
     def _fetch_nexus_pits_map(self, event_key, nexus_api_key):
         """
         Returns {team_number: pit_location} from FRC Nexus, if configured/available.
@@ -222,6 +263,8 @@ class Command(BaseCommand):
             blue_score = self._to_int_or_none((match.get("alliances") or {}).get("blue", {}).get("score"))
             red_rp = self._extract_alliance_rp(match.get("score_breakdown"), "red")
             blue_rp = self._extract_alliance_rp(match.get("score_breakdown"), "blue")
+            red_climb_success = self._extract_alliance_climb_success(match.get("score_breakdown"), "red")
+            blue_climb_success = self._extract_alliance_climb_success(match.get("score_breakdown"), "blue")
             is_final = (
                 match.get("actual_time") is not None
                 or (red_score is not None and blue_score is not None and red_score >= 0 and blue_score >= 0)
@@ -234,6 +277,8 @@ class Command(BaseCommand):
                     "blue_score": blue_score if is_final else None,
                     "red_rp": red_rp if is_final else None,
                     "blue_rp": blue_rp if is_final else None,
+                    "red_climb_success": red_climb_success if is_final else None,
+                    "blue_climb_success": blue_climb_success if is_final else None,
                     "is_final": is_final,
                 },
             )

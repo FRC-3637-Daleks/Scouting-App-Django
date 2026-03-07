@@ -256,6 +256,41 @@ def _derive_now_queuing_from_matches(nexus_matches):
     return None, None
 
 
+def _derive_current_match_from_matches(nexus_matches):
+    """
+    Derive the currently playing qualification match from Nexus match statuses.
+    Returns (label, match_number).
+    """
+    if not isinstance(nexus_matches, list):
+        return None, None
+
+    on_field = []
+    for row in nexus_matches:
+        if not isinstance(row, dict):
+            continue
+        label = row.get("label") or ""
+        parsed = re.search(r"^Qualification\s+(\d+)", label, flags=re.IGNORECASE)
+        if not parsed:
+            continue
+        status_text = str(row.get("status") or "").lower()
+        if "on field" not in status_text and "in progress" not in status_text:
+            continue
+        times = row.get("times") or {}
+        actual_field = times.get("actualOnFieldTime")
+        est_field = times.get("estimatedOnFieldTime")
+        ts = actual_field if isinstance(actual_field, (int, float)) else (
+            est_field if isinstance(est_field, (int, float)) else -1
+        )
+        on_field.append((ts, int(parsed.group(1)), label, row.get("status") or "On field"))
+
+    if not on_field:
+        return None, None
+
+    on_field.sort(key=lambda item: (item[0], item[1]), reverse=True)
+    _, match_number, label, status = on_field[0]
+    return f"{label} ({status})", match_number
+
+
 def _load_statbotics_rest_win_chances(event_key, team_number, matches):
     """
     Return a mapping of match_number -> display win chance for the given team.
@@ -731,6 +766,7 @@ def view_pit_dashboard(request):
     nexus_status = {}
     announcements = []
     parts_requests = []
+    current_match = None
     now_queuing = None
     nexus_error = None
     current_qual_match_num = None
@@ -753,6 +789,7 @@ def view_pit_dashboard(request):
         now_queuing = nexus_status.get("nowQueuing")
         announcements = nexus_status.get("announcements") or []
         parts_requests = nexus_status.get("partsRequests") or []
+        current_match, _ = _derive_current_match_from_matches(nexus_status.get("matches"))
 
         if not now_queuing:
             derived_label, derived_match_num = _derive_now_queuing_from_matches(nexus_status.get("matches"))
@@ -830,7 +867,7 @@ def view_pit_dashboard(request):
             "queue_time": queue_time_by_match.get(m.match_number, "-"),
             "win_chance": win_chance_by_match.get(m.match_number, "-"),
             "statbotics_match_url": f"https://www.statbotics.io/match/{event.tba_event_key}_qm{m.match_number}",
-            "is_queueing": m.match_number in queueing_match_numbers,
+            "is_queueing": bool(current_qual_match_num and m.match_number <= current_qual_match_num),
         }
         for m in shown_matches
     ]
@@ -856,11 +893,11 @@ def view_pit_dashboard(request):
         our_rp = result.red_rp if alliance == "red" else result.blue_rp
 
         if our_score > opp_score:
-            outcome = "W"
+            outcome = "Win"
         elif our_score < opp_score:
-            outcome = "L"
+            outcome = "Loss"
         else:
-            outcome = "T"
+            outcome = "Tie"
 
         if our_rp is None:
             rp_display = "-"
@@ -884,6 +921,15 @@ def view_pit_dashboard(request):
     ).values_list("rank", flat=True).first()
     total_teams = event.teams.count()
     matches_played = len(team_match_results)
+    climbs_completed = 0
+    for result in completed_results:
+        match_obj = result.match
+        alliance = _get_team_alliance(match_obj, team_number)
+        if alliance == "red" and result.red_climb_success is True:
+            climbs_completed += 1
+        elif alliance == "blue" and result.blue_climb_success is True:
+            climbs_completed += 1
+    climb_success_rate = f"{climbs_completed} / {matches_played}"
 
     context = {
         "event": event,
@@ -893,6 +939,8 @@ def view_pit_dashboard(request):
         "our_rank": our_rank,
         "total_teams": total_teams,
         "matches_played": matches_played,
+        "climb_success_rate": climb_success_rate,
+        "current_match": current_match,
         "now_queuing": now_queuing,
         "announcements": announcements,
         "parts_requests": parts_requests,
