@@ -12,10 +12,11 @@ from .forms import PitScoutDataForm
 from django.shortcuts import render, get_object_or_404
 from django.http import JsonResponse
 from django.core.management import call_command
+from django.core.cache import cache
 from django.contrib.auth.decorators import login_required
 import json
 from django.shortcuts import render
-from .models import TeamRanking, Match, NexusApiKey
+from .models import TeamRanking, Match, MatchResult, NexusApiKey
 from django.db.models import F
 from django.db.models import OuterRef, Subquery, Value, FloatField, IntegerField
 from pathlib import Path
@@ -57,6 +58,237 @@ def _get_standscout_compressed_url(image_field, max_width=900, quality=65):
             img.save(cache_path, format="JPEG", quality=quality, optimize=True, progressive=True)
 
     return f"{settings.MEDIA_URL}cache/standscout/{cache_name}"
+
+
+def _normalize_probability(value):
+    try:
+        probability = float(value)
+    except (TypeError, ValueError):
+        return None
+
+    # Support either 0-1 or 0-100 formats.
+    if probability > 1:
+        probability = probability / 100.0
+
+    return max(0.0, min(1.0, probability))
+
+
+def _get_team_alliance(match_obj, team_number):
+    red_teams = (
+        match_obj.team_red_1.team_number,
+        match_obj.team_red_2.team_number,
+        match_obj.team_red_3.team_number,
+    )
+    blue_teams = (
+        match_obj.team_blue_1.team_number,
+        match_obj.team_blue_2.team_number,
+        match_obj.team_blue_3.team_number,
+    )
+
+    if team_number in red_teams:
+        return "red"
+    if team_number in blue_teams:
+        return "blue"
+    return None
+
+
+def _extract_alliance_win_probability(match_payload, alliance):
+    """
+    Extract a specific alliance win probability from Statbotics REST payload.
+    Handles both top-level and nested prediction layouts.
+    """
+    if not isinstance(match_payload, dict) or alliance not in {"red", "blue"}:
+        return None
+
+    alliance_key = f"{alliance}_win_prob"
+    opposite_alliance = "blue" if alliance == "red" else "red"
+    opposite_key = f"{opposite_alliance}_win_prob"
+
+    for key in (alliance_key, f"{alliance}WinProb"):
+        if key in match_payload:
+            normalized = _normalize_probability(match_payload.get(key))
+            if normalized is not None:
+                return normalized
+
+    # Common REST shape may include only one side's win probability.
+    for key in (opposite_key, f"{opposite_alliance}WinProb"):
+        if key in match_payload:
+            normalized = _normalize_probability(match_payload.get(key))
+            if normalized is not None:
+                return 1.0 - normalized
+
+    for container_name in ("pred", "epa"):
+        container = match_payload.get(container_name)
+        if isinstance(container, dict):
+            for key in (alliance_key, f"{alliance}WinProb"):
+                if key in container:
+                    normalized = _normalize_probability(container.get(key))
+                    if normalized is not None:
+                        return normalized
+            for key in (opposite_key, f"{opposite_alliance}WinProb"):
+                if key in container:
+                    normalized = _normalize_probability(container.get(key))
+                    if normalized is not None:
+                        return 1.0 - normalized
+
+    # Some payloads return winner + winner probability instead of alliance-specific keys.
+    winner = match_payload.get("epa_winner") or match_payload.get("pred_winner")
+    winner_prob = match_payload.get("epa_win_prob")
+    if winner_prob is None:
+        winner_prob = match_payload.get("pred_win_prob")
+    if winner_prob is None and isinstance(match_payload.get("epa"), dict):
+        winner_prob = match_payload["epa"].get("win_prob")
+    if winner_prob is None and isinstance(match_payload.get("pred"), dict):
+        winner_prob = match_payload["pred"].get("win_prob")
+
+    normalized = _normalize_probability(winner_prob)
+    if normalized is None or winner not in {"red", "blue"}:
+        return None
+
+    return normalized if winner == alliance else 1.0 - normalized
+
+
+def _extract_team_perspective_win_probability(match_payload):
+    """
+    Extract team-perspective win probability when a team-filtered endpoint provides it.
+    """
+    if not isinstance(match_payload, dict):
+        return None
+
+    for key in ("win_prob", "winProb", "epa_win_prob", "pred_win_prob"):
+        if key in match_payload:
+            normalized = _normalize_probability(match_payload.get(key))
+            if normalized is not None:
+                return normalized
+
+    for container_name in ("epa", "pred"):
+        container = match_payload.get(container_name)
+        if isinstance(container, dict):
+            for key in ("win_prob", "winProb"):
+                if key in container:
+                    normalized = _normalize_probability(container.get(key))
+                    if normalized is not None:
+                        return normalized
+    return None
+
+
+def _parse_match_number_from_payload(payload_row):
+    if not isinstance(payload_row, dict):
+        return None
+
+    raw_number = payload_row.get("match_number")
+    try:
+        if raw_number is not None:
+            return int(raw_number)
+    except (TypeError, ValueError):
+        pass
+
+    for key_name in ("key", "match", "match_key"):
+        value = payload_row.get(key_name)
+        if isinstance(value, str):
+            parsed = re.search(r"_qm(\d+)$", value)
+            if parsed:
+                return int(parsed.group(1))
+    return None
+
+
+def _load_statbotics_rest_win_chances(event_key, team_number, matches):
+    """
+    Return a mapping of match_number -> display win chance for the given team.
+    Uses Statbotics REST API per match key.
+    """
+    cache_key = f"pit_dash_statbotics:{event_key}:{team_number}"
+    cached = cache.get(cache_key)
+    if isinstance(cached, dict):
+        return cached, None
+
+    match_lookup = {m.match_number: m for m in matches}
+    match_number_set = set(match_lookup.keys())
+    if not match_number_set:
+        return {}, None
+
+    base_url = "https://api.statbotics.io/v3/matches"
+    win_chance_by_match = {}
+    had_request_error = False
+
+    try:
+        response = requests.get(
+            base_url,
+            params={
+                "team": team_number,
+                "event": event_key,
+                "limit": max(50, len(match_number_set) + 10),
+            },
+            timeout=6,
+        )
+        response.raise_for_status()
+        payload = response.json()
+    except requests.RequestException:
+        payload = []
+        had_request_error = True
+    except ValueError:
+        payload = []
+        had_request_error = True
+
+    rows = payload if isinstance(payload, list) else []
+    for row in rows:
+        match_number = _parse_match_number_from_payload(row)
+        if match_number is None or match_number not in match_number_set:
+            continue
+
+        team_prob = _extract_team_perspective_win_probability(row)
+        if team_prob is not None:
+            win_chance_by_match[match_number] = f"{round(team_prob * 100)}%"
+            continue
+
+        match_obj = match_lookup.get(match_number)
+        if not match_obj:
+            continue
+
+        alliance = (row.get("alliance") or "").lower()
+        if alliance not in {"red", "blue"}:
+            alliance = _get_team_alliance(match_obj, team_number)
+        if alliance is None:
+            continue
+
+        probability = _extract_alliance_win_probability(row, alliance)
+        if probability is not None:
+            win_chance_by_match[match_number] = f"{round(probability * 100)}%"
+
+    # Fallback to per-match endpoint only for unresolved rows.
+    unresolved = [n for n in match_number_set if n not in win_chance_by_match]
+    for match_number in unresolved:
+        match_obj = match_lookup.get(match_number)
+        if not match_obj:
+            continue
+        alliance = _get_team_alliance(match_obj, team_number)
+        if alliance is None:
+            continue
+
+        match_key = f"{event_key}_qm{match_number}"
+        try:
+            response = requests.get(f"https://api.statbotics.io/v3/match/{match_key}", timeout=4)
+            if response.status_code == 404:
+                continue
+            response.raise_for_status()
+            payload = response.json()
+        except requests.RequestException:
+            had_request_error = True
+            continue
+        except ValueError:
+            had_request_error = True
+            continue
+
+        probability = _extract_alliance_win_probability(payload, alliance)
+        if probability is not None:
+            win_chance_by_match[match_number] = f"{round(probability * 100)}%"
+
+    if win_chance_by_match:
+        cache.set(cache_key, win_chance_by_match, 120)
+
+    if not win_chance_by_match and had_request_error:
+        return {}, "Unable to load Statbotics win probabilities."
+    return win_chance_by_match, None
 
 
 @login_required()
@@ -440,6 +672,8 @@ def view_pit_dashboard(request):
     current_qual_match_num = None
     queue_time_by_match = {}
     display_tz = ZoneInfo("America/New_York")
+    statbotics_error = None
+    win_chance_by_match = {}
 
     try:
         nexus_key = NexusApiKey.objects.get(active=True).api_key
@@ -490,16 +724,75 @@ def view_pit_dashboard(request):
     if current_qual_match_num:
         team_matches = team_matches.filter(match_number__gte=max(1, current_qual_match_num - 3))
 
-    match_rows = [{"match": m, "queue_time": queue_time_by_match.get(m.match_number, "-")} for m in team_matches]
+    shown_matches = list(team_matches)
+    win_chance_by_match, statbotics_error = _load_statbotics_rest_win_chances(
+        event_key=event.tba_event_key,
+        team_number=team_number,
+        matches=shown_matches,
+    )
+
+    match_rows = [
+        {
+            "match": m,
+            "queue_time": queue_time_by_match.get(m.match_number, "-"),
+            "win_chance": win_chance_by_match.get(m.match_number, "-"),
+        }
+        for m in shown_matches
+    ]
+
+    # Pull completed match results for Team 3637 from DB-synced TBA data.
+    team_match_results = []
+    completed_results = MatchResult.objects.select_related("match").filter(
+        match__event_id=event,
+        is_final=True,
+        match__match_number__isnull=False,
+    ).order_by("-match__match_number")
+
+    for result in completed_results:
+        match_obj = result.match
+        alliance = _get_team_alliance(match_obj, team_number)
+        if alliance not in {"red", "blue"}:
+            continue
+        if result.red_score is None or result.blue_score is None:
+            continue
+
+        our_score = result.red_score if alliance == "red" else result.blue_score
+        opp_score = result.blue_score if alliance == "red" else result.red_score
+        our_rp = result.red_rp if alliance == "red" else result.blue_rp
+
+        if our_score > opp_score:
+            outcome = "W"
+        elif our_score < opp_score:
+            outcome = "L"
+        else:
+            outcome = "T"
+
+        if our_rp is None:
+            rp_display = "-"
+        elif float(our_rp).is_integer():
+            rp_display = str(int(our_rp))
+        else:
+            rp_display = f"{our_rp:.1f}"
+
+        team_match_results.append(
+            {
+                "match_number": match_obj.match_number,
+                "result": outcome,
+                "score_display": f"{our_score}-{opp_score}",
+                "rp_display": rp_display,
+            }
+        )
 
     context = {
         "event": event,
         "team_number": team_number,
         "match_rows": match_rows,
+        "team_match_results": team_match_results,
         "now_queuing": now_queuing,
         "announcements": announcements,
         "parts_requests": parts_requests,
         "nexus_error": nexus_error,
+        "statbotics_error": statbotics_error,
     }
     return render(request, "scouting/pit_dashboard.html", context)
 

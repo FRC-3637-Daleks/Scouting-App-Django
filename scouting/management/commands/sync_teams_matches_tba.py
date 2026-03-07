@@ -5,7 +5,7 @@ from django.core.exceptions import ObjectDoesNotExist
 from django.core.files.base import ContentFile
 from django.core.management.base import BaseCommand
 
-from scouting.models import Event, Match, NexusApiKey, PitScoutData, TbaApiKey, Team
+from scouting.models import Event, Match, MatchResult, NexusApiKey, PitScoutData, TbaApiKey, Team
 
 
 class Command(BaseCommand):
@@ -49,6 +49,52 @@ class Command(BaseCommand):
 
     def _build_frc_nexus_map_url(self, event_key, team_number):
         return f"https://frc.nexus/en/event/{event_key}/team/{team_number}/map"
+
+    def _to_int_or_none(self, value):
+        if value is None:
+            return None
+        try:
+            return int(value)
+        except (TypeError, ValueError):
+            return None
+
+    def _to_float_or_none(self, value):
+        if value is None:
+            return None
+        try:
+            return float(value)
+        except (TypeError, ValueError):
+            return None
+
+    def _extract_alliance_rp(self, score_breakdown, alliance):
+        if not isinstance(score_breakdown, dict):
+            return None
+        alliance_data = score_breakdown.get(alliance)
+        if not isinstance(alliance_data, dict):
+            return None
+
+        # Preferred direct keys when available.
+        for key in ("rp", "ranking_points", "rankingPoints", "total_rp"):
+            value = self._to_float_or_none(alliance_data.get(key))
+            if value is not None:
+                return value
+
+        # Fallback: sum game-specific ranking point booleans/numerics.
+        rp_total = 0.0
+        found_any = False
+        for key, raw_value in alliance_data.items():
+            key_lower = str(key).lower()
+            if "rankingpoint" in key_lower or key_lower.endswith("_rp"):
+                if isinstance(raw_value, bool):
+                    rp_total += 1.0 if raw_value else 0.0
+                    found_any = True
+                else:
+                    numeric = self._to_float_or_none(raw_value)
+                    if numeric is not None:
+                        rp_total += numeric
+                        found_any = True
+
+        return rp_total if found_any else None
 
     def _fetch_nexus_pits_map(self, event_key, nexus_api_key):
         """
@@ -128,14 +174,14 @@ class Command(BaseCommand):
 
         active_event.save()
 
-        matches_url = f"https://www.thebluealliance.com/api/v3/event/{event_key}/matches/simple"
+        matches_url = f"https://www.thebluealliance.com/api/v3/event/{event_key}/matches"
         matches = self._get_json(matches_url, headers)
 
         for match in matches:
             if match["comp_level"] != "qm":
                 continue
 
-            Match.objects.update_or_create(
+            match_obj, _ = Match.objects.update_or_create(
                 match_number=match["match_number"],
                 event_id=active_event,
                 defaults={
@@ -169,6 +215,26 @@ class Command(BaseCommand):
                         if match["alliances"]["blue"]["team_keys"][2]
                         else 9999
                     )[0],
+                },
+            )
+
+            red_score = self._to_int_or_none((match.get("alliances") or {}).get("red", {}).get("score"))
+            blue_score = self._to_int_or_none((match.get("alliances") or {}).get("blue", {}).get("score"))
+            red_rp = self._extract_alliance_rp(match.get("score_breakdown"), "red")
+            blue_rp = self._extract_alliance_rp(match.get("score_breakdown"), "blue")
+            is_final = (
+                match.get("actual_time") is not None
+                or (red_score is not None and blue_score is not None and red_score >= 0 and blue_score >= 0)
+            )
+
+            MatchResult.objects.update_or_create(
+                match=match_obj,
+                defaults={
+                    "red_score": red_score if is_final else None,
+                    "blue_score": blue_score if is_final else None,
+                    "red_rp": red_rp if is_final else None,
+                    "blue_rp": blue_rp if is_final else None,
+                    "is_final": is_final,
                 },
             )
 

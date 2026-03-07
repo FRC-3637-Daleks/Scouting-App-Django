@@ -67,6 +67,21 @@ class Match(TimeStampedModel):
         return str(self.match_number)
 
 
+class MatchResult(TimeStampedModel):
+    match = models.OneToOneField(Match, on_delete=models.CASCADE, related_name="result")
+    red_score = models.IntegerField(null=True, blank=True)
+    blue_score = models.IntegerField(null=True, blank=True)
+    red_rp = models.FloatField(null=True, blank=True)
+    blue_rp = models.FloatField(null=True, blank=True)
+    is_final = models.BooleanField(default=False)
+
+    class Meta:
+        verbose_name_plural = "Match results"
+
+    def __str__(self):
+        return f"Q{self.match.match_number} - {self.match.event_id.event_name}"
+
+
 class TbaApiKey(models.Model):
     api_key = models.CharField(max_length=100, null=False, blank=False)
     active = models.BooleanField(default=False)
