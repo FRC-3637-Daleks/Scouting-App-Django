@@ -736,6 +736,7 @@ def view_pit_dashboard(request):
             "match": m,
             "queue_time": queue_time_by_match.get(m.match_number, "-"),
             "win_chance": win_chance_by_match.get(m.match_number, "-"),
+            "statbotics_match_url": f"https://www.statbotics.io/match/{event.tba_event_key}_qm{m.match_number}",
         }
         for m in shown_matches
     ]
