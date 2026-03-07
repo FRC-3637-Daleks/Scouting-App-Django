@@ -61,6 +61,22 @@
         input[type="number"] {
             width: 70px;
         }
+
+        .camera-upload-wrap {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            margin-top: 0.25rem;
+        }
+
+        .camera-upload-name {
+            font-size: 0.9rem;
+            color: #6c757d;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+            max-width: 70%;
+        }
     </style>
 
     <script>
@@ -116,6 +132,39 @@
             setInterval(checkServerStatus, 5000);
             // Check immediately
             checkServerStatus();
+        });
+    </script>
+
+    <script>
+        $(document).ready(function () {
+            var isMobile = window.matchMedia('(max-width: 768px)').matches;
+            if (!isMobile) {
+                return;
+            }
+
+            $('input[type="file"]').each(function () {
+                var input = $(this);
+                var wrapper = $('<div class="camera-upload-wrap"></div>');
+                var button = $('<button type="button" class="btn btn-outline-primary btn-sm"><i class="fas fa-camera me-2"></i>Take Photo</button>');
+                var fileName = $('<span class="camera-upload-name">No file selected</span>');
+
+                input.addClass('d-none');
+                input.after(wrapper);
+                wrapper.append(button);
+                wrapper.append(fileName);
+
+                button.on('click', function () {
+                    input.trigger('click');
+                });
+
+                input.on('change', function () {
+                    if (this.files && this.files.length > 0) {
+                        fileName.text(this.files[0].name);
+                    } else {
+                        fileName.text('No file selected');
+                    }
+                });
+            });
         });
     </script>
 {% endblock %}

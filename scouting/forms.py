@@ -8,6 +8,14 @@ from .models import *
 from django.forms.widgets import RadioSelect
 
 class PitScoutDataForm(forms.ModelForm):
+    IMAGE_FIELDS = [
+        'auton_picture_1',
+        'auton_picture_2',
+        'auton_picture_3',
+        'robot_picture_1',
+        'robot_picture_2',
+    ]
+
     class Meta:
         model = PitScoutData
         fields = '__all__'
@@ -29,6 +37,16 @@ class PitScoutDataForm(forms.ModelForm):
             'can_robot_l1_climb_in_auto': 'Can robot L1 climb in AUTO',
         }
         exclude = ['assigned_scout', 'team', 'event']
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        # Hint mobile browsers to open camera; desktop still uses file picker.
+        for field_name in self.IMAGE_FIELDS:
+            if field_name in self.fields:
+                self.fields[field_name].widget.attrs.update({
+                    'accept': 'image/*',
+                    'capture': 'environment',
+                })
 
 class MatchData2026Form(forms.ModelForm):
     class Meta:
