@@ -38,7 +38,7 @@ class PitScoutDataForm(forms.ModelForm):
             'can_robot_l1_climb_in_auto': 'Can robot L1 climb in AUTO',
             'can_robot_drive_under_trench': 'Can robot drive under the TRENCH',
         }
-        exclude = ['assigned_scout', 'team', 'event']
+        exclude = ['assigned_scout', 'team', 'event', 'pit_location', 'frc_nexus_url']
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)

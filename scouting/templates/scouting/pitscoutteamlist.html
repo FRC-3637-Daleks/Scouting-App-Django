@@ -12,6 +12,7 @@
                         <th scope="col" class="text-nowrap">Team #</th>
                         <th scope="col" class="text-nowrap">Logo</th>
                         <th scope="col" class="text-nowrap">Team Name</th>
+                        <th scope="col" class="text-nowrap">Pit Location</th>
                         <th scope="col" class="text-nowrap">Scout Assigned</th>
                         <th scope="col" class="text-nowrap">Scout</th>
                     </tr>
@@ -27,6 +28,15 @@
                                     {% endif %}
                                 </td>
                                 <td>{{ report.team.team_name }}</td>
+                                <td>
+                                    {% if report.pit_location and report.frc_nexus_url %}
+                                        <a href="{{ report.frc_nexus_url }}" target="_blank" rel="noopener noreferrer">{{ report.pit_location }}</a>
+                                    {% elif report.pit_location %}
+                                        {{ report.pit_location }}
+                                    {% else %}
+                                        Unavailable
+                                    {% endif %}
+                                </td>
                                 <td>
                                     {% if report.assigned_scout %}
                                         {% if report.assigned_scout.get_full_name %}
@@ -54,6 +64,7 @@
                         <th scope="col" class="text-nowrap">Team #</th>
                         <th scope="col" class="text-nowrap">Logo</th>
                         <th scope="col" class="text-nowrap">Team Name</th>
+                        <th scope="col" class="text-nowrap">Pit Location</th>
                         <th scope="col" class="text-nowrap">Scout Assigned</th>
                         <th scope="col" class="text-nowrap">Scout</th>
                     </tr>
@@ -69,6 +80,15 @@
                                     {% endif %}
                                 </td>
                                 <td>{{ report.team.team_name }}</td>
+                                <td>
+                                    {% if report.pit_location and report.frc_nexus_url %}
+                                        <a href="{{ report.frc_nexus_url }}" target="_blank" rel="noopener noreferrer">{{ report.pit_location }}</a>
+                                    {% elif report.pit_location %}
+                                        {{ report.pit_location }}
+                                    {% else %}
+                                        Unavailable
+                                    {% endif %}
+                                </td>
                                 <td>
                                     {% if report.assigned_scout %}
                                         {% if report.assigned_scout.get_full_name %}
@@ -96,6 +116,7 @@
                         <th scope="col" class="text-nowrap">Team #</th>
                         <th scope="col" class="text-nowrap">Logo</th>
                         <th scope="col" class="text-nowrap">Team Name</th>
+                        <th scope="col" class="text-nowrap">Pit Location</th>
                         <th scope="col" class="text-nowrap">Scout</th>
                         <th scope="col" class="text-nowrap">Report</th>
                     </tr>
@@ -111,6 +132,15 @@
                                     {% endif %}
                                 </td>
                                 <td>{{ report.team.team_name }}</td>
+                                <td>
+                                    {% if report.pit_location and report.frc_nexus_url %}
+                                        <a href="{{ report.frc_nexus_url }}" target="_blank" rel="noopener noreferrer">{{ report.pit_location }}</a>
+                                    {% elif report.pit_location %}
+                                        {{ report.pit_location }}
+                                    {% else %}
+                                        Unavailable
+                                    {% endif %}
+                                </td>
                                 <td>
                                     {% if report.assigned_scout %}
                                         {% if report.assigned_scout.get_full_name %}

@@ -80,6 +80,19 @@ class TbaApiKey(models.Model):
         super(TbaApiKey, self).save(*args, **kwargs)
 
 
+class NexusApiKey(models.Model):
+    api_key = models.CharField(max_length=100, null=False, blank=False)
+    active = models.BooleanField(default=False)
+
+    class Meta:
+        verbose_name_plural = "FRC Nexus API Keys"
+
+    def save(self, *args, **kwargs):
+        if self.active:
+            NexusApiKey.objects.filter(active=True).update(active=False)
+        super(NexusApiKey, self).save(*args, **kwargs)
+
+
 class PitScoutData(TimeStampedModel):
     team = models.ForeignKey('Team', on_delete=models.CASCADE, null=False, blank=False)
     event = models.ForeignKey('Event', on_delete=models.CASCADE, null=False)
@@ -98,6 +111,8 @@ class PitScoutData(TimeStampedModel):
     intake_type = models.CharField(max_length=100, null=True)
     type_drivebase= models.CharField(max_length=100, null=True)
     auton_paths_or_description= models.TextField(max_length=1000, null=True)
+    pit_location = models.CharField(max_length=100, blank=True, null=True)
+    frc_nexus_url = models.URLField(blank=True, null=True)
     description = models.TextField(max_length=2000)
     #Image Fields
     auton_picture_1 = models.ImageField(upload_to=unique_pit_image_path, blank=True, null=True)

@@ -5,11 +5,14 @@ from django.core.exceptions import ObjectDoesNotExist
 from django.core.files.base import ContentFile
 from django.core.management.base import BaseCommand
 
-from scouting.models import Event, Match, TbaApiKey, Team
+from scouting.models import Event, Match, NexusApiKey, PitScoutData, TbaApiKey, Team
 
 
 class Command(BaseCommand):
-    help = "Update teams and matches from The Blue Alliance API (including team logos)"
+    help = (
+        "Update teams and matches from The Blue Alliance API "
+        "(including team logos, pit locations, and FRC Nexus links when available)"
+    )
 
     def _get_json(self, url, headers):
         response = requests.get(url, headers=headers, timeout=20)
@@ -35,23 +38,72 @@ class Command(BaseCommand):
 
         return None, None
 
+    def _extract_pit_location(self, team_payload, status_payload):
+        # TBA payloads are not consistent for this; try several likely keys.
+        for payload in [status_payload or {}, team_payload or {}]:
+            for key in ("pit_location", "pitLocation", "pit", "pit_number", "pitNumber"):
+                value = payload.get(key)
+                if value:
+                    return str(value).strip()
+        return ""
+
+    def _build_frc_nexus_map_url(self, event_key, team_number):
+        return f"https://frc.nexus/en/event/{event_key}/team/{team_number}/map"
+
+    def _fetch_nexus_pits_map(self, event_key, nexus_api_key):
+        """
+        Returns {team_number: pit_location} from FRC Nexus, if configured/available.
+        """
+        url = f"https://frc.nexus/api/v1/event/{event_key}/pits"
+        headers = {"Nexus-Api-Key": nexus_api_key}
+
+        try:
+            data = requests.get(url, headers=headers, timeout=20).json()
+        except requests.RequestException:
+            return {}
+        except ValueError:
+            return {}
+
+        if not isinstance(data, dict):
+            return {}
+
+        pits = {}
+        for team_number, pit_location in data.items():
+            try:
+                team_int = int(team_number)
+            except (TypeError, ValueError):
+                continue
+            pits[team_int] = str(pit_location).strip()
+        return pits
+
     def handle(self, *args, **options):
         try:
-            api_key = TbaApiKey.objects.get(active=True).api_key
+            tba_api_key = TbaApiKey.objects.get(active=True).api_key
         except ObjectDoesNotExist:
-            self.stdout.write("Active API key not found.")
+            self.stdout.write("Active TBA API key not found.")
+            return
+
+        try:
+            nexus_api_key = NexusApiKey.objects.get(active=True).api_key
+        except ObjectDoesNotExist:
+            self.stdout.write("Active FRC Nexus API key not found.")
             return
 
         active_event = Event.objects.get(active=True)
         event_key = active_event.tba_event_key
-        headers = {"X-TBA-Auth-Key": api_key}
+        headers = {"X-TBA-Auth-Key": tba_api_key}
 
-        teams_url = f"https://www.thebluealliance.com/api/v3/event/{event_key}/teams/simple"
+        teams_url = f"https://www.thebluealliance.com/api/v3/event/{event_key}/teams"
         teams = self._get_json(teams_url, headers)
+        team_statuses_url = f"https://www.thebluealliance.com/api/v3/event/{event_key}/teams/statuses"
+        team_statuses = self._get_json(team_statuses_url, headers)
+        nexus_pits_map = self._fetch_nexus_pits_map(event_key, nexus_api_key)
 
         logos_saved = 0
+        pits_saved = 0
         for team in teams:
             team_number = team["team_number"]
+            team_key = f"frc{team_number}"
             team_obj, _ = Team.objects.update_or_create(
                 team_number=team_number,
                 defaults={"team_name": team.get("nickname") or f"Team {team_number}"},
@@ -60,12 +112,19 @@ class Command(BaseCommand):
             active_event.teams.add(team_obj)
 
             logo_bytes, ext = self._fetch_team_logo_bytes(headers, team_number, active_event.game.year)
-            if not logo_bytes:
-                continue
+            if logo_bytes:
+                file_name = f"frc{team_number}_logo{ext}"
+                team_obj.team_logo.save(file_name, ContentFile(logo_bytes), save=True)
+                logos_saved += 1
 
-            file_name = f"frc{team_number}_logo{ext}"
-            team_obj.team_logo.save(file_name, ContentFile(logo_bytes), save=True)
-            logos_saved += 1
+            pit_location = nexus_pits_map.get(team_number) or self._extract_pit_location(team, team_statuses.get(team_key))
+            frc_nexus_url = self._build_frc_nexus_map_url(event_key, team_number)
+            pit_data, _ = PitScoutData.objects.get_or_create(team=team_obj, event=active_event)
+            pit_data.pit_location = pit_location or pit_data.pit_location
+            pit_data.frc_nexus_url = frc_nexus_url
+            pit_data.save(update_fields=["pit_location", "frc_nexus_url"])
+            if pit_location:
+                pits_saved += 1
 
         active_event.save()
 
@@ -115,6 +174,7 @@ class Command(BaseCommand):
 
         self.stdout.write(
             self.style.SUCCESS(
-                f"Teams, matches, and logos updated successfully. Logos saved: {logos_saved}"
+                f"Teams, matches, logos, and pit metadata updated successfully. "
+                f"Logos saved: {logos_saved}, pit locations saved: {pits_saved}"
             )
         )

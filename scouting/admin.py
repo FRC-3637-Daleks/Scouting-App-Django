@@ -9,5 +9,6 @@ admin.site.register(Match)
 # admin.site.register(MatchField)
 admin.site.register(MatchData2026)
 admin.site.register(TbaApiKey)
+admin.site.register(NexusApiKey)
 admin.site.register(PitScoutData)
 
