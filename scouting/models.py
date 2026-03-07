@@ -1,6 +1,13 @@
 from django.db import models
 from django_extensions.db.models import TimeStampedModel
 from django.conf import settings
+import os
+import uuid
+
+
+def unique_pit_image_path(instance, filename):
+    ext = os.path.splitext(filename)[1].lower()
+    return f"images/{uuid.uuid4().hex}{ext}"
 
 
 class Game(TimeStampedModel):
@@ -83,11 +90,11 @@ class PitScoutData(TimeStampedModel):
     auton_paths_or_description= models.TextField(max_length=1000, null=True)
     description = models.TextField(max_length=2000)
     #Image Fields
-    auton_picture_1 = models.ImageField(upload_to='images/', blank=True, null=True)
-    auton_picture_2 = models.ImageField(upload_to='images/', blank=True, null=True)
-    auton_picture_3 = models.ImageField(upload_to='images/', blank=True, null=True)
-    robot_picture_1 = models.ImageField(upload_to='images/', blank=True, null=True)
-    robot_picture_2 = models.ImageField(upload_to='images/', blank=True, null=True)
+    auton_picture_1 = models.ImageField(upload_to=unique_pit_image_path, blank=True, null=True)
+    auton_picture_2 = models.ImageField(upload_to=unique_pit_image_path, blank=True, null=True)
+    auton_picture_3 = models.ImageField(upload_to=unique_pit_image_path, blank=True, null=True)
+    robot_picture_1 = models.ImageField(upload_to=unique_pit_image_path, blank=True, null=True)
+    robot_picture_2 = models.ImageField(upload_to=unique_pit_image_path, blank=True, null=True)
 
     class Meta:
         verbose_name_plural = "Pit scout data"

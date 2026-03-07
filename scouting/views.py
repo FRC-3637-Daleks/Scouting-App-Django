@@ -125,17 +125,36 @@ def view_team_statistics(request, team_number):
 
     if pit_scout_data:
         pit_scout_data_dict = model_to_dict(pit_scout_data)
-        # Remove unnecessary fields
-        pit_scout_data_dict.pop('id', None)
-        pit_scout_data_dict.pop('team', None)
-        pit_scout_data_dict.pop('event', None)
+        image_fields = {
+            'auton_picture_1',
+            'auton_picture_2',
+            'auton_picture_3',
+            'robot_picture_1',
+            'robot_picture_2',
+        }
+        # Remove non-display fields from table rows.
+        for field_name in ['id', 'team', 'event', *image_fields]:
+            pit_scout_data_dict.pop(field_name, None)
 
         # Format assigned scout name
         if pit_scout_data.assigned_scout:
-            pit_scout_data_dict[
-                'assigned_scout'] = f"{pit_scout_data.assigned_scout.first_name} {pit_scout_data.assigned_scout.last_name}"
+            pit_scout_data_dict['assigned_scout'] = (
+                f"{pit_scout_data.assigned_scout.first_name} "
+                f"{pit_scout_data.assigned_scout.last_name}"
+            ).strip()
         else:
             pit_scout_data_dict['assigned_scout'] = "No scout assigned"
+
+        # Build display rows using field verbose names instead of raw db keys.
+        pit_scout_data_rows = []
+        for field_name, value in pit_scout_data_dict.items():
+            label = pit_scout_data._meta.get_field(field_name).verbose_name
+            if isinstance(value, bool):
+                value = "Yes" if value else "No"
+            pit_scout_data_rows.append({
+                'label': str(label).title(),
+                'value': value,
+            })
 
         # Gather images
         pit_scout_images = [
@@ -148,7 +167,7 @@ def view_team_statistics(request, team_number):
         # Filter out any `None` values
         pit_scout_images = [img for img in pit_scout_images if img]
     else:
-        pit_scout_data_dict = {}
+        pit_scout_data_rows = []
         pit_scout_images = []
 
     # Get team ranking for the active event
@@ -157,7 +176,7 @@ def view_team_statistics(request, team_number):
     context = {
         'team': team,
         'match_count': match_count,
-        'pit_scout_data': pit_scout_data_dict,
+        'pit_scout_data': pit_scout_data_rows,
         'pit_scout_images': pit_scout_images,
         'match_data': match_data,
         'team_ranking': team_ranking,
