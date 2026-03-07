@@ -5,7 +5,7 @@ from django.core.exceptions import ObjectDoesNotExist
 
 
 class Command(BaseCommand):
-    help = 'Update team OPR, DPR, and CCWM stats from The Blue Alliance API'
+    help = 'Update team rank, OPR, DPR, and CCWM stats from The Blue Alliance API'
 
     def handle(self, *args, **options):
         try:
@@ -23,6 +23,27 @@ class Command(BaseCommand):
             return
 
         try:
+            rankings_response = tba.event_rankings(event.tba_event_key)
+            rankings_list = rankings_response.get('rankings', []) if isinstance(rankings_response, dict) else []
+            for rank_data in rankings_list:
+                team_key = rank_data.get('team_key')
+                if not team_key or not str(team_key).startswith('frc'):
+                    continue
+                team_number = team_key[3:]
+                try:
+                    team = Team.objects.get(team_number=team_number)
+                except Team.DoesNotExist:
+                    self.stdout.write(self.style.WARNING(f"Team {team_number} not found in database"))
+                    continue
+
+                ranking, _ = TeamRanking.objects.get_or_create(
+                    team=team,
+                    event=event,
+                    defaults={'rank': 0}
+                )
+                ranking.rank = rank_data.get('rank', ranking.rank or 0)
+                ranking.save(update_fields=['rank'])
+
             oprs_response = tba.event_oprs(event.tba_event_key)
 
             if not oprs_response:
@@ -52,12 +73,6 @@ class Command(BaseCommand):
                         ranking.ccwm = round(ccwms.get(team_key, 0), 2)
                         ranking.save()
 
-                        self.stdout.write(
-                            self.style.SUCCESS(
-                                f"Updated OPR stats for team {team_number}"
-                            )
-                        )
-
                     except Team.DoesNotExist:
                         self.stdout.write(
                             self.style.WARNING(f"Team {team_number} not found in database")
@@ -70,7 +85,7 @@ class Command(BaseCommand):
                     )
                     continue
 
-            self.stdout.write(self.style.SUCCESS("Team OPR stats update completed"))
+            self.stdout.write(self.style.SUCCESS("Team rank + OPR stats update completed"))
 
         except Exception as e:
             self.stdout.write(self.style.ERROR(f"Unexpected error: {str(e)}"))

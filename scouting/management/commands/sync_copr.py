@@ -5,7 +5,7 @@ from scouting.models import *
 from django.core.exceptions import ObjectDoesNotExist
 
 class Command(BaseCommand):
-    help = 'Update team COPRs (Component OPRs) from The Blue Alliance API'
+    help = 'Update team rank and COPRs (Component OPRs) from The Blue Alliance API'
 
     CATEGORY_TO_FIELD = {
         # 2026 top-level score breakdown components
@@ -54,7 +54,29 @@ class Command(BaseCommand):
             return
 
         # Build the COPR endpoint URL and fetch data
+        rankings_url = f'https://www.thebluealliance.com/api/v3/event/{event.tba_event_key}/rankings'
         url = f'https://www.thebluealliance.com/api/v3/event/{event.tba_event_key}/coprs'
+        rankings_response = session.get(rankings_url, headers=headers)
+        if rankings_response.status_code == 200:
+            rankings_data = rankings_response.json() or {}
+            for rank_data in rankings_data.get("rankings", []):
+                team_key = rank_data.get("team_key")
+                if not team_key or not str(team_key).startswith("frc"):
+                    continue
+                team_number = team_key[3:]
+                try:
+                    team = Team.objects.get(team_number=team_number)
+                except Team.DoesNotExist:
+                    continue
+
+                ranking, _ = TeamRanking.objects.get_or_create(
+                    team=team,
+                    event=event,
+                    defaults={'rank': 0}
+                )
+                ranking.rank = rank_data.get("rank", ranking.rank or 0)
+                ranking.save(update_fields=["rank"])
+
         response = session.get(url, headers=headers)
         if response.status_code != 200:
             self.stdout.write(self.style.ERROR(f"Failed to fetch data from TBA: {response.status_code}"))
@@ -107,4 +129,4 @@ class Command(BaseCommand):
  #                   )
  #              )
 
-        self.stdout.write(self.style.SUCCESS("Team COPR stats update completed"))
+        self.stdout.write(self.style.SUCCESS("Team rank + COPR stats update completed"))

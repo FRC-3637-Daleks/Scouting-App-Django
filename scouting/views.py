@@ -192,6 +192,70 @@ def _parse_match_number_from_payload(payload_row):
     return None
 
 
+def _derive_now_queuing_from_matches(nexus_matches):
+    """
+    Fallback when Nexus no longer returns top-level nowQueuing.
+    Returns (label, match_number) from qualification match statuses/times.
+    """
+    if not isinstance(nexus_matches, list):
+        return None, None
+
+    qual_rows = []
+    for row in nexus_matches:
+        if not isinstance(row, dict):
+            continue
+        label = row.get("label") or ""
+        parsed = re.search(r"^Qualification\s+(\d+)", label, flags=re.IGNORECASE)
+        if not parsed:
+            continue
+        qual_rows.append((int(parsed.group(1)), label, row.get("status") or "", row.get("times") or {}))
+
+    if not qual_rows:
+        return None, None
+
+    # Prefer explicit queueing status first.
+    queueing_keywords = ("queue", "queu")
+    queueing = []
+    for match_number, label, status, times in qual_rows:
+        status_text = str(status).lower()
+        if any(keyword in status_text for keyword in queueing_keywords):
+            est_q = times.get("estimatedQueueTime")
+            queueing.append((est_q if isinstance(est_q, (int, float)) else 10**18, match_number, label, status))
+    if queueing:
+        queueing.sort(key=lambda item: (item[0], item[1]))
+        _, match_number, label, status = queueing[0]
+        return f"{label} ({status})", match_number
+
+    # Next fallback: the most recent qualification currently on field.
+    on_field = []
+    for match_number, label, status, times in qual_rows:
+        status_text = str(status).lower()
+        if "on field" in status_text or "in progress" in status_text:
+            actual_q = times.get("actualQueueTime")
+            est_q = times.get("estimatedQueueTime")
+            ts = actual_q if isinstance(actual_q, (int, float)) else (
+                est_q if isinstance(est_q, (int, float)) else -1
+            )
+            on_field.append((ts, match_number, label, status))
+    if on_field:
+        on_field.sort(key=lambda item: (item[0], item[1]), reverse=True)
+        _, match_number, label, status = on_field[0]
+        return f"{label} ({status})", match_number
+
+    # Last fallback: earliest upcoming qualification by estimated queue time.
+    upcoming = []
+    for match_number, label, status, times in qual_rows:
+        est_q = times.get("estimatedQueueTime")
+        if isinstance(est_q, (int, float)):
+            upcoming.append((est_q, match_number, label, status))
+    if upcoming:
+        upcoming.sort(key=lambda item: (item[0], item[1]))
+        _, match_number, label, status = upcoming[0]
+        return f"{label} ({status})", match_number
+
+    return None, None
+
+
 def _load_statbotics_rest_win_chances(event_key, team_number, matches):
     """
     Return a mapping of match_number -> display win chance for the given team.
@@ -688,6 +752,12 @@ def view_pit_dashboard(request):
         now_queuing = nexus_status.get("nowQueuing")
         announcements = nexus_status.get("announcements") or []
         parts_requests = nexus_status.get("partsRequests") or []
+
+        if not now_queuing:
+            derived_label, derived_match_num = _derive_now_queuing_from_matches(nexus_status.get("matches"))
+            if derived_label:
+                now_queuing = derived_label
+                current_qual_match_num = derived_match_num
 
         if isinstance(now_queuing, str):
             match = re.search(r"Qualification\s+(\d+)", now_queuing, flags=re.IGNORECASE)
