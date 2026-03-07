@@ -864,11 +864,21 @@ def view_pit_dashboard(request):
             }
         )
 
+    our_rank = TeamRanking.objects.filter(
+        event=event,
+        team__team_number=team_number,
+    ).values_list("rank", flat=True).first()
+    total_teams = event.teams.count()
+    matches_played = len(team_match_results)
+
     context = {
         "event": event,
         "team_number": team_number,
         "match_rows": match_rows,
         "team_match_results": team_match_results,
+        "our_rank": our_rank,
+        "total_teams": total_teams,
+        "matches_played": matches_played,
         "now_queuing": now_queuing,
         "announcements": announcements,
         "parts_requests": parts_requests,

@@ -120,6 +120,32 @@
 
             <div class="col-12 col-xxl-4">
                 <div class="card mb-3">
+                    <div class="card-header"><strong>Event Stats</strong></div>
+                    <div class="card-body">
+                        <div class="row g-2">
+                            <div class="col-6">
+                                <div class="border rounded p-2 text-center h-100">
+                                    <div class="small text-muted">Our Rank</div>
+                                    <div class="fs-4 fw-bold">
+                                        {% if our_rank %}
+                                            {{ our_rank }} / {{ total_teams }}
+                                        {% else %}
+                                            - / {{ total_teams }}
+                                        {% endif %}
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-6">
+                                <div class="border rounded p-2 text-center h-100">
+                                    <div class="small text-muted">Matches Played</div>
+                                    <div class="fs-4 fw-bold">{{ matches_played }}</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card mb-3">
                     <div class="card-header"><strong>Announcements</strong></div>
                     <div class="card-body">
                         {% if announcements %}
