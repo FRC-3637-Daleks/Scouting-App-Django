@@ -25,6 +25,7 @@ class PitScoutDataForm(forms.ModelForm):
             'can_robot_l3_climb': RadioSelect(choices=((True, 'Yes'), (False, 'No'))),
             'can_robot_l1_climb': RadioSelect(choices=((True, 'Yes'), (False, 'No'))),
             'can_robot_l1_climb_in_auto': RadioSelect(choices=((True, 'Yes'), (False, 'No'))),
+            'can_robot_drive_under_trench': RadioSelect(choices=((True, 'Yes'), (False, 'No'))),
             'auton_picture_1': ClearableFileInput(),
             'auton_picture_2': ClearableFileInput(),
             'auton_picture_3': ClearableFileInput(),
@@ -35,6 +36,7 @@ class PitScoutDataForm(forms.ModelForm):
             'can_robot_l3_climb': 'Can robot L3 climb',
             'can_robot_l1_climb': 'Can robot L1 climb',
             'can_robot_l1_climb_in_auto': 'Can robot L1 climb in AUTO',
+            'can_robot_drive_under_trench': 'Can robot drive under the TRENCH',
         }
         exclude = ['assigned_scout', 'team', 'event']
 

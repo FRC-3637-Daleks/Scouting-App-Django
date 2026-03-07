@@ -90,6 +90,7 @@ class PitScoutData(TimeStampedModel):
     can_robot_l3_climb = models.BooleanField(default=False)
     can_robot_l1_climb = models.BooleanField(default=False)
     can_robot_l1_climb_in_auto = models.BooleanField(default=False)
+    can_robot_drive_under_trench = models.BooleanField(default=False)
 
     # Integer Fields
 
