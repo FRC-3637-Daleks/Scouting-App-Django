@@ -2,11 +2,19 @@
 {% load git_version %}
 
 <!DOCTYPE html>
-<html lang="en" data-bs-theme="light">
+<html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta http-equiv="X-UA-Compatible" content="ie=edge">
+    <script>
+        (function () {
+            var storedTheme = localStorage.getItem('theme') || 'system';
+            var prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+            var resolvedTheme = storedTheme === 'system' ? (prefersDark ? 'dark' : 'light') : storedTheme;
+            document.documentElement.setAttribute('data-bs-theme', resolvedTheme);
+        })();
+    </script>
     <!-- Font Awesome -->
     <link rel="stylesheet" href="{% static 'css/all.css' %}">
     <!-- Bootstrap -->
@@ -24,7 +32,7 @@
 </head>
 <body>
     <!-- Navbar -->
-    <nav class="navbar navbar-expand-sm bg-dark navbar-dark">
+    <nav class="navbar navbar-expand-sm bg-body-tertiary border-bottom shadow-sm">
     {% block brand %}{% endblock %}
     <!-- Hamburger menu button -->
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarToggler" aria-controls="navbarToggler" aria-expanded="false" aria-label="Toggle navigation">
@@ -42,6 +50,16 @@
 
         </ul>
         <ul class="navbar-nav ml-auto">
+            <li class="nav-item dropdown">
+                <a class="nav-link dropdown-toggle" href="#" id="themeDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+                    <i class="fas fa-circle-half-stroke me-1"></i> Theme
+                </a>
+                <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="themeDropdown">
+                    <li><button type="button" class="dropdown-item theme-option" data-theme-value="system">System</button></li>
+                    <li><button type="button" class="dropdown-item theme-option" data-theme-value="light">Light</button></li>
+                    <li><button type="button" class="dropdown-item theme-option" data-theme-value="dark">Dark</button></li>
+                </ul>
+            </li>
             {% if user.is_authenticated %}
                 <li class="nav-item dropdown">
                     <a class="nav-link dropdown-toggle" href="#" id="signinDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
@@ -73,7 +91,7 @@
         {% block content %}{% endblock %}
     </main>
 
-    <footer class="footer {% if debug %} bg-warning {% else %} bg-secondary {% endif %} py-3">
+    <footer class="footer bg-body border-top py-3">
         <div class="container-fluid d-flex align-items-center">
             <div class="d-flex align-items-center" style="width: 33.3333%;">
                 <img alt="Team 3637 Logo" src="{% static 'images/logo.png' %}" height="56" class="ms-3"/>
@@ -93,6 +111,41 @@
     <script src="{% static 'js/bootstrap.bundle.min.js' %}"></script>
     <script src="{% static 'js/main.js' %}"></script>
     <script>
+        function resolveTheme(themeValue) {
+            if (themeValue === 'system') {
+                return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+            }
+            return themeValue;
+        }
+
+        function applyTheme(themeValue) {
+            var resolvedTheme = resolveTheme(themeValue);
+            document.documentElement.setAttribute('data-bs-theme', resolvedTheme);
+            document.querySelectorAll('.theme-option').forEach(function (btn) {
+                var isSelected = btn.getAttribute('data-theme-value') === themeValue;
+                btn.classList.toggle('active', isSelected);
+                btn.setAttribute('aria-pressed', isSelected ? 'true' : 'false');
+            });
+        }
+
+        var currentTheme = localStorage.getItem('theme') || 'system';
+        applyTheme(currentTheme);
+
+        document.querySelectorAll('.theme-option').forEach(function (btn) {
+            btn.addEventListener('click', function () {
+                var themeValue = btn.getAttribute('data-theme-value');
+                localStorage.setItem('theme', themeValue);
+                applyTheme(themeValue);
+            });
+        });
+
+        window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', function () {
+            var selectedTheme = localStorage.getItem('theme') || 'system';
+            if (selectedTheme === 'system') {
+                applyTheme('system');
+            }
+        });
+
         document.querySelectorAll('[data-bs-toggle="tooltip"]').forEach(function (el) {
             new bootstrap.Tooltip(el);
         });

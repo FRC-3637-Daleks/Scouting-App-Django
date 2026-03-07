@@ -15,11 +15,15 @@ from django.core.management import call_command
 from django.contrib.auth.decorators import login_required
 import json
 from django.shortcuts import render
-from .models import TeamRanking
+from .models import TeamRanking, Match, NexusApiKey
 from django.db.models import F
 from django.db.models import OuterRef, Subquery, Value, FloatField, IntegerField
 from pathlib import Path
 from PIL import Image
+import requests
+import re
+from datetime import datetime, timezone as dt_timezone
+from zoneinfo import ZoneInfo
 
 
 def _get_standscout_compressed_url(image_field, max_width=900, quality=65):
@@ -403,6 +407,101 @@ def picklist_graphs(request):
         "foul_points_values": [round(d['foul_points'], 2) for d in teams_data],
     }
     return render(request, "scouting/picklist_graphs.html", context)
+
+
+@login_required()
+def view_pit_dashboard(request):
+    event = Event.objects.get(active=True)
+
+    # Show Team 3637 schedule in the same table format as the match schedule.
+    team_number = 3637
+    team_matches = Match.objects.filter(
+        event_id=event
+    ).filter(
+        team_red_1__team_number=team_number
+    ) | Match.objects.filter(
+        event_id=event, team_red_2__team_number=team_number
+    ) | Match.objects.filter(
+        event_id=event, team_red_3__team_number=team_number
+    ) | Match.objects.filter(
+        event_id=event, team_blue_1__team_number=team_number
+    ) | Match.objects.filter(
+        event_id=event, team_blue_2__team_number=team_number
+    ) | Match.objects.filter(
+        event_id=event, team_blue_3__team_number=team_number
+    )
+    team_matches = team_matches.order_by("match_number").distinct()
+
+    nexus_status = {}
+    announcements = []
+    parts_requests = []
+    now_queuing = None
+    nexus_error = None
+    current_qual_match_num = None
+    queue_time_by_match = {}
+    display_tz = ZoneInfo("America/New_York")
+
+    try:
+        nexus_key = NexusApiKey.objects.get(active=True).api_key
+        response = requests.get(
+            f"https://frc.nexus/api/v1/event/{event.tba_event_key}",
+            headers={"Nexus-Api-Key": nexus_key},
+            timeout=10,
+        )
+        response.raise_for_status()
+        nexus_status = response.json()
+
+        now_queuing = nexus_status.get("nowQueuing")
+        announcements = nexus_status.get("announcements") or []
+        parts_requests = nexus_status.get("partsRequests") or []
+
+        if isinstance(now_queuing, str):
+            match = re.search(r"Qualification\s+(\d+)", now_queuing, flags=re.IGNORECASE)
+            if match:
+                current_qual_match_num = int(match.group(1))
+
+        # Pull estimated queue time for qualification matches from Nexus payload.
+        for nexus_match in nexus_status.get("matches", []):
+            if not isinstance(nexus_match, dict):
+                continue
+            label = nexus_match.get("label") or ""
+            match = re.search(r"^Qualification\s+(\d+)", label, flags=re.IGNORECASE)
+            if not match:
+                continue
+
+            match_number = int(match.group(1))
+            queue_time_ms = (nexus_match.get("times") or {}).get("estimatedQueueTime")
+            if not queue_time_ms:
+                continue
+
+            try:
+                local_dt = datetime.fromtimestamp(queue_time_ms / 1000, tz=dt_timezone.utc).astimezone(display_tz)
+                queue_time_by_match[match_number] = local_dt.strftime("%I:%M %p").lstrip("0")
+            except Exception:
+                continue
+    except NexusApiKey.DoesNotExist:
+        nexus_error = "No active Nexus API key configured."
+    except requests.RequestException:
+        nexus_error = "Unable to load live event status from FRC Nexus."
+    except ValueError:
+        nexus_error = "FRC Nexus returned invalid data."
+
+    # Show a rolling window: 3 matches before now-queuing plus current/upcoming.
+    if current_qual_match_num:
+        team_matches = team_matches.filter(match_number__gte=max(1, current_qual_match_num - 3))
+
+    match_rows = [{"match": m, "queue_time": queue_time_by_match.get(m.match_number, "-")} for m in team_matches]
+
+    context = {
+        "event": event,
+        "team_number": team_number,
+        "match_rows": match_rows,
+        "now_queuing": now_queuing,
+        "announcements": announcements,
+        "parts_requests": parts_requests,
+        "nexus_error": nexus_error,
+    }
+    return render(request, "scouting/pit_dashboard.html", context)
 
 
 @api_view(['POST'])  # Specify the allowed HTTP methods

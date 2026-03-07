@@ -22,12 +22,12 @@
                     {% for match in matches %}
                         <tr>
                             <th scope="row">{{ match.match_number }}</th>
-                            <td class="table-danger"><a href="{% url 'scouting:stands_scout_match' match_number=match.match_number team_number=match.team_red_1.team_number %}">{{ match.team_red_1.team_number }}</a></td>
-                            <td class="table-danger"><a href="{% url 'scouting:stands_scout_match' match_number=match.match_number team_number=match.team_red_2.team_number %}">{{ match.team_red_2.team_number }}</a></td>
-                            <td class="table-danger"><a href="{% url 'scouting:stands_scout_match' match_number=match.match_number team_number=match.team_red_3.team_number %}">{{ match.team_red_3.team_number }}</a></td>
-                            <td class="table-info"><a href="{% url 'scouting:stands_scout_match' match_number=match.match_number team_number=match.team_blue_1.team_number %}">{{ match.team_blue_1.team_number }}</a></td>
-                            <td class="table-info"><a href="{% url 'scouting:stands_scout_match' match_number=match.match_number team_number=match.team_blue_2.team_number %}">{{ match.team_blue_2.team_number }}</a></td>
-                            <td class="table-info"><a href="{% url 'scouting:stands_scout_match' match_number=match.match_number team_number=match.team_blue_3.team_number %}">{{ match.team_blue_3.team_number }}</a></td>
+                            <td class="alliance-red"><a class="alliance-link" href="{% url 'scouting:stands_scout_match' match_number=match.match_number team_number=match.team_red_1.team_number %}">{{ match.team_red_1.team_number }}</a></td>
+                            <td class="alliance-red"><a class="alliance-link" href="{% url 'scouting:stands_scout_match' match_number=match.match_number team_number=match.team_red_2.team_number %}">{{ match.team_red_2.team_number }}</a></td>
+                            <td class="alliance-red"><a class="alliance-link" href="{% url 'scouting:stands_scout_match' match_number=match.match_number team_number=match.team_red_3.team_number %}">{{ match.team_red_3.team_number }}</a></td>
+                            <td class="alliance-blue"><a class="alliance-link" href="{% url 'scouting:stands_scout_match' match_number=match.match_number team_number=match.team_blue_1.team_number %}">{{ match.team_blue_1.team_number }}</a></td>
+                            <td class="alliance-blue"><a class="alliance-link" href="{% url 'scouting:stands_scout_match' match_number=match.match_number team_number=match.team_blue_2.team_number %}">{{ match.team_blue_2.team_number }}</a></td>
+                            <td class="alliance-blue"><a class="alliance-link" href="{% url 'scouting:stands_scout_match' match_number=match.match_number team_number=match.team_blue_3.team_number %}">{{ match.team_blue_3.team_number }}</a></td>
                         </tr>
                     {% empty %}
                         <tr>
@@ -38,4 +38,31 @@
             </table>
             </div>
     </div>
+
+    <style>
+        .alliance-link {
+            color: inherit;
+            text-decoration: none;
+            font-weight: 600;
+        }
+        .alliance-link:hover {
+            text-decoration: underline;
+        }
+        [data-bs-theme="light"] .alliance-red {
+            background-color: #f8d7da !important;
+            color: #641220 !important;
+        }
+        [data-bs-theme="light"] .alliance-blue {
+            background-color: #d7ebff !important;
+            color: #0a3b80 !important;
+        }
+        [data-bs-theme="dark"] .alliance-red {
+            background-color: #5a1a22 !important;
+            color: #ffe6e8 !important;
+        }
+        [data-bs-theme="dark"] .alliance-blue {
+            background-color: #12335f !important;
+            color: #e7f2ff !important;
+        }
+    </style>
 {% endblock %}
