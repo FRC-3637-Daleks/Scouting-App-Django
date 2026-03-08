@@ -84,6 +84,29 @@ class MatchResult(TimeStampedModel):
         return f"Q{self.match.match_number} - {self.match.event_id.event_name}"
 
 
+class PlayoffMatch(TimeStampedModel):
+    tba_match_key = models.CharField(max_length=50, unique=True)
+    event = models.ForeignKey(Event, on_delete=models.CASCADE, related_name="playoff_matches")
+    comp_level = models.CharField(max_length=4)
+    set_number = models.IntegerField(null=True, blank=True)
+    match_number = models.IntegerField()
+    team_red_1 = models.ForeignKey(Team, on_delete=models.CASCADE, null=False, related_name="+")
+    team_red_2 = models.ForeignKey(Team, on_delete=models.CASCADE, null=False, related_name="+")
+    team_red_3 = models.ForeignKey(Team, on_delete=models.CASCADE, null=False, related_name="+")
+    team_blue_1 = models.ForeignKey(Team, on_delete=models.CASCADE, null=False, related_name="+")
+    team_blue_2 = models.ForeignKey(Team, on_delete=models.CASCADE, null=False, related_name="+")
+    team_blue_3 = models.ForeignKey(Team, on_delete=models.CASCADE, null=False, related_name="+")
+    red_alliance_number = models.IntegerField(null=True, blank=True)
+    blue_alliance_number = models.IntegerField(null=True, blank=True)
+    is_final = models.BooleanField(default=False)
+
+    class Meta:
+        verbose_name_plural = "Playoff matches"
+
+    def __str__(self):
+        return f"{self.tba_match_key}"
+
+
 class TbaApiKey(models.Model):
     api_key = models.CharField(max_length=100, null=False, blank=False)
     active = models.BooleanField(default=False)

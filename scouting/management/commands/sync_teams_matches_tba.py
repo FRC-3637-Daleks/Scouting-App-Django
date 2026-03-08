@@ -5,7 +5,7 @@ from django.core.exceptions import ObjectDoesNotExist
 from django.core.files.base import ContentFile
 from django.core.management.base import BaseCommand
 
-from scouting.models import Event, Match, MatchResult, NexusApiKey, PitScoutData, TbaApiKey, Team
+from scouting.models import Event, Match, MatchResult, NexusApiKey, PitScoutData, PlayoffMatch, TbaApiKey, Team
 
 
 class Command(BaseCommand):
@@ -49,6 +49,46 @@ class Command(BaseCommand):
 
     def _build_frc_nexus_map_url(self, event_key, team_number):
         return f"https://frc.nexus/en/event/{event_key}/team/{team_number}/map"
+
+    def _coerce_alliance_number(self, alliance_entry):
+        if not isinstance(alliance_entry, dict):
+            return None
+        raw_number = alliance_entry.get("number")
+        try:
+            if raw_number is not None:
+                return int(raw_number)
+        except (TypeError, ValueError):
+            pass
+
+        name = str(alliance_entry.get("name") or "")
+        digits = "".join(ch for ch in name if ch.isdigit())
+        if digits:
+            try:
+                return int(digits)
+            except ValueError:
+                return None
+        return None
+
+    def _get_or_create_team_from_key(self, team_key):
+        if not team_key or not str(team_key).startswith("frc"):
+            return Team.objects.get_or_create(team_number=9999)[0]
+        return Team.objects.get_or_create(team_number=team_key[3:])[0]
+
+    def _extract_alliance_number(self, team_keys, team_to_alliance):
+        for team_key in team_keys or []:
+            if team_key in team_to_alliance:
+                return team_to_alliance[team_key]
+        return None
+
+    def _team_objs_from_keys(self, team_keys):
+        normalized = list(team_keys or [])
+        while len(normalized) < 3:
+            normalized.append("")
+        return [
+            self._get_or_create_team_from_key(normalized[0]),
+            self._get_or_create_team_from_key(normalized[1]),
+            self._get_or_create_team_from_key(normalized[2]),
+        ]
 
     def _to_int_or_none(self, value):
         if value is None:
@@ -217,68 +257,104 @@ class Command(BaseCommand):
 
         matches_url = f"https://www.thebluealliance.com/api/v3/event/{event_key}/matches"
         matches = self._get_json(matches_url, headers)
+        alliances_url = f"https://www.thebluealliance.com/api/v3/event/{event_key}/alliances"
+        alliances_data = self._get_json(alliances_url, headers)
+        team_to_alliance = {}
+        alliance_to_picks = {}
+        if isinstance(alliances_data, list):
+            for alliance in alliances_data:
+                if not isinstance(alliance, dict):
+                    continue
+                alliance_number = self._coerce_alliance_number(alliance)
+                picks = alliance.get("picks") or []
+                if alliance_number is None:
+                    continue
+                alliance_to_picks[alliance_number] = [pick for pick in picks if isinstance(pick, str)]
+                for team_key in picks:
+                    if isinstance(team_key, str):
+                        team_to_alliance[team_key] = alliance_number
 
         for match in matches:
-            if match["comp_level"] != "qm":
+            comp_level = match.get("comp_level")
+            if comp_level == "qm":
+                match_obj, _ = Match.objects.update_or_create(
+                    match_number=match["match_number"],
+                    event_id=active_event,
+                    defaults={
+                        "team_red_1": self._get_or_create_team_from_key(match["alliances"]["red"]["team_keys"][0]),
+                        "team_red_2": self._get_or_create_team_from_key(match["alliances"]["red"]["team_keys"][1]),
+                        "team_red_3": self._get_or_create_team_from_key(match["alliances"]["red"]["team_keys"][2]),
+                        "team_blue_1": self._get_or_create_team_from_key(match["alliances"]["blue"]["team_keys"][0]),
+                        "team_blue_2": self._get_or_create_team_from_key(match["alliances"]["blue"]["team_keys"][1]),
+                        "team_blue_3": self._get_or_create_team_from_key(match["alliances"]["blue"]["team_keys"][2]),
+                    },
+                )
+
+                red_score = self._to_int_or_none((match.get("alliances") or {}).get("red", {}).get("score"))
+                blue_score = self._to_int_or_none((match.get("alliances") or {}).get("blue", {}).get("score"))
+                red_rp = self._extract_alliance_rp(match.get("score_breakdown"), "red")
+                blue_rp = self._extract_alliance_rp(match.get("score_breakdown"), "blue")
+                red_climb_success = self._extract_alliance_climb_success(match.get("score_breakdown"), "red")
+                blue_climb_success = self._extract_alliance_climb_success(match.get("score_breakdown"), "blue")
+                is_final = (
+                    match.get("actual_time") is not None
+                    or (red_score is not None and blue_score is not None and red_score >= 0 and blue_score >= 0)
+                )
+
+                MatchResult.objects.update_or_create(
+                    match=match_obj,
+                    defaults={
+                        "red_score": red_score if is_final else None,
+                        "blue_score": blue_score if is_final else None,
+                        "red_rp": red_rp if is_final else None,
+                        "blue_rp": blue_rp if is_final else None,
+                        "red_climb_success": red_climb_success if is_final else None,
+                        "blue_climb_success": blue_climb_success if is_final else None,
+                        "is_final": is_final,
+                    },
+                )
                 continue
 
-            match_obj, _ = Match.objects.update_or_create(
-                match_number=match["match_number"],
-                event_id=active_event,
-                defaults={
-                    "team_red_1": Team.objects.get_or_create(
-                        team_number=match["alliances"]["red"]["team_keys"][0][3:]
-                        if match["alliances"]["red"]["team_keys"][0]
-                        else 9999
-                    )[0],
-                    "team_red_2": Team.objects.get_or_create(
-                        team_number=match["alliances"]["red"]["team_keys"][1][3:]
-                        if match["alliances"]["red"]["team_keys"][1]
-                        else 9999
-                    )[0],
-                    "team_red_3": Team.objects.get_or_create(
-                        team_number=match["alliances"]["red"]["team_keys"][2][3:]
-                        if match["alliances"]["red"]["team_keys"][2]
-                        else 9999
-                    )[0],
-                    "team_blue_1": Team.objects.get_or_create(
-                        team_number=match["alliances"]["blue"]["team_keys"][0][3:]
-                        if match["alliances"]["blue"]["team_keys"][0]
-                        else 9999
-                    )[0],
-                    "team_blue_2": Team.objects.get_or_create(
-                        team_number=match["alliances"]["blue"]["team_keys"][1][3:]
-                        if match["alliances"]["blue"]["team_keys"][1]
-                        else 9999
-                    )[0],
-                    "team_blue_3": Team.objects.get_or_create(
-                        team_number=match["alliances"]["blue"]["team_keys"][2][3:]
-                        if match["alliances"]["blue"]["team_keys"][2]
-                        else 9999
-                    )[0],
-                },
-            )
+            if comp_level not in {"ef", "qf", "sf", "f"}:
+                continue
+
+            red_team_keys = (match.get("alliances") or {}).get("red", {}).get("team_keys") or ["", "", ""]
+            blue_team_keys = (match.get("alliances") or {}).get("blue", {}).get("team_keys") or ["", "", ""]
+            while len(red_team_keys) < 3:
+                red_team_keys.append("")
+            while len(blue_team_keys) < 3:
+                blue_team_keys.append("")
+            red_alliance_number = self._extract_alliance_number(red_team_keys, team_to_alliance)
+            blue_alliance_number = self._extract_alliance_number(blue_team_keys, team_to_alliance)
+
+            # Display teams in official alliance selection order when available.
+            red_pick_order = alliance_to_picks.get(red_alliance_number) or red_team_keys
+            blue_pick_order = alliance_to_picks.get(blue_alliance_number) or blue_team_keys
+            red_team_objs = self._team_objs_from_keys(red_pick_order)
+            blue_team_objs = self._team_objs_from_keys(blue_pick_order)
 
             red_score = self._to_int_or_none((match.get("alliances") or {}).get("red", {}).get("score"))
             blue_score = self._to_int_or_none((match.get("alliances") or {}).get("blue", {}).get("score"))
-            red_rp = self._extract_alliance_rp(match.get("score_breakdown"), "red")
-            blue_rp = self._extract_alliance_rp(match.get("score_breakdown"), "blue")
-            red_climb_success = self._extract_alliance_climb_success(match.get("score_breakdown"), "red")
-            blue_climb_success = self._extract_alliance_climb_success(match.get("score_breakdown"), "blue")
             is_final = (
                 match.get("actual_time") is not None
                 or (red_score is not None and blue_score is not None and red_score >= 0 and blue_score >= 0)
             )
 
-            MatchResult.objects.update_or_create(
-                match=match_obj,
+            PlayoffMatch.objects.update_or_create(
+                tba_match_key=match.get("key"),
                 defaults={
-                    "red_score": red_score if is_final else None,
-                    "blue_score": blue_score if is_final else None,
-                    "red_rp": red_rp if is_final else None,
-                    "blue_rp": blue_rp if is_final else None,
-                    "red_climb_success": red_climb_success if is_final else None,
-                    "blue_climb_success": blue_climb_success if is_final else None,
+                    "event": active_event,
+                    "comp_level": comp_level,
+                    "set_number": match.get("set_number"),
+                    "match_number": match.get("match_number") or 0,
+                    "team_red_1": red_team_objs[0],
+                    "team_red_2": red_team_objs[1],
+                    "team_red_3": red_team_objs[2],
+                    "team_blue_1": blue_team_objs[0],
+                    "team_blue_2": blue_team_objs[1],
+                    "team_blue_3": blue_team_objs[2],
+                    "red_alliance_number": red_alliance_number,
+                    "blue_alliance_number": blue_alliance_number,
                     "is_final": is_final,
                 },
             )

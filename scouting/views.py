@@ -16,7 +16,7 @@ from django.core.cache import cache
 from django.contrib.auth.decorators import login_required
 import json
 from django.shortcuts import render
-from .models import TeamRanking, Match, MatchResult, NexusApiKey
+from .models import TeamRanking, Match, MatchResult, NexusApiKey, PlayoffMatch
 from django.db.models import F
 from django.db.models import OuterRef, Subquery, Value, FloatField, IntegerField
 from pathlib import Path
@@ -289,6 +289,60 @@ def _derive_current_match_from_matches(nexus_matches):
     on_field.sort(key=lambda item: (item[0], item[1]), reverse=True)
     _, match_number, label, status = on_field[0]
     return f"{label} ({status})", match_number
+
+
+def _format_playoff_label(comp_level, set_number, match_number):
+    comp_map = {
+        "ef": "EF",
+        "qf": "QF",
+        "sf": "SF",
+        "f": "F",
+    }
+    prefix = comp_map.get((comp_level or "").lower(), (comp_level or "").upper())
+    if set_number:
+        return f"{prefix}{set_number}-M{match_number}"
+    return f"{prefix}-M{match_number}"
+
+
+def _infer_alliance_number(event, team_number):
+    if not event or not team_number:
+        return None
+    value = TeamRanking.objects.filter(
+        event=event,
+        team__team_number=team_number,
+    ).values_list("alliance_number", flat=True).first()
+    if isinstance(value, int) and value > 0:
+        return value
+    return None
+
+
+def _build_bracket_match_payload(match_obj, event=None):
+    if not match_obj:
+        return None
+    blue_teams = [
+        match_obj.team_blue_1.team_number,
+        match_obj.team_blue_2.team_number,
+        match_obj.team_blue_3.team_number,
+    ]
+    red_teams = [
+        match_obj.team_red_1.team_number,
+        match_obj.team_red_2.team_number,
+        match_obj.team_red_3.team_number,
+    ]
+    blue_alliance_number = match_obj.blue_alliance_number
+    red_alliance_number = match_obj.red_alliance_number
+    if blue_alliance_number is None:
+        blue_alliance_number = _infer_alliance_number(event, blue_teams[0])
+    if red_alliance_number is None:
+        red_alliance_number = _infer_alliance_number(event, red_teams[0])
+
+    return {
+        "blue_alliance_number": blue_alliance_number if blue_alliance_number is not None else "-",
+        "red_alliance_number": red_alliance_number if red_alliance_number is not None else "-",
+        "blue_teams_text": "-".join(str(team_number) for team_number in blue_teams),
+        "red_teams_text": "-".join(str(team_number) for team_number in red_teams),
+        "match_number": match_obj.match_number,
+    }
 
 
 def _load_statbotics_rest_win_chances(event_key, team_number, matches):
@@ -861,16 +915,83 @@ def view_pit_dashboard(request):
         matches=shown_matches,
     )
 
-    match_rows = [
+    qual_rows = [
         {
             "match": m,
+            "match_label": f"Q{m.match_number}",
             "queue_time": queue_time_by_match.get(m.match_number, "-"),
             "win_chance": win_chance_by_match.get(m.match_number, "-"),
             "statbotics_match_url": f"https://www.statbotics.io/match/{event.tba_event_key}_qm{m.match_number}",
             "is_queueing": bool(current_qual_match_num and m.match_number <= current_qual_match_num),
+            "blue_alliance_number": "-",
+            "red_alliance_number": "-",
+            "sort_group": 0,
+            "sort_set": 0,
+            "sort_match": m.match_number,
         }
         for m in shown_matches
     ]
+
+    playoff_matches = (
+        PlayoffMatch.objects.filter(event=event, is_final=False)
+        .filter(
+            team_red_1__team_number=team_number
+        ) | PlayoffMatch.objects.filter(
+            event=event, is_final=False, team_red_2__team_number=team_number
+        ) | PlayoffMatch.objects.filter(
+            event=event, is_final=False, team_red_3__team_number=team_number
+        ) | PlayoffMatch.objects.filter(
+            event=event, is_final=False, team_blue_1__team_number=team_number
+        ) | PlayoffMatch.objects.filter(
+            event=event, is_final=False, team_blue_2__team_number=team_number
+        ) | PlayoffMatch.objects.filter(
+            event=event, is_final=False, team_blue_3__team_number=team_number
+        )
+    )
+    playoff_matches = playoff_matches.distinct()
+    comp_order = {"ef": 1, "qf": 2, "sf": 3, "f": 4}
+    playoff_rows = [
+        {
+            "match": m,
+            "match_label": _format_playoff_label(m.comp_level, m.set_number, m.match_number),
+            "queue_time": "-",
+            "win_chance": "-",
+            "statbotics_match_url": f"https://www.statbotics.io/match/{m.tba_match_key}",
+            "is_queueing": False,
+            "blue_alliance_number": m.blue_alliance_number if m.blue_alliance_number is not None else "-",
+            "red_alliance_number": m.red_alliance_number if m.red_alliance_number is not None else "-",
+            "sort_group": comp_order.get((m.comp_level or "").lower(), 9),
+            "sort_set": m.set_number or 0,
+            "sort_match": m.match_number or 0,
+        }
+        for m in playoff_matches
+    ]
+
+    playoff_all_matches = list(
+        PlayoffMatch.objects.select_related(
+            "team_red_1", "team_red_2", "team_red_3",
+            "team_blue_1", "team_blue_2", "team_blue_3",
+        ).filter(event=event)
+    )
+    sf_matches = {
+        int(m.set_number): m
+        for m in playoff_all_matches
+        if (m.comp_level or "").lower() == "sf" and m.set_number
+    }
+    playoff_bracket_slots = [_build_bracket_match_payload(sf_matches.get(i), event=event) for i in range(1, 14)]
+    finals_payload = [
+        _build_bracket_match_payload(m, event=event)
+        for m in sorted(
+            [m for m in playoff_all_matches if (m.comp_level or "").lower() == "f"],
+            key=lambda item: item.match_number,
+        )
+    ]
+    show_playoff_bracket = any(slot is not None for slot in playoff_bracket_slots) or bool(finals_payload)
+
+    match_rows = sorted(
+        qual_rows + playoff_rows,
+        key=lambda row: (row["sort_group"], row["sort_set"], row["sort_match"]),
+    )
 
     # Pull completed match results for Team 3637 from DB-synced TBA data.
     team_match_results = []
@@ -947,6 +1068,9 @@ def view_pit_dashboard(request):
         "event": event,
         "team_number": team_number,
         "match_rows": match_rows,
+        "playoff_bracket_slots": playoff_bracket_slots,
+        "playoff_finals_payload": finals_payload,
+        "show_playoff_bracket": show_playoff_bracket,
         "team_match_results": team_match_results,
         "our_rank": our_rank,
         "total_teams": total_teams,
