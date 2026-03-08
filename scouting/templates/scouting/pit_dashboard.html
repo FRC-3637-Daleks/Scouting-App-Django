@@ -227,12 +227,16 @@
                 {% if parts_requests %}
                     <div class="card">
                         <div class="card-header"><strong>Parts Requests</strong></div>
-                        <div class="card-body">
-                            <ul class="mb-0">
-                                {% for item in parts_requests %}
-                                    <li>{{ item }}</li>
-                                {% endfor %}
-                            </ul>
+                        <div class="card-body" id="parts-requests-widget">
+                            {% for req in parts_requests %}
+                                <div class="parts-request-item {% if not forloop.first %}d-none{% endif %}">
+                                    <div class="parts-request-title">
+                                        Team {{ req.team_number }}{% if req.team_name and req.team_name != '-' %} - {{ req.team_name }}{% endif %}{% if req.requestor and req.requestor != '-' %} | {{ req.requestor }}{% endif %}
+                                    </div>
+                                    <div class="parts-request-body">{{ req.item }}</div>
+                                    <div class="parts-request-time">{{ req.requested_at }}</div>
+                                </div>
+                            {% endfor %}
                         </div>
                     </div>
                 {% endif %}
@@ -375,6 +379,21 @@
             background-color: #8b1e2d !important;
             color: #fff !important;
             font-weight: 700;
+        }
+        .parts-request-title {
+            font-size: 1rem;
+            font-weight: 700;
+            margin-bottom: 0.35rem;
+        }
+        .parts-request-body {
+            font-size: 1.15rem;
+            font-weight: 600;
+            line-height: 1.25;
+            margin-bottom: 0.45rem;
+        }
+        .parts-request-time {
+            font-size: 0.9rem;
+            opacity: 0.85;
         }
         .tba-bracket-wrap {
             overflow: hidden;
@@ -530,6 +549,32 @@
             fit();
             draw();
             window.addEventListener('resize', function () { fit(); draw(); });
+        })();
+
+        (function () {
+            const partsWidget = document.getElementById('parts-requests-widget');
+            if (partsWidget) {
+                const items = Array.from(partsWidget.querySelectorAll('.parts-request-item'));
+                if (items.length > 0) {
+                    const intervalMs = 5000;
+                    let idx = Math.floor(Date.now() / intervalMs) % items.length;
+
+                    function render(activeIndex) {
+                        items.forEach(function (item, i) {
+                            item.classList.toggle('d-none', i !== activeIndex);
+                        });
+                    }
+
+                    render(idx);
+
+                    if (items.length > 1) {
+                        setInterval(function () {
+                            idx = (idx + 1) % items.length;
+                            render(idx);
+                        }, intervalMs);
+                    }
+                }
+            }
         })();
 
         (function () {

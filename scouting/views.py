@@ -345,6 +345,106 @@ def _build_bracket_match_payload(match_obj, event=None):
     }
 
 
+def _format_parts_requests(parts_requests, display_tz):
+    team_numbers = set()
+    for item in parts_requests or []:
+        if isinstance(item, dict):
+            raw_team = (
+                item.get("requestedByTeam")
+                or item.get("teamNumber")
+                or item.get("team_number")
+                or item.get("team")
+            )
+            try:
+                team_numbers.add(int(raw_team))
+            except (TypeError, ValueError):
+                continue
+
+    team_name_map = {
+        team.team_number: team.team_name
+        for team in Team.objects.filter(team_number__in=team_numbers)
+    }
+
+    formatted = []
+    for item in parts_requests or []:
+        if isinstance(item, str):
+            formatted.append({
+                "team_number": "-",
+                "requestor": "-",
+                "item": item,
+                "requested_at": "-",
+            })
+            continue
+
+        if not isinstance(item, dict):
+            continue
+
+        team_number = (
+            item.get("requestedByTeam")
+            or item.get("teamNumber")
+            or item.get("team_number")
+            or item.get("team")
+            or "-"
+        )
+        team_number_display = str(team_number)
+        team_name = "-"
+        try:
+            team_number_int = int(team_number)
+            team_name = team_name_map.get(team_number_int, "-")
+            team_number_display = str(team_number_int)
+        except (TypeError, ValueError):
+            pass
+
+        requestor = (
+            item.get("requestor")
+            or item.get("requester")
+            or item.get("requestedBy")
+            or item.get("name")
+            or "-"
+        )
+        requested_item = (
+            item.get("parts")
+            or item.get("item")
+            or item.get("part")
+            or item.get("itemName")
+            or item.get("request")
+            or "Part request"
+        )
+
+        raw_ts = (
+            item.get("postedTime")
+            or item.get("requestedAt")
+            or item.get("createdAt")
+            or item.get("timestamp")
+            or item.get("time")
+        )
+        requested_at = "-"
+        try:
+            if isinstance(raw_ts, (int, float)):
+                ts = float(raw_ts)
+                if ts > 10_000_000_000:
+                    ts = ts / 1000.0
+                local_dt = datetime.fromtimestamp(ts, tz=dt_timezone.utc).astimezone(display_tz)
+                requested_at = local_dt.strftime("%b %d, %I:%M %p").replace(" 0", " ")
+            elif isinstance(raw_ts, str) and raw_ts.strip():
+                parsed = datetime.fromisoformat(raw_ts.replace("Z", "+00:00"))
+                if parsed.tzinfo is None:
+                    parsed = parsed.replace(tzinfo=dt_timezone.utc)
+                local_dt = parsed.astimezone(display_tz)
+                requested_at = local_dt.strftime("%b %d, %I:%M %p").replace(" 0", " ")
+        except Exception:
+            requested_at = str(raw_ts) if raw_ts else "-"
+
+        formatted.append({
+            "team_number": team_number_display,
+            "team_name": team_name,
+            "requestor": requestor,
+            "item": requested_item,
+            "requested_at": requested_at,
+        })
+    return formatted
+
+
 def _load_statbotics_rest_win_chances(event_key, team_number, matches):
     """
     Return a mapping of match_number -> display win chance for the given team.
@@ -820,6 +920,7 @@ def view_pit_dashboard(request):
     nexus_status = {}
     announcements = []
     parts_requests = []
+    parts_requests_display = []
     current_match = None
     now_queuing = None
     nexus_error = None
@@ -843,6 +944,7 @@ def view_pit_dashboard(request):
         now_queuing = nexus_status.get("nowQueuing")
         announcements = nexus_status.get("announcements") or []
         parts_requests = nexus_status.get("partsRequests") or []
+        parts_requests_display = _format_parts_requests(parts_requests, display_tz)
         current_match, _ = _derive_current_match_from_matches(nexus_status.get("matches"))
 
         if not now_queuing:
@@ -1080,7 +1182,7 @@ def view_pit_dashboard(request):
         "current_match": current_match,
         "now_queuing": now_queuing,
         "announcements": announcements,
-        "parts_requests": parts_requests,
+        "parts_requests": parts_requests_display,
         "nexus_error": nexus_error,
         "statbotics_error": statbotics_error,
     }
