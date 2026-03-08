@@ -402,7 +402,7 @@
         .tba-bracket-canvas {
             position: relative;
             width: 1480px;
-            height: 780px;
+            height: 860px;
             min-width: 1480px;
             transform-origin: top left;
         }
@@ -483,7 +483,7 @@
         .tba-match-11 { left: 780px; top: 230px; }
         .tba-match-12 { left: 780px; top: 585px; }
         .tba-match-13 { left: 1030px; top: 515px; }
-        .tba-finals-card { left: 1230px; top: 355px; }
+        .tba-finals-card { left: 1230px; top: 390px; }
     </style>
 
     <script>
@@ -495,7 +495,7 @@
 
             function fit() {
                 const baseWidth = 1480;
-                const baseHeight = 780;
+                const baseHeight = 860;
                 const scale = Math.min(1, wrap.clientWidth / baseWidth);
                 canvas.style.transform = `scale(${scale})`;
                 wrap.style.height = `${baseHeight * scale}px`;
