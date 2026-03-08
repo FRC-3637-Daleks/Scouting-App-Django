@@ -585,15 +585,18 @@
             if (!wrap || rows.length === 0) return;
 
             let page = 0;
-            let rowsPerPage = 1;
+            const rowsPerPage = 10;
             let totalPages = 1;
+            const intervalMs = 10000;
+
+            function getTimeBasedPage() {
+                if (totalPages <= 1) return 0;
+                return Math.floor(Date.now() / intervalMs) % totalPages;
+            }
 
             function recalcAndRender(resetPage) {
-                const firstRow = rows[0];
-                const rowHeight = Math.max(1, firstRow.getBoundingClientRect().height || 32);
-                rowsPerPage = Math.max(1, Math.floor(wrap.clientHeight / rowHeight));
                 totalPages = Math.max(1, Math.ceil(rows.length / rowsPerPage));
-                if (resetPage) page = 0;
+                if (resetPage) page = getTimeBasedPage();
                 if (page >= totalPages) page = 0;
 
                 const start = page * rowsPerPage;
@@ -604,13 +607,12 @@
             }
 
             recalcAndRender(true);
-            window.addEventListener('resize', function () { recalcAndRender(false); });
 
             setInterval(function () {
                 if (totalPages <= 1) return;
-                page = (page + 1) % totalPages;
+                page = getTimeBasedPage();
                 recalcAndRender(false);
-            }, 10000);
+            }, intervalMs);
         })();
 
         setTimeout(function () {
