@@ -49,7 +49,7 @@
             </li>
 
         </ul>
-        <ul class="navbar-nav ml-auto">
+        <ul class="navbar-nav ms-auto">
             <li class="nav-item dropdown">
                 <a class="nav-link dropdown-toggle" href="#" id="themeDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
                     <i class="fas fa-circle-half-stroke me-1"></i> Theme
@@ -82,6 +82,9 @@
                     <a href="{% url 'login' %}" class="nav-link">Sign In <i class="fas fa-sign-in-alt ml-1"></i></a>
                 </li>
             {% endif %}
+            <li class="nav-item d-flex align-items-center ms-3">
+                <span id="navbarClock" class="navbar-brand mb-0 py-0" aria-live="polite">00:00 am</span>
+            </li>
         </ul>
     </div>
     </nav>
@@ -149,6 +152,23 @@
         document.querySelectorAll('[data-bs-toggle="tooltip"]').forEach(function (el) {
             new bootstrap.Tooltip(el);
         });
+
+        function updateNavbarClock() {
+            var clockEl = document.getElementById('navbarClock');
+            if (!clockEl) {
+                return;
+            }
+            var now = new Date();
+            var hours24 = now.getHours();
+            var hours12 = hours24 % 12 || 12;
+            var hours = String(hours12).padStart(2, '0');
+            var minutes = String(now.getMinutes()).padStart(2, '0');
+            var meridiem = hours24 >= 12 ? 'pm' : 'am';
+            clockEl.textContent = hours + ':' + minutes + ' ' + meridiem;
+        }
+
+        updateNavbarClock();
+        setInterval(updateNavbarClock, 1000);
     </script>
 </body>
 </html>
