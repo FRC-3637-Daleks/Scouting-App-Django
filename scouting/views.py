@@ -930,6 +930,18 @@ def view_pit_dashboard(request):
         elif alliance == "blue" and result.blue_climb_success is True:
             climbs_completed += 1
     climb_success_rate = f"{climbs_completed} / {matches_played}"
+    event_rank_rows = [
+        {
+            "team_number": ranking.team.team_number,
+            "team_name": ranking.team.team_name,
+            "rank": ranking.rank,
+            "ranking_points": ranking.ranking_points,
+        }
+        for ranking in TeamRanking.objects.select_related("team").filter(
+            event=event,
+            rank__isnull=False,
+        ).order_by("rank", "team__team_number")
+    ]
 
     context = {
         "event": event,
@@ -940,6 +952,7 @@ def view_pit_dashboard(request):
         "total_teams": total_teams,
         "matches_played": matches_played,
         "climb_success_rate": climb_success_rate,
+        "event_rank_rows": event_rank_rows,
         "current_match": current_match,
         "now_queuing": now_queuing,
         "announcements": announcements,

@@ -25,6 +25,16 @@ class Command(BaseCommand):
         try:
             rankings_response = tba.event_rankings(event.tba_event_key)
             rankings_list = rankings_response.get('rankings', []) if isinstance(rankings_response, dict) else []
+            sort_order_info = rankings_response.get('sort_order_info', []) if isinstance(rankings_response, dict) else []
+            rp_index = None
+            for index, order_info in enumerate(sort_order_info):
+                name = str((order_info or {}).get("name") or "").lower()
+                if "ranking point" in name or name == "rp":
+                    rp_index = index
+                    break
+            # TBA often exposes this as "Ranking Score" in sort order index 0.
+            if rp_index is None and sort_order_info:
+                rp_index = 0
             for rank_data in rankings_list:
                 team_key = rank_data.get('team_key')
                 if not team_key or not str(team_key).startswith('frc'):
@@ -42,7 +52,15 @@ class Command(BaseCommand):
                     defaults={'rank': 0}
                 )
                 ranking.rank = rank_data.get('rank', ranking.rank or 0)
-                ranking.save(update_fields=['rank'])
+                ranking_points = None
+                sort_orders = rank_data.get("sort_orders") or []
+                if rp_index is not None and len(sort_orders) > rp_index:
+                    try:
+                        ranking_points = round(float(sort_orders[rp_index]), 2)
+                    except (TypeError, ValueError):
+                        ranking_points = None
+                ranking.ranking_points = ranking_points
+                ranking.save(update_fields=['rank', 'ranking_points'])
 
             oprs_response = tba.event_oprs(event.tba_event_key)
 

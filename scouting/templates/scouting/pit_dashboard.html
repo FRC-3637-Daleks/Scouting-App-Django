@@ -158,35 +158,31 @@
                     </div>
                 </div>
 
-                <div class="card mb-3">
-                    <div class="card-header"><strong>Announcements</strong></div>
-                    <div class="card-body">
-                        {% if announcements %}
+                {% if announcements %}
+                    <div class="card mb-3">
+                        <div class="card-header"><strong>Announcements</strong></div>
+                        <div class="card-body">
                             <ul class="mb-0">
                                 {% for item in announcements %}
                                     <li>{{ item }}</li>
                                 {% endfor %}
                             </ul>
-                        {% else %}
-                            <p class="text-muted mb-0">No announcements.</p>
-                        {% endif %}
+                        </div>
                     </div>
-                </div>
+                {% endif %}
 
-                <div class="card">
-                    <div class="card-header"><strong>Parts Requests</strong></div>
-                    <div class="card-body">
-                        {% if parts_requests %}
+                {% if parts_requests %}
+                    <div class="card">
+                        <div class="card-header"><strong>Parts Requests</strong></div>
+                        <div class="card-body">
                             <ul class="mb-0">
                                 {% for item in parts_requests %}
                                     <li>{{ item }}</li>
                                 {% endfor %}
                             </ul>
-                        {% else %}
-                            <p class="text-muted mb-0">No parts requests.</p>
-                        {% endif %}
+                        </div>
                     </div>
-                </div>
+                {% endif %}
 
                 <div class="card mt-3">
                     <div class="card-header"><strong>Team {{ team_number }} Match Results</strong></div>
@@ -217,6 +213,46 @@
                         {% else %}
                             <div class="p-3">
                                 <p class="text-muted mb-0">No completed match results available.</p>
+                            </div>
+                        {% endif %}
+                    </div>
+                </div>
+
+                <div class="card mt-3" id="event-rank-widget">
+                    <div class="card-header"><strong>Event Rank</strong></div>
+                    <div class="card-body p-0">
+                        {% if event_rank_rows %}
+                            <div class="table-responsive event-rank-table-wrap">
+                                <table class="table table-sm table-striped m-0 align-middle">
+                                    <thead>
+                                        <tr>
+                                            <th scope="col" class="text-center">Team</th>
+                                            <th scope="col">Name</th>
+                                            <th scope="col" class="text-center">Rank</th>
+                                            <th scope="col" class="text-center">RP</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {% for row in event_rank_rows %}
+                                            <tr class="event-rank-row {% if row.team_number == team_number %}event-rank-our-team{% endif %}">
+                                                <td class="text-center">{{ row.team_number }}</td>
+                                                <td>{{ row.team_name }}</td>
+                                                <td class="text-center">{{ row.rank }}</td>
+                                                <td class="text-center">
+                                                    {% if row.ranking_points is not None %}
+                                                        {{ row.ranking_points|floatformat:2 }}
+                                                    {% else %}
+                                                        -
+                                                    {% endif %}
+                                                </td>
+                                            </tr>
+                                        {% endfor %}
+                                    </tbody>
+                                </table>
+                            </div>
+                        {% else %}
+                            <div class="p-3">
+                                <p class="text-muted mb-0">No event ranking data available.</p>
                             </div>
                         {% endif %}
                     </div>
@@ -278,9 +314,54 @@
             background-color: #6b5a00 !important;
             color: #fff6cf !important;
         }
+        .event-rank-table-wrap {
+            max-height: min(40vh, 420px);
+            overflow: hidden;
+        }
+        .event-rank-our-team td {
+            background-color: #8b1e2d !important;
+            color: #fff !important;
+            font-weight: 700;
+        }
     </style>
 
     <script>
+        (function () {
+            const widget = document.getElementById('event-rank-widget');
+            if (!widget) return;
+            const rows = Array.from(widget.querySelectorAll('tbody tr.event-rank-row'));
+            const wrap = widget.querySelector('.event-rank-table-wrap');
+            if (!wrap || rows.length === 0) return;
+
+            let page = 0;
+            let rowsPerPage = 1;
+            let totalPages = 1;
+
+            function recalcAndRender(resetPage) {
+                const firstRow = rows[0];
+                const rowHeight = Math.max(1, firstRow.getBoundingClientRect().height || 32);
+                rowsPerPage = Math.max(1, Math.floor(wrap.clientHeight / rowHeight));
+                totalPages = Math.max(1, Math.ceil(rows.length / rowsPerPage));
+                if (resetPage) page = 0;
+                if (page >= totalPages) page = 0;
+
+                const start = page * rowsPerPage;
+                const end = start + rowsPerPage;
+                rows.forEach(function (row, index) {
+                    row.style.display = (index >= start && index < end) ? '' : 'none';
+                });
+            }
+
+            recalcAndRender(true);
+            window.addEventListener('resize', function () { recalcAndRender(false); });
+
+            setInterval(function () {
+                if (totalPages <= 1) return;
+                page = (page + 1) % totalPages;
+                recalcAndRender(false);
+            }, 10000);
+        })();
+
         setTimeout(function () {
             window.location.reload();
         }, 15000);
