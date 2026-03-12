@@ -2,11 +2,19 @@
 {% load git_version %}
 
 <!DOCTYPE html>
-<html lang="en" data-bs-theme="light">
+<html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta http-equiv="X-UA-Compatible" content="ie=edge">
+    <script>
+        (function () {
+            var storedTheme = localStorage.getItem('theme') || 'system';
+            var prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+            var resolvedTheme = storedTheme === 'system' ? (prefersDark ? 'dark' : 'light') : storedTheme;
+            document.documentElement.setAttribute('data-bs-theme', resolvedTheme);
+        })();
+    </script>
     <!-- Font Awesome -->
     <link rel="stylesheet" href="{% static 'css/all.css' %}">
     <!-- Bootstrap -->
@@ -24,10 +32,10 @@
 </head>
 <body>
     <!-- Navbar -->
-    <nav class="navbar navbar-expand-sm bg-dark navbar-dark">
+    <nav class="navbar navbar-expand-sm bg-body-tertiary border-bottom shadow-sm">
     {% block brand %}{% endblock %}
     <!-- Hamburger menu button -->
-    <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbarToggler" aria-controls="navbarTogglerDemo02" aria-expanded="false" aria-label="Toggle navigation">
+    <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarToggler" aria-controls="navbarToggler" aria-expanded="false" aria-label="Toggle navigation">
         <span class="navbar-toggler-icon"></span>
     </button>
 
@@ -41,17 +49,32 @@
             </li>
 
         </ul>
-        <ul class="navbar-nav ml-auto">
+        <ul class="navbar-nav ms-auto">
+            <li class="nav-item dropdown">
+                <a class="nav-link dropdown-toggle" href="#" id="themeDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+                    <i class="fas fa-circle-half-stroke me-1"></i> Theme
+                </a>
+                <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="themeDropdown">
+                    <li><button type="button" class="dropdown-item theme-option" data-theme-value="system">System</button></li>
+                    <li><button type="button" class="dropdown-item theme-option" data-theme-value="light">Light</button></li>
+                    <li><button type="button" class="dropdown-item theme-option" data-theme-value="dark">Dark</button></li>
+                </ul>
+            </li>
             {% if user.is_authenticated %}
                 <li class="nav-item dropdown">
-                    <a class="nav-link dropdown-toggle" href="#" id="signinDropdown" role="button" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+                    <a class="nav-link dropdown-toggle" href="#" id="signinDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
                         <i class="fas fa-user mr-1"></i> {{ user.first_name }} {{ user.last_name }}
                     </a>
                     <div class="dropdown-menu dropdown-menu-right" aria-labelledby="signinDropdown">
-                        {% if user.is_staff %}
-                            <a class="dropdown-item" href="{% url 'admin:index' %}" target="_blank"><i class="fas fa-user-shield mr-3"></i>Admin</a>
+                        {% if user.is_active and user.is_staff %}
+                            <a class="dropdown-item" href="{% url 'admin:index' %}"><i class="fas fa-user-shield me-2"></i>Admin</a>
                         {% endif %}
-                        <a class="dropdown-item" href="{% url 'logout' %}"><i class="fas fa-sign-out-alt mr-3"></i>Sign Out</a>
+                        <form method="post" action="{% url 'logout' %}" class="m-0">
+                            {% csrf_token %}
+                            <button type="submit" class="dropdown-item">
+                                <i class="fas fa-sign-out-alt me-2"></i>Sign Out
+                            </button>
+                        </form>
                     </div>
                 </li>
             {% else %}
@@ -59,6 +82,9 @@
                     <a href="{% url 'login' %}" class="nav-link">Sign In <i class="fas fa-sign-in-alt ml-1"></i></a>
                 </li>
             {% endif %}
+            <li class="nav-item d-flex align-items-center ms-3">
+                <span id="navbarClock" class="navbar-brand mb-0 py-0" aria-live="polite">00:00 am</span>
+            </li>
         </ul>
     </div>
     </nav>
@@ -68,24 +94,81 @@
         {% block content %}{% endblock %}
     </main>
 
-    <footer class="footer {% if debug %} bg-warning {% else %} bg-secondary {% endif %} d-flex align-items-start justify-content-between">
-        <div class="w-25">
-            <img alt="Team 3637 Logo" src="{% static 'images/logo.png' %}" height="70px" class="ml-3 mt-3"/>
+    <footer class="footer bg-body border-top py-3">
+        <div class="container-fluid d-flex align-items-center">
+            <div class="d-flex align-items-center" style="width: 33.3333%;">
+                <img alt="Team 3637 Logo" src="{% static 'images/logo.png' %}" height="56" class="ms-3"/>
+            </div>
+            <div class="text-center" style="width: 33.3333%;">
+                <p class="m-0">
+                    &copy; FIRST Robotics Team 3637 - The Daleks 2026
+                    {% if user.is_staff or user.is_superuser %}
+                        - SwVer {% git_version %}
+                    {% endif %}
+                </p>
+            </div>
+            <div style="width: 33.3333%;"></div>
         </div>
-
-        {% if user.is_staff and not debug %}
-            <p class="mt-auto mb-3 ml-3 mr-3">{% git_version %}</p>
-        {% elif debug %}
-            <p class="mt-auto mb-3 ml-3 mr-3">YOU ARE RUNNING IN DEVELOPMENT MODE!</p>
-        {% endif %}
     </footer>
 
     <script src="{% static 'js/bootstrap.bundle.min.js' %}"></script>
     <script src="{% static 'js/main.js' %}"></script>
     <script>
-        $(function () {
-            $('[data-toggle="tooltip"]').tooltip();
+        function resolveTheme(themeValue) {
+            if (themeValue === 'system') {
+                return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+            }
+            return themeValue;
+        }
+
+        function applyTheme(themeValue) {
+            var resolvedTheme = resolveTheme(themeValue);
+            document.documentElement.setAttribute('data-bs-theme', resolvedTheme);
+            document.querySelectorAll('.theme-option').forEach(function (btn) {
+                var isSelected = btn.getAttribute('data-theme-value') === themeValue;
+                btn.classList.toggle('active', isSelected);
+                btn.setAttribute('aria-pressed', isSelected ? 'true' : 'false');
+            });
+        }
+
+        var currentTheme = localStorage.getItem('theme') || 'system';
+        applyTheme(currentTheme);
+
+        document.querySelectorAll('.theme-option').forEach(function (btn) {
+            btn.addEventListener('click', function () {
+                var themeValue = btn.getAttribute('data-theme-value');
+                localStorage.setItem('theme', themeValue);
+                applyTheme(themeValue);
+            });
         });
+
+        window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', function () {
+            var selectedTheme = localStorage.getItem('theme') || 'system';
+            if (selectedTheme === 'system') {
+                applyTheme('system');
+            }
+        });
+
+        document.querySelectorAll('[data-bs-toggle="tooltip"]').forEach(function (el) {
+            new bootstrap.Tooltip(el);
+        });
+
+        function updateNavbarClock() {
+            var clockEl = document.getElementById('navbarClock');
+            if (!clockEl) {
+                return;
+            }
+            var now = new Date();
+            var hours24 = now.getHours();
+            var hours12 = hours24 % 12 || 12;
+            var hours = String(hours12).padStart(2, '0');
+            var minutes = String(now.getMinutes()).padStart(2, '0');
+            var meridiem = hours24 >= 12 ? 'pm' : 'am';
+            clockEl.textContent = hours + ':' + minutes + ' ' + meridiem;
+        }
+
+        updateNavbarClock();
+        setInterval(updateNavbarClock, 1000);
     </script>
 </body>
 </html>

@@ -1,0 +1,622 @@
+{% extends 'scouting/base.html' %}
+
+{% block title %} | Pit Dashboard {% endblock %}
+
+{% block content %}
+    <div class="container-fluid py-3">
+        <div class="text-center mb-3">
+            <h1 class="m-0">Pit Dashboard | Team {{ team_number }} | {{ event.event_name }}</h1>
+            <h2 class="mt-2 mb-0">
+                Current Match:
+                {% if current_match %}
+                    <span class="badge bg-primary">{{ current_match }}</span>
+                {% else %}
+                    <span class="badge bg-secondary">Unavailable</span>
+                {% endif %}
+                <span class="mx-2">|</span>
+                Now Queueing:
+                {% if now_queuing %}
+                    <span class="badge bg-success">{{ now_queuing }}</span>
+                {% else %}
+                    <span class="badge bg-secondary">Unavailable</span>
+                {% endif %}
+            </h2>
+        </div>
+
+        {% if nexus_error %}
+            <div class="alert alert-warning">{{ nexus_error }}</div>
+        {% endif %}
+        {% if statbotics_error %}
+            <div class="alert alert-warning">{{ statbotics_error }}</div>
+        {% endif %}
+
+        <div class="row g-3">
+            <div class="col-12 col-xxl-8">
+                <div class="card">
+                    <div class="card-header"><strong>Upcoming Matches</strong></div>
+                    <div class="card-body p-0">
+                        <div class="table-responsive">
+                            <table class="table table-striped table-hover m-0 text-center align-middle">
+                                <thead class="table-dark">
+                                    <tr>
+                                        <th scope="col" class="text-nowrap">Match #</th>
+                                        <th scope="col" class="text-nowrap">Queue Time</th>
+                                        <th scope="col" class="text-nowrap">3637 Win %</th>
+                                        <th scope="col" class="text-nowrap">Blue #</th>
+                                        <th scope="col" class="text-nowrap">Red #</th>
+                                        <th scope="col" class="text-nowrap">Blue 1</th>
+                                        <th scope="col" class="text-nowrap">Blue 2</th>
+                                        <th scope="col" class="text-nowrap">Blue 3</th>
+                                        <th scope="col" class="text-nowrap">Red 1</th>
+                                        <th scope="col" class="text-nowrap">Red 2</th>
+                                        <th scope="col" class="text-nowrap">Red 3</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for row in match_rows %}
+                                        {% with match=row.match %}
+                                        <tr class="{% if row.is_queueing %}queueing-row{% endif %}">
+                                            <th scope="row">{{ row.match_label }}</th>
+                                            <td>{{ row.queue_time }}</td>
+                                            <td>
+                                                <strong>
+                                                    <a href="{{ row.statbotics_match_url }}" target="_blank" rel="noopener noreferrer" class="team-link">
+                                                        {{ row.win_chance }}
+                                                    </a>
+                                                </strong>
+                                            </td>
+                                            <td>{{ row.blue_alliance_number }}</td>
+                                            <td>{{ row.red_alliance_number }}</td>
+                                            <td class="{% if match.team_blue_1.team_number == team_number %}team-highlight-blue{% else %}alliance-blue{% endif %}">
+                                                <a class="team-link d-inline-flex align-items-center justify-content-center gap-2" href="{% url 'scouting:team_statistics' match.team_blue_1.team_number %}">
+                                                    {% if match.team_blue_1.team_logo %}
+                                                        <img src="{{ match.team_blue_1.team_logo.url }}" alt="Team {{ match.team_blue_1.team_number }} logo" class="team-icon">
+                                                    {% endif %}
+                                                    <span>{{ match.team_blue_1.team_number }}</span>
+                                                </a>
+                                            </td>
+                                            <td class="{% if match.team_blue_2.team_number == team_number %}team-highlight-blue{% else %}alliance-blue{% endif %}">
+                                                <a class="team-link d-inline-flex align-items-center justify-content-center gap-2" href="{% url 'scouting:team_statistics' match.team_blue_2.team_number %}">
+                                                    {% if match.team_blue_2.team_logo %}
+                                                        <img src="{{ match.team_blue_2.team_logo.url }}" alt="Team {{ match.team_blue_2.team_number }} logo" class="team-icon">
+                                                    {% endif %}
+                                                    <span>{{ match.team_blue_2.team_number }}</span>
+                                                </a>
+                                            </td>
+                                            <td class="{% if match.team_blue_3.team_number == team_number %}team-highlight-blue{% else %}alliance-blue{% endif %}">
+                                                <a class="team-link d-inline-flex align-items-center justify-content-center gap-2" href="{% url 'scouting:team_statistics' match.team_blue_3.team_number %}">
+                                                    {% if match.team_blue_3.team_logo %}
+                                                        <img src="{{ match.team_blue_3.team_logo.url }}" alt="Team {{ match.team_blue_3.team_number }} logo" class="team-icon">
+                                                    {% endif %}
+                                                    <span>{{ match.team_blue_3.team_number }}</span>
+                                                </a>
+                                            </td>
+                                            <td class="{% if match.team_red_1.team_number == team_number %}team-highlight-red{% else %}alliance-red{% endif %}">
+                                                <a class="team-link d-inline-flex align-items-center justify-content-center gap-2" href="{% url 'scouting:team_statistics' match.team_red_1.team_number %}">
+                                                    {% if match.team_red_1.team_logo %}
+                                                        <img src="{{ match.team_red_1.team_logo.url }}" alt="Team {{ match.team_red_1.team_number }} logo" class="team-icon">
+                                                    {% endif %}
+                                                    <span>{{ match.team_red_1.team_number }}</span>
+                                                </a>
+                                            </td>
+                                            <td class="{% if match.team_red_2.team_number == team_number %}team-highlight-red{% else %}alliance-red{% endif %}">
+                                                <a class="team-link d-inline-flex align-items-center justify-content-center gap-2" href="{% url 'scouting:team_statistics' match.team_red_2.team_number %}">
+                                                    {% if match.team_red_2.team_logo %}
+                                                        <img src="{{ match.team_red_2.team_logo.url }}" alt="Team {{ match.team_red_2.team_number }} logo" class="team-icon">
+                                                    {% endif %}
+                                                    <span>{{ match.team_red_2.team_number }}</span>
+                                                </a>
+                                            </td>
+                                            <td class="{% if match.team_red_3.team_number == team_number %}team-highlight-red{% else %}alliance-red{% endif %}">
+                                                <a class="team-link d-inline-flex align-items-center justify-content-center gap-2" href="{% url 'scouting:team_statistics' match.team_red_3.team_number %}">
+                                                    {% if match.team_red_3.team_logo %}
+                                                        <img src="{{ match.team_red_3.team_logo.url }}" alt="Team {{ match.team_red_3.team_number }} logo" class="team-icon">
+                                                    {% endif %}
+                                                    <span>{{ match.team_red_3.team_number }}</span>
+                                                </a>
+                                            </td>
+                                        </tr>
+                                        {% endwith %}
+                                    {% empty %}
+                                        <tr>
+                                            <td colspan="11" class="text-center">No upcoming matches found.</td>
+                                        </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+                {% if show_playoff_bracket %}
+                    <div class="card mt-2">
+                        <div class="card-header"><strong>Playoff Bracket</strong></div>
+                        <div class="card-body p-2">
+                            <div class="tba-bracket-wrap" id="tba-bracket-wrap">
+                                <div class="tba-bracket-canvas" id="tba-bracket-canvas">
+                                    <svg id="tba-bracket-lines" class="tba-bracket-lines"></svg>
+                                    {% for slot in playoff_bracket_slots %}
+                                        <div class="tba-match-card tba-match-{{ forloop.counter }}" id="tba-match-{{ forloop.counter }}">
+                                            <div class="tba-match-title">Match {{ forloop.counter }}</div>
+                                            {% if slot %}
+                                                <div class="tba-alliance tba-red">
+                                                    <span class="tba-alliance-num">{{ slot.red_alliance_number }}</span>
+                                                    <span class="tba-alliance-teams">{{ slot.red_teams_text }}</span>
+                                                </div>
+                                                <div class="tba-alliance tba-blue">
+                                                    <span class="tba-alliance-num">{{ slot.blue_alliance_number }}</span>
+                                                    <span class="tba-alliance-teams">{{ slot.blue_teams_text }}</span>
+                                                </div>
+                                            {% else %}
+                                                <div class="tba-alliance tba-red"><span class="tba-alliance-num">-</span><span class="tba-alliance-teams">TBD</span></div>
+                                                <div class="tba-alliance tba-blue"><span class="tba-alliance-num">-</span><span class="tba-alliance-teams">TBD</span></div>
+                                            {% endif %}
+                                        </div>
+                                    {% endfor %}
+                                    <div class="tba-finals-card" id="tba-finals">
+                                        <div class="tba-match-title">Finals</div>
+                                        {% with playoff_finals_payload.0 as f1 %}
+                                            {% if f1 %}
+                                                <div class="tba-alliance tba-red">
+                                                    <span class="tba-alliance-num">{{ f1.red_alliance_number }}</span>
+                                                    <span class="tba-alliance-teams">{{ f1.red_teams_text }}</span>
+                                                </div>
+                                                <div class="tba-alliance tba-blue">
+                                                    <span class="tba-alliance-num">{{ f1.blue_alliance_number }}</span>
+                                                    <span class="tba-alliance-teams">{{ f1.blue_teams_text }}</span>
+                                                </div>
+                                            {% else %}
+                                                <div class="tba-alliance tba-red"><span class="tba-alliance-num">-</span><span class="tba-alliance-teams">TBD</span></div>
+                                                <div class="tba-alliance tba-blue"><span class="tba-alliance-num">-</span><span class="tba-alliance-teams">TBD</span></div>
+                                            {% endif %}
+                                        {% endwith %}
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                {% endif %}
+            </div>
+
+            <div class="col-12 col-xxl-4">
+                <div class="card mb-3">
+                    <div class="card-header"><strong>Event Stats</strong></div>
+                    <div class="card-body">
+                        <div class="row g-2">
+                            <div class="col-12 col-md-4">
+                                <div class="border rounded p-2 text-center h-100">
+                                    <div class="small text-muted">Our Rank</div>
+                                    <div class="fs-4 fw-bold">
+                                        {% if our_rank %}
+                                            {{ our_rank }} / {{ total_teams }}
+                                        {% else %}
+                                            - / {{ total_teams }}
+                                        {% endif %}
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-12 col-md-4">
+                                <div class="border rounded p-2 text-center h-100">
+                                    <div class="small text-muted">Matches Played</div>
+                                    <div class="fs-4 fw-bold">{{ matches_played }}</div>
+                                </div>
+                            </div>
+                            <div class="col-12 col-md-4">
+                                <div class="border rounded p-2 text-center h-100">
+                                    <div class="small text-muted">Climb Success</div>
+                                    <div class="fs-4 fw-bold">{{ climb_success_rate }}</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                {% if announcements %}
+                    <div class="card mb-3">
+                        <div class="card-header"><strong>Announcements</strong></div>
+                        <div class="card-body">
+                            <ul class="mb-0">
+                                {% for item in announcements %}
+                                    <li>{{ item }}</li>
+                                {% endfor %}
+                            </ul>
+                        </div>
+                    </div>
+                {% endif %}
+
+                {% if parts_requests %}
+                    <div class="card">
+                        <div class="card-header"><strong>Parts Requests</strong></div>
+                        <div class="card-body" id="parts-requests-widget">
+                            {% for req in parts_requests %}
+                                <div class="parts-request-item {% if not forloop.first %}d-none{% endif %}">
+                                    <div class="parts-request-title">
+                                        Team {{ req.team_number }}{% if req.team_name and req.team_name != '-' %} - {{ req.team_name }}{% endif %}{% if req.requestor and req.requestor != '-' %} | {{ req.requestor }}{% endif %}
+                                    </div>
+                                    <div class="parts-request-body">{{ req.item }}</div>
+                                    <div class="parts-request-time">{{ req.requested_at }}</div>
+                                </div>
+                            {% endfor %}
+                        </div>
+                    </div>
+                {% endif %}
+
+                <div class="card mt-3">
+                    <div class="card-header"><strong>Team {{ team_number }} Match Results</strong></div>
+                    <div class="card-body p-0">
+                        {% if team_match_results %}
+                            <div class="table-responsive">
+                                <table class="table table-sm table-striped m-0 text-center align-middle">
+                                    <thead>
+                                        <tr>
+                                            <th scope="col">Match</th>
+                                            <th scope="col">Result</th>
+                                            <th scope="col">Final Score</th>
+                                            <th scope="col">RP</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {% for row in team_match_results %}
+                                            <tr>
+                                                <td>Q{{ row.match_number }}</td>
+                                                <td><strong>{{ row.result }}</strong></td>
+                                                <td>{{ row.score_display }}</td>
+                                                <td>{{ row.rp_display }}</td>
+                                            </tr>
+                                        {% endfor %}
+                                    </tbody>
+                                </table>
+                            </div>
+                        {% else %}
+                            <div class="p-3">
+                                <p class="text-muted mb-0">No completed match results available.</p>
+                            </div>
+                        {% endif %}
+                    </div>
+                </div>
+
+                <div class="card mt-3" id="event-rank-widget">
+                    <div class="card-header"><strong>Event Rank</strong></div>
+                    <div class="card-body p-0">
+                        {% if event_rank_rows %}
+                            <div class="table-responsive event-rank-table-wrap">
+                                <table class="table table-sm table-striped m-0 align-middle">
+                                    <thead>
+                                        <tr>
+                                            <th scope="col" class="text-center">Team</th>
+                                            <th scope="col">Name</th>
+                                            <th scope="col" class="text-center">Rank</th>
+                                            <th scope="col" class="text-center">RP</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {% for row in event_rank_rows %}
+                                            <tr class="event-rank-row {% if row.team_number == team_number %}event-rank-our-team{% endif %}">
+                                                <td class="text-center">{{ row.team_number }}</td>
+                                                <td>{{ row.team_name }}</td>
+                                                <td class="text-center">{{ row.rank }}</td>
+                                                <td class="text-center">
+                                                    {% if row.ranking_points is not None %}
+                                                        {{ row.ranking_points|floatformat:2 }}
+                                                    {% else %}
+                                                        -
+                                                    {% endif %}
+                                                </td>
+                                            </tr>
+                                        {% endfor %}
+                                    </tbody>
+                                </table>
+                            </div>
+                        {% else %}
+                            <div class="p-3">
+                                <p class="text-muted mb-0">No event ranking data available.</p>
+                            </div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <style>
+        .team-highlight-red {
+            background-color: #8b1e2d !important;
+            color: #fff !important;
+            font-weight: 700;
+        }
+        .team-highlight-blue {
+            background-color: #1463d8 !important;
+            color: #fff !important;
+            font-weight: 700;
+        }
+        [data-bs-theme="light"] .alliance-red {
+            background-color: #f8d7da !important;
+            color: #641220 !important;
+        }
+        [data-bs-theme="light"] .alliance-blue {
+            background-color: #d7ebff !important;
+            color: #0a3b80 !important;
+        }
+        [data-bs-theme="dark"] .alliance-red {
+            background-color: #5a1a22 !important;
+            color: #ffe6e8 !important;
+        }
+        [data-bs-theme="dark"] .alliance-blue {
+            background-color: #12335f !important;
+            color: #e7f2ff !important;
+        }
+        .team-link {
+            color: inherit;
+            font-weight: inherit;
+            text-decoration: none;
+        }
+        .team-link:hover {
+            text-decoration: underline;
+        }
+        .team-icon {
+            height: 22px;
+            width: 22px;
+            object-fit: cover;
+            border-radius: 4px;
+            border: 1px solid rgba(0, 0, 0, 0.15);
+            background: #fff;
+        }
+        [data-bs-theme="light"] .queueing-row td,
+        [data-bs-theme="light"] .queueing-row th {
+            background-color: #fff3b0 !important;
+            color: #3d3000 !important;
+        }
+        [data-bs-theme="dark"] .queueing-row td,
+        [data-bs-theme="dark"] .queueing-row th {
+            background-color: #6b5a00 !important;
+            color: #fff6cf !important;
+        }
+        .event-rank-table-wrap {
+            max-height: min(40vh, 420px);
+            overflow: hidden;
+        }
+        .event-rank-our-team td {
+            background-color: #8b1e2d !important;
+            color: #fff !important;
+            font-weight: 700;
+        }
+        .parts-request-title {
+            font-size: 1rem;
+            font-weight: 700;
+            margin-bottom: 0.35rem;
+        }
+        .parts-request-body {
+            font-size: 1.15rem;
+            font-weight: 600;
+            line-height: 1.25;
+            margin-bottom: 0.45rem;
+        }
+        .parts-request-time {
+            font-size: 0.9rem;
+            opacity: 0.85;
+        }
+        .tba-bracket-wrap {
+            overflow: hidden;
+            width: 100%;
+        }
+        .tba-bracket-canvas {
+            position: relative;
+            width: 1480px;
+            height: 860px;
+            min-width: 1480px;
+            transform-origin: top left;
+        }
+        .tba-bracket-lines {
+            position: absolute;
+            inset: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 1;
+            overflow: visible;
+        }
+        .tba-match-card, .tba-finals-card {
+            position: absolute;
+            width: 210px;
+            border: 1px solid rgba(0,0,0,0.15);
+            border-radius: 6px;
+            background: rgba(255,255,255,0.94);
+            z-index: 2;
+            box-shadow: 0 1px 2px rgba(0,0,0,0.08);
+        }
+        [data-bs-theme="dark"] .tba-match-card,
+        [data-bs-theme="dark"] .tba-finals-card {
+            background: rgba(27,31,35,0.9);
+            border-color: rgba(255,255,255,0.2);
+        }
+        .tba-match-title {
+            font-size: 0.85rem;
+            font-style: italic;
+            color: #6c757d;
+            padding: 4px 6px;
+            border-bottom: 1px solid rgba(0,0,0,0.08);
+        }
+        .tba-alliance {
+            display: grid;
+            grid-template-columns: 30px 1fr;
+            align-items: center;
+            min-height: 28px;
+            font-size: 0.88rem;
+            font-weight: 600;
+        }
+        .tba-alliance-num {
+            text-align: center;
+            border-right: 1px solid rgba(0,0,0,0.08);
+        }
+        .tba-alliance-teams {
+            padding: 0 6px;
+            color: #2f55b7;
+        }
+        .tba-blue { background: rgba(207,221,255,0.55); }
+        .tba-red { background: rgba(255,216,220,0.55); }
+        [data-bs-theme="dark"] .tba-blue {
+            background: #12335f;
+        }
+        [data-bs-theme="dark"] .tba-red {
+            background: #5a1a22;
+        }
+        [data-bs-theme="dark"] .tba-blue .tba-alliance-teams,
+        [data-bs-theme="dark"] .tba-red .tba-alliance-teams,
+        [data-bs-theme="dark"] .tba-blue .tba-alliance-num,
+        [data-bs-theme="dark"] .tba-red .tba-alliance-num {
+            color: #e7f2ff;
+        }
+        [data-bs-theme="dark"] .tba-red .tba-alliance-teams,
+        [data-bs-theme="dark"] .tba-red .tba-alliance-num {
+            color: #ffe6e8;
+        }
+        .tba-finals-card { width: 210px; }
+        .tba-match-1 { left: 12px; top: 20px; }
+        .tba-match-2 { left: 12px; top: 150px; }
+        .tba-match-3 { left: 12px; top: 320px; }
+        .tba-match-4 { left: 12px; top: 450px; }
+        .tba-match-5 { left: 260px; top: 610px; }
+        .tba-match-6 { left: 260px; top: 710px; }
+        .tba-match-7 { left: 300px; top: 85px; }
+        .tba-match-8 { left: 300px; top: 385px; }
+        .tba-match-9 { left: 540px; top: 650px; }
+        .tba-match-10 { left: 540px; top: 545px; }
+        .tba-match-11 { left: 780px; top: 230px; }
+        .tba-match-12 { left: 780px; top: 585px; }
+        .tba-match-13 { left: 1030px; top: 515px; }
+        .tba-finals-card { left: 1230px; top: 390px; }
+    </style>
+
+    <script>
+        (function () {
+            const wrap = document.getElementById('tba-bracket-wrap');
+            const canvas = document.getElementById('tba-bracket-canvas');
+            const svg = document.getElementById('tba-bracket-lines');
+            if (!wrap || !canvas || !svg) return;
+
+            function fit() {
+                const baseWidth = 1480;
+                const baseHeight = 860;
+                const scale = Math.min(1, wrap.clientWidth / baseWidth);
+                canvas.style.transform = `scale(${scale})`;
+                wrap.style.height = `${baseHeight * scale}px`;
+            }
+
+            const edges = [
+                ['tba-match-1','tba-match-7'],
+                ['tba-match-2','tba-match-7'],
+                ['tba-match-3','tba-match-8'],
+                ['tba-match-4','tba-match-8'],
+                ['tba-match-5','tba-match-10'],
+                ['tba-match-6','tba-match-9'],
+                ['tba-match-7','tba-match-11'],
+                ['tba-match-8','tba-match-11'],
+                ['tba-match-9','tba-match-12'],
+                ['tba-match-10','tba-match-12'],
+                ['tba-match-12','tba-match-13'],
+                ['tba-match-11','tba-finals'],
+                ['tba-match-13','tba-finals']
+            ];
+
+            function anchorRight(el) {
+                const c = canvas.getBoundingClientRect();
+                const r = el.getBoundingClientRect();
+                return { x: r.right - c.left, y: r.top - c.top + r.height / 2 };
+            }
+            function anchorLeft(el) {
+                const c = canvas.getBoundingClientRect();
+                const r = el.getBoundingClientRect();
+                return { x: r.left - c.left, y: r.top - c.top + r.height / 2 };
+            }
+            function draw() {
+                while (svg.firstChild) svg.removeChild(svg.firstChild);
+                edges.forEach(function (edge) {
+                    const from = document.getElementById(edge[0]);
+                    const to = document.getElementById(edge[1]);
+                    if (!from || !to) return;
+                    const p1 = anchorRight(from);
+                    const p4 = anchorLeft(to);
+                    const midX = p1.x + (p4.x - p1.x) * 0.5;
+                    const d = `M ${p1.x} ${p1.y} L ${midX} ${p1.y} L ${midX} ${p4.y} L ${p4.x} ${p4.y}`;
+                    const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+                    path.setAttribute('d', d);
+                    path.setAttribute('fill', 'none');
+                    path.setAttribute('stroke', getComputedStyle(document.documentElement).getPropertyValue('--bs-body-color').trim() || '#212529');
+                    path.setAttribute('stroke-width', '2');
+                    path.setAttribute('opacity', '0.72');
+                    svg.appendChild(path);
+                });
+            }
+            fit();
+            draw();
+            window.addEventListener('resize', function () { fit(); draw(); });
+        })();
+
+        (function () {
+            const partsWidget = document.getElementById('parts-requests-widget');
+            if (partsWidget) {
+                const items = Array.from(partsWidget.querySelectorAll('.parts-request-item'));
+                if (items.length > 0) {
+                    const intervalMs = 5000;
+                    let idx = Math.floor(Date.now() / intervalMs) % items.length;
+
+                    function render(activeIndex) {
+                        items.forEach(function (item, i) {
+                            item.classList.toggle('d-none', i !== activeIndex);
+                        });
+                    }
+
+                    render(idx);
+
+                    if (items.length > 1) {
+                        setInterval(function () {
+                            idx = (idx + 1) % items.length;
+                            render(idx);
+                        }, intervalMs);
+                    }
+                }
+            }
+        })();
+
+        (function () {
+            const widget = document.getElementById('event-rank-widget');
+            if (!widget) return;
+            const rows = Array.from(widget.querySelectorAll('tbody tr.event-rank-row'));
+            const wrap = widget.querySelector('.event-rank-table-wrap');
+            if (!wrap || rows.length === 0) return;
+
+            let page = 0;
+            const rowsPerPage = 10;
+            let totalPages = 1;
+            const intervalMs = 10000;
+
+            function getTimeBasedPage() {
+                if (totalPages <= 1) return 0;
+                return Math.floor(Date.now() / intervalMs) % totalPages;
+            }
+
+            function recalcAndRender(resetPage) {
+                totalPages = Math.max(1, Math.ceil(rows.length / rowsPerPage));
+                if (resetPage) page = getTimeBasedPage();
+                if (page >= totalPages) page = 0;
+
+                const start = page * rowsPerPage;
+                const end = start + rowsPerPage;
+                rows.forEach(function (row, index) {
+                    row.style.display = (index >= start && index < end) ? '' : 'none';
+                });
+            }
+
+            recalcAndRender(true);
+
+            setInterval(function () {
+                if (totalPages <= 1) return;
+                page = getTimeBasedPage();
+                recalcAndRender(false);
+            }, intervalMs);
+        })();
+
+        setTimeout(function () {
+            window.location.reload();
+        }, 15000);
+    </script>
+{% endblock %}

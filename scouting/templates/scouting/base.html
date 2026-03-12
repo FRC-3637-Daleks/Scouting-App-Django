@@ -15,6 +15,11 @@
             <a href="{% url 'scouting:pit_scout_teams_list' %}" class="nav-link">Pit Scout</a>
         </div>
     {% endif %}
+    {% if user.is_authenticated %}
+        <div class="navbar-item">
+            <a href="{% url 'scouting:pit_dashboard' %}" class="nav-link">Pit Dashboard</a>
+        </div>
+    {% endif %}
     <div class="navbar-item">
         <a href="{% url 'scouting:team_statistics_list' %}" class="nav-link">Team Statistics</a>
     </div>

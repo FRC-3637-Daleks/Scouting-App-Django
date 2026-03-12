@@ -5,72 +5,159 @@
 {% block content %}
     <div class="container">
         <h1 class="m-3 text-center">Assigned Teams</h1>
-            <table class="table table-striped">
+            <div class="table-responsive">
+            <table class="table table-striped table-sm align-middle text-center">
                 <thead>
-                    <th scope="col">Team #</th>
-                    <th scope="col">Team Name</th>
-                    <th scope="col">Scout Assigned</th>
-                    <th scope="col">Scout</th>
+                    <tr>
+                        <th scope="col" class="text-nowrap">Team #</th>
+                        <th scope="col" class="text-nowrap">Logo</th>
+                        <th scope="col" class="text-nowrap">Team Name</th>
+                        <th scope="col" class="text-nowrap">Pit Location</th>
+                        <th scope="col" class="text-nowrap">Scout Assigned</th>
+                        <th scope="col" class="text-nowrap">Scout</th>
+                    </tr>
                 </thead>
                 <tbody>
                     {% for report in pit_scout_reports %}
                         {% if report.description == '' and report.assigned_scout == current_user%}
                             <tr>
                                 <th scope="row">{{ report.team.team_number }}</th>
-                                <th scope="row">{{ report.team.team_name }}</th>
-                                <th scope="row">{{ report.assigned_scout }}</th>
-                                <th scope="row"><a href="{% url 'scouting:pit_scout_team' team_number=report.team.team_number %}" class="btn btn-primary" rile="button">Scout</a></th>
+                                <td>
+                                    {% if report.team.team_logo %}
+                                        <img src="{{ report.team.team_logo.url }}" alt="Team {{ report.team.team_number }} logo" class="img-thumbnail" style="height: 40px; width: 40px; object-fit: cover;">
+                                    {% endif %}
+                                </td>
+                                <td>{{ report.team.team_name }}</td>
+                                <td>
+                                    {% if report.pit_location and report.frc_nexus_url %}
+                                        <a href="{{ report.frc_nexus_url }}" target="_blank" rel="noopener noreferrer">{{ report.pit_location }}</a>
+                                    {% elif report.pit_location %}
+                                        {{ report.pit_location }}
+                                    {% else %}
+                                        Unavailable
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    {% if report.assigned_scout %}
+                                        {% if report.assigned_scout.get_full_name %}
+                                            {{ report.assigned_scout.get_full_name }}
+                                        {% else %}
+                                            {{ report.assigned_scout.username }}
+                                        {% endif %}
+                                    {% else %}
+                                        Unassigned
+                                    {% endif %}
+                                </td>
+                                <td><a href="{% url 'scouting:pit_scout_team' team_number=report.team.team_number %}" class="btn btn-primary btn-sm text-nowrap" role="button">Scout</a></td>
                             </tr>
                         {% endif %}
                     {% endfor %}
                 </tbody>
-
             </table>
+            </div>
 
             <h1 class="m-3 text-center">Other's Assigned Teams</h1>
-            <table class="table table-striped">
+            <div class="table-responsive">
+            <table class="table table-striped table-sm align-middle text-center">
                 <thead>
-                    <th scope="col">Team #</th>
-                    <th scope="col">Team Name</th>
-                    <th scope="col">Scout Assigned</th>
-                    <th scope="col">Scout</th>
+                    <tr>
+                        <th scope="col" class="text-nowrap">Team #</th>
+                        <th scope="col" class="text-nowrap">Logo</th>
+                        <th scope="col" class="text-nowrap">Team Name</th>
+                        <th scope="col" class="text-nowrap">Pit Location</th>
+                        <th scope="col" class="text-nowrap">Scout Assigned</th>
+                        <th scope="col" class="text-nowrap">Scout</th>
+                    </tr>
                 </thead>
                 <tbody>
                     {% for report in pit_scout_reports %}
                         {% if report.description == '' and not report.assigned_scout == current_user%}
                             <tr>
                                 <th scope="row">{{ report.team.team_number }}</th>
-                                <th scope="row">{{ report.team.team_name }}</th>
-                                <th scope="row">{{ report.assigned_scout }}</th>
-                                <th scope="row"><a href="{% url 'scouting:pit_scout_team' team_number=report.team.team_number %}" class="btn btn-primary" rile="button">Scout</a></th>
+                                <td>
+                                    {% if report.team.team_logo %}
+                                        <img src="{{ report.team.team_logo.url }}" alt="Team {{ report.team.team_number }} logo" class="img-thumbnail" style="height: 40px; width: 40px; object-fit: cover;">
+                                    {% endif %}
+                                </td>
+                                <td>{{ report.team.team_name }}</td>
+                                <td>
+                                    {% if report.pit_location and report.frc_nexus_url %}
+                                        <a href="{{ report.frc_nexus_url }}" target="_blank" rel="noopener noreferrer">{{ report.pit_location }}</a>
+                                    {% elif report.pit_location %}
+                                        {{ report.pit_location }}
+                                    {% else %}
+                                        Unavailable
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    {% if report.assigned_scout %}
+                                        {% if report.assigned_scout.get_full_name %}
+                                            {{ report.assigned_scout.get_full_name }}
+                                        {% else %}
+                                            {{ report.assigned_scout.username }}
+                                        {% endif %}
+                                    {% else %}
+                                        Unassigned
+                                    {% endif %}
+                                </td>
+                                <td><a href="{% url 'scouting:pit_scout_team' team_number=report.team.team_number %}" class="btn btn-primary btn-sm text-nowrap" role="button">Scout</a></td>
                             </tr>
                         {% endif %}
                     {% endfor %}
                 </tbody>
-
             </table>
+            </div>
 
     <h1 class="m-3 text-center">Pit Scouting Complete</h1>
-            <table class="table table-striped">
+            <div class="table-responsive">
+            <table class="table table-striped table-sm align-middle text-center">
                 <thead>
-                    <th scope="col">Team #</th>
-                    <th scope="col">Team Name</th>
-                    <th scope="col">Scout</th>
-                    <th scope="col">Report</th>
+                    <tr>
+                        <th scope="col" class="text-nowrap">Team #</th>
+                        <th scope="col" class="text-nowrap">Logo</th>
+                        <th scope="col" class="text-nowrap">Team Name</th>
+                        <th scope="col" class="text-nowrap">Pit Location</th>
+                        <th scope="col" class="text-nowrap">Scout</th>
+                        <th scope="col" class="text-nowrap">Report</th>
+                    </tr>
                 </thead>
                 <tbody>
                     {% for report in pit_scout_reports %}
                         {% if report.description != '' %}
                             <tr>
                                 <th scope="row">{{ report.team.team_number }}</th>
-                                <th scope="row">{{ report.team.team_name }}</th>
-                                <th scope="row">{{ report.assigned_scout }}</th>
-                                <th scope="row"><a href="{% url 'scouting:pit_scout_team' team_number=report.team.team_number %}" class="btn btn-primary" rile="button">View Report</a></th>
+                                <td>
+                                    {% if report.team.team_logo %}
+                                        <img src="{{ report.team.team_logo.url }}" alt="Team {{ report.team.team_number }} logo" class="img-thumbnail" style="height: 40px; width: 40px; object-fit: cover;">
+                                    {% endif %}
+                                </td>
+                                <td>{{ report.team.team_name }}</td>
+                                <td>
+                                    {% if report.pit_location and report.frc_nexus_url %}
+                                        <a href="{{ report.frc_nexus_url }}" target="_blank" rel="noopener noreferrer">{{ report.pit_location }}</a>
+                                    {% elif report.pit_location %}
+                                        {{ report.pit_location }}
+                                    {% else %}
+                                        Unavailable
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    {% if report.assigned_scout %}
+                                        {% if report.assigned_scout.get_full_name %}
+                                            {{ report.assigned_scout.get_full_name }}
+                                        {% else %}
+                                            {{ report.assigned_scout.username }}
+                                        {% endif %}
+                                    {% else %}
+                                        Unassigned
+                                    {% endif %}
+                                </td>
+                                <td><a href="{% url 'scouting:pit_scout_team' team_number=report.team.team_number %}" class="btn btn-primary btn-sm text-nowrap" role="button">View Report</a></td>
                             </tr>
                         {% endif %}
                     {% endfor %}
                 </tbody>
-
             </table>
+            </div>
     </div>
 {% endblock %}

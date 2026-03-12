@@ -1,6 +1,18 @@
 from django.db import models
 from django_extensions.db.models import TimeStampedModel
 from django.conf import settings
+import os
+import uuid
+
+
+def unique_pit_image_path(instance, filename):
+    ext = os.path.splitext(filename)[1].lower()
+    return f"images/{uuid.uuid4().hex}{ext}"
+
+
+def unique_team_logo_path(instance, filename):
+    ext = os.path.splitext(filename)[1].lower() or ".png"
+    return f"team_logos/{instance.team_number}_{uuid.uuid4().hex}{ext}"
 
 
 class Game(TimeStampedModel):
@@ -14,6 +26,7 @@ class Game(TimeStampedModel):
 class Team(TimeStampedModel):
     team_name = models.CharField(max_length=30)
     team_number = models.IntegerField()
+    team_logo = models.ImageField(upload_to=unique_team_logo_path, blank=True, null=True)
 
     def __str__(self):
         return str(self.team_number) + " - " + self.team_name
@@ -54,6 +67,46 @@ class Match(TimeStampedModel):
         return str(self.match_number)
 
 
+class MatchResult(TimeStampedModel):
+    match = models.OneToOneField(Match, on_delete=models.CASCADE, related_name="result")
+    red_score = models.IntegerField(null=True, blank=True)
+    blue_score = models.IntegerField(null=True, blank=True)
+    red_rp = models.FloatField(null=True, blank=True)
+    blue_rp = models.FloatField(null=True, blank=True)
+    red_climb_success = models.BooleanField(null=True, blank=True)
+    blue_climb_success = models.BooleanField(null=True, blank=True)
+    is_final = models.BooleanField(default=False)
+
+    class Meta:
+        verbose_name_plural = "Match results"
+
+    def __str__(self):
+        return f"Q{self.match.match_number} - {self.match.event_id.event_name}"
+
+
+class PlayoffMatch(TimeStampedModel):
+    tba_match_key = models.CharField(max_length=50, unique=True)
+    event = models.ForeignKey(Event, on_delete=models.CASCADE, related_name="playoff_matches")
+    comp_level = models.CharField(max_length=4)
+    set_number = models.IntegerField(null=True, blank=True)
+    match_number = models.IntegerField()
+    team_red_1 = models.ForeignKey(Team, on_delete=models.CASCADE, null=False, related_name="+")
+    team_red_2 = models.ForeignKey(Team, on_delete=models.CASCADE, null=False, related_name="+")
+    team_red_3 = models.ForeignKey(Team, on_delete=models.CASCADE, null=False, related_name="+")
+    team_blue_1 = models.ForeignKey(Team, on_delete=models.CASCADE, null=False, related_name="+")
+    team_blue_2 = models.ForeignKey(Team, on_delete=models.CASCADE, null=False, related_name="+")
+    team_blue_3 = models.ForeignKey(Team, on_delete=models.CASCADE, null=False, related_name="+")
+    red_alliance_number = models.IntegerField(null=True, blank=True)
+    blue_alliance_number = models.IntegerField(null=True, blank=True)
+    is_final = models.BooleanField(default=False)
+
+    class Meta:
+        verbose_name_plural = "Playoff matches"
+
+    def __str__(self):
+        return f"{self.tba_match_key}"
+
+
 class TbaApiKey(models.Model):
     api_key = models.CharField(max_length=100, null=False, blank=False)
     active = models.BooleanField(default=False)
@@ -67,13 +120,30 @@ class TbaApiKey(models.Model):
         super(TbaApiKey, self).save(*args, **kwargs)
 
 
+class NexusApiKey(models.Model):
+    api_key = models.CharField(max_length=100, null=False, blank=False)
+    active = models.BooleanField(default=False)
+
+    class Meta:
+        verbose_name_plural = "FRC Nexus API Keys"
+
+    def save(self, *args, **kwargs):
+        if self.active:
+            NexusApiKey.objects.filter(active=True).update(active=False)
+        super(NexusApiKey, self).save(*args, **kwargs)
+
+
 class PitScoutData(TimeStampedModel):
     team = models.ForeignKey('Team', on_delete=models.CASCADE, null=False, blank=False)
     event = models.ForeignKey('Event', on_delete=models.CASCADE, null=False)
     assigned_scout = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True)
     # Boolean Fields
-    friendly_or_cool= models.BooleanField(default=False)
-    crisp_boomers = models.BooleanField(default=False)
+    friendly_or_cool = models.BooleanField(default=False)
+    crisp_boompers = models.BooleanField(default=False)
+    can_robot_l3_climb = models.BooleanField(default=False)
+    can_robot_l1_climb = models.BooleanField(default=False)
+    can_robot_l1_climb_in_auto = models.BooleanField(default=False)
+    can_robot_drive_under_trench = models.BooleanField(default=False)
 
     # Integer Fields
 
@@ -81,13 +151,15 @@ class PitScoutData(TimeStampedModel):
     intake_type = models.CharField(max_length=100, null=True)
     type_drivebase= models.CharField(max_length=100, null=True)
     auton_paths_or_description= models.TextField(max_length=1000, null=True)
+    pit_location = models.CharField(max_length=100, blank=True, null=True)
+    frc_nexus_url = models.URLField(blank=True, null=True)
     description = models.TextField(max_length=2000)
     #Image Fields
-    auton_picture_1 = models.ImageField(upload_to='images/', blank=True, null=True)
-    auton_picture_2 = models.ImageField(upload_to='images/', blank=True, null=True)
-    auton_picture_3 = models.ImageField(upload_to='images/', blank=True, null=True)
-    robot_picture_1 = models.ImageField(upload_to='images/', blank=True, null=True)
-    robot_picture_2 = models.ImageField(upload_to='images/', blank=True, null=True)
+    auton_picture_1 = models.ImageField(upload_to=unique_pit_image_path, blank=True, null=True)
+    auton_picture_2 = models.ImageField(upload_to=unique_pit_image_path, blank=True, null=True)
+    auton_picture_3 = models.ImageField(upload_to=unique_pit_image_path, blank=True, null=True)
+    robot_picture_1 = models.ImageField(upload_to=unique_pit_image_path, blank=True, null=True)
+    robot_picture_2 = models.ImageField(upload_to=unique_pit_image_path, blank=True, null=True)
 
     class Meta:
         verbose_name_plural = "Pit scout data"
@@ -102,6 +174,7 @@ class TeamRanking(models.Model):
     team = models.ForeignKey(Team, on_delete=models.CASCADE, related_name='teamranking')
     event = models.ForeignKey(Event, on_delete=models.CASCADE)
     rank = models.IntegerField(null=True, blank=True)
+    ranking_points = models.FloatField(null=True, blank=True)
     priority = models.FloatField(null=True, blank=True)
     opr = models.FloatField(default=0.0)
     dpr = models.FloatField(default=0.0)

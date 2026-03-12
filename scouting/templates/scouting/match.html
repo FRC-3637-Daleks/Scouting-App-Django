@@ -8,6 +8,23 @@
 {% block content %}
     <div class="container">
         <h1 class="m-3 text-center">Match {{ match.match_number }} | Team {{ team.team_number }} - {{ team.team_name }}</h1>
+        <div class="d-flex justify-content-center mb-3">
+            {% if team.team_logo %}
+                <img src="{{ team.team_logo.url }}" alt="Team {{ team.team_number }} logo" class="img-thumbnail" style="height: 84px; width: 84px; object-fit: cover;">
+            {% endif %}
+        </div>
+
+        <h4 class="text-center mt-3">Robot Photos</h4>
+        {% if robot_photo_urls %}
+            <div class="d-flex flex-wrap justify-content-center gap-3 mb-4">
+                {% for photo_url in robot_photo_urls %}
+                    <img src="{{ photo_url }}" alt="Team {{ team.team_number }} robot photo {{ forloop.counter }}" class="img-fluid rounded shadow" style="max-height: 220px;" loading="lazy" decoding="async">
+                {% endfor %}
+            </div>
+        {% else %}
+            <p class="text-center text-muted mb-4">No robot photos available yet.</p>
+        {% endif %}
+
         <form method="POST">
             {% csrf_token %}
             {% for section, fields in form.field_groups.items %}

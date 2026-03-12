@@ -8,19 +8,47 @@ from .models import *
 from django.forms.widgets import RadioSelect
 
 class PitScoutDataForm(forms.ModelForm):
+    IMAGE_FIELDS = [
+        'auton_picture_1',
+        'auton_picture_2',
+        'auton_picture_3',
+        'robot_picture_1',
+        'robot_picture_2',
+    ]
+
     class Meta:
         model = PitScoutData
         fields = '__all__'
         widgets = {
-            'crisp_boomers': RadioSelect(choices=((True, 'Yes'), (False, 'No'))),
-            'friendly': RadioSelect(choices=((True, 'Yes'), (False, 'No'))),
-            'auton_picture1': ClearableFileInput(),
-            'auton_picture2': ClearableFileInput(),  # Explicit widget for image field
-            'auton_picture3': ClearableFileInput(),
-            'robot_picture1': ClearableFileInput(),
-            'robot_picture2': ClearableFileInput(),
+            'friendly_or_cool': RadioSelect(choices=((True, 'Yes'), (False, 'No'))),
+            'crisp_boompers': RadioSelect(choices=((True, 'Yes'), (False, 'No'))),
+            'can_robot_l3_climb': RadioSelect(choices=((True, 'Yes'), (False, 'No'))),
+            'can_robot_l1_climb': RadioSelect(choices=((True, 'Yes'), (False, 'No'))),
+            'can_robot_l1_climb_in_auto': RadioSelect(choices=((True, 'Yes'), (False, 'No'))),
+            'can_robot_drive_under_trench': RadioSelect(choices=((True, 'Yes'), (False, 'No'))),
+            'auton_picture_1': ClearableFileInput(),
+            'auton_picture_2': ClearableFileInput(),
+            'auton_picture_3': ClearableFileInput(),
+            'robot_picture_1': ClearableFileInput(),
+            'robot_picture_2': ClearableFileInput(),
         }
-        exclude = ['assigned_scout', 'team', 'event']
+        labels = {
+            'can_robot_l3_climb': 'Can robot L3 climb',
+            'can_robot_l1_climb': 'Can robot L1 climb',
+            'can_robot_l1_climb_in_auto': 'Can robot L1 climb in AUTO',
+            'can_robot_drive_under_trench': 'Can robot drive under the TRENCH',
+        }
+        exclude = ['assigned_scout', 'team', 'event', 'pit_location', 'frc_nexus_url']
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        # Hint mobile browsers to open camera; desktop still uses file picker.
+        for field_name in self.IMAGE_FIELDS:
+            if field_name in self.fields:
+                self.fields[field_name].widget.attrs.update({
+                    'accept': 'image/*',
+                    'capture': 'environment',
+                })
 
 class MatchData2026Form(forms.ModelForm):
     class Meta:

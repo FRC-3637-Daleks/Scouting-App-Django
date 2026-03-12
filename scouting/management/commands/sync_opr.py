@@ -5,7 +5,7 @@ from django.core.exceptions import ObjectDoesNotExist
 
 
 class Command(BaseCommand):
-    help = 'Update team OPR, DPR, and CCWM stats from The Blue Alliance API'
+    help = 'Update team rank, OPR, DPR, and CCWM stats from The Blue Alliance API'
 
     def handle(self, *args, **options):
         try:
@@ -23,6 +23,45 @@ class Command(BaseCommand):
             return
 
         try:
+            rankings_response = tba.event_rankings(event.tba_event_key)
+            rankings_list = rankings_response.get('rankings', []) if isinstance(rankings_response, dict) else []
+            sort_order_info = rankings_response.get('sort_order_info', []) if isinstance(rankings_response, dict) else []
+            rp_index = None
+            for index, order_info in enumerate(sort_order_info):
+                name = str((order_info or {}).get("name") or "").lower()
+                if "ranking point" in name or name == "rp":
+                    rp_index = index
+                    break
+            # TBA often exposes this as "Ranking Score" in sort order index 0.
+            if rp_index is None and sort_order_info:
+                rp_index = 0
+            for rank_data in rankings_list:
+                team_key = rank_data.get('team_key')
+                if not team_key or not str(team_key).startswith('frc'):
+                    continue
+                team_number = team_key[3:]
+                try:
+                    team = Team.objects.get(team_number=team_number)
+                except Team.DoesNotExist:
+                    self.stdout.write(self.style.WARNING(f"Team {team_number} not found in database"))
+                    continue
+
+                ranking, _ = TeamRanking.objects.get_or_create(
+                    team=team,
+                    event=event,
+                    defaults={'rank': 0}
+                )
+                ranking.rank = rank_data.get('rank', ranking.rank or 0)
+                ranking_points = None
+                sort_orders = rank_data.get("sort_orders") or []
+                if rp_index is not None and len(sort_orders) > rp_index:
+                    try:
+                        ranking_points = round(float(sort_orders[rp_index]), 2)
+                    except (TypeError, ValueError):
+                        ranking_points = None
+                ranking.ranking_points = ranking_points
+                ranking.save(update_fields=['rank', 'ranking_points'])
+
             oprs_response = tba.event_oprs(event.tba_event_key)
 
             if not oprs_response:
@@ -52,12 +91,6 @@ class Command(BaseCommand):
                         ranking.ccwm = round(ccwms.get(team_key, 0), 2)
                         ranking.save()
 
-                        self.stdout.write(
-                            self.style.SUCCESS(
-                                f"Updated OPR stats for team {team_number}"
-                            )
-                        )
-
                     except Team.DoesNotExist:
                         self.stdout.write(
                             self.style.WARNING(f"Team {team_number} not found in database")
@@ -70,7 +103,7 @@ class Command(BaseCommand):
                     )
                     continue
 
-            self.stdout.write(self.style.SUCCESS("Team OPR stats update completed"))
+            self.stdout.write(self.style.SUCCESS("Team rank + OPR stats update completed"))
 
         except Exception as e:
             self.stdout.write(self.style.ERROR(f"Unexpected error: {str(e)}"))

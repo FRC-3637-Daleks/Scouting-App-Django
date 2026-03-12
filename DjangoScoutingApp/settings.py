@@ -12,6 +12,7 @@ https://docs.djangoproject.com/en/5.0/ref/settings/
 
 from pathlib import Path
 import os
+import subprocess
 from django.conf import settings
 from django.conf.urls.static import static
 
@@ -33,7 +34,24 @@ ALLOWED_HOSTS = ['scoutingapp.logangreif.com', 'localhost', '127.0.0.1', '10.36.
 SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
 LOGIN_REDIRECT_URL = '/'
 
-GIT_VERSION = os.getenv('GIT_VERSION') if os.getenv('GIT_VERSION') else 'unknown'
+def _detect_git_version():
+    env_version = os.getenv('GIT_VERSION')
+    if env_version:
+        return env_version
+
+    try:
+        return subprocess.check_output(
+            ["git", "rev-parse", "--short", "HEAD"],
+            cwd=BASE_DIR,
+            text=True,
+            stderr=subprocess.DEVNULL,
+            timeout=2,
+        ).strip()
+    except Exception:
+        return "unknown"
+
+
+GIT_VERSION = _detect_git_version()
 
 # Application definition
 
