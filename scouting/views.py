@@ -192,6 +192,21 @@ def _parse_match_number_from_payload(payload_row):
     return None
 
 
+def _extract_qual_match_number(label, payload_row=None):
+    label_text = str(label or "")
+    label_patterns = (
+        r"^Qualification\s+(\d+)\b",
+        r"^Qual(?:ification)?\s*#?\s*(\d+)\b",
+        r"^QM\s*#?\s*(\d+)\b",
+    )
+    for pattern in label_patterns:
+        parsed = re.search(pattern, label_text, flags=re.IGNORECASE)
+        if parsed:
+            return int(parsed.group(1))
+
+    return _parse_match_number_from_payload(payload_row)
+
+
 def _derive_now_queuing_from_matches(nexus_matches):
     """
     Fallback when Nexus no longer returns top-level nowQueuing.
@@ -205,10 +220,10 @@ def _derive_now_queuing_from_matches(nexus_matches):
         if not isinstance(row, dict):
             continue
         label = row.get("label") or ""
-        parsed = re.search(r"^Qualification\s+(\d+)", label, flags=re.IGNORECASE)
-        if not parsed:
+        match_number = _extract_qual_match_number(label, row)
+        if match_number is None:
             continue
-        qual_rows.append((int(parsed.group(1)), label, row.get("status") or "", row.get("times") or {}))
+        qual_rows.append((match_number, label, row.get("status") or "", row.get("times") or {}))
 
     if not qual_rows:
         return None, None
@@ -258,37 +273,45 @@ def _derive_now_queuing_from_matches(nexus_matches):
 
 def _derive_current_match_from_matches(nexus_matches):
     """
-    Derive the currently playing qualification match from Nexus match statuses.
-    Returns (label, match_number).
+    Derive the currently playing match from Nexus match statuses.
+    Returns (label, qualification_match_number_or_none).
     """
     if not isinstance(nexus_matches, list):
         return None, None
 
-    on_field = []
+    active_matches = []
     for row in nexus_matches:
         if not isinstance(row, dict):
             continue
         label = row.get("label") or ""
-        parsed = re.search(r"^Qualification\s+(\d+)", label, flags=re.IGNORECASE)
-        if not parsed:
-            continue
         status_text = str(row.get("status") or "").lower()
-        if "on field" not in status_text and "in progress" not in status_text:
+        is_active = any(
+            keyword in status_text
+            for keyword in ("on field", "in progress", "playing", "in match", "underway")
+        )
+        if not is_active:
             continue
+
         times = row.get("times") or {}
         actual_field = times.get("actualOnFieldTime")
         est_field = times.get("estimatedOnFieldTime")
         ts = actual_field if isinstance(actual_field, (int, float)) else (
-            est_field if isinstance(est_field, (int, float)) else -1
+            est_field if isinstance(est_field, (int, float)) else (
+                times.get("actualQueueTime") if isinstance(times.get("actualQueueTime"), (int, float)) else (
+                    times.get("estimatedQueueTime") if isinstance(times.get("estimatedQueueTime"), (int, float)) else -1
+                )
+            )
         )
-        on_field.append((ts, int(parsed.group(1)), label, row.get("status") or "On field"))
+        qual_match_number = _extract_qual_match_number(label, row)
+        sort_match_number = qual_match_number if isinstance(qual_match_number, int) else -1
+        active_matches.append((ts, sort_match_number, label, row.get("status") or "On field", qual_match_number))
 
-    if not on_field:
+    if not active_matches:
         return None, None
 
-    on_field.sort(key=lambda item: (item[0], item[1]), reverse=True)
-    _, match_number, label, status = on_field[0]
-    return f"{label} ({status})", match_number
+    active_matches.sort(key=lambda item: (item[0], item[1]), reverse=True)
+    _, _, label, status, qual_match_number = active_matches[0]
+    return f"{label} ({status})", qual_match_number
 
 
 def _format_playoff_label(comp_level, set_number, match_number):
@@ -941,14 +964,20 @@ def view_pit_dashboard(request):
         response.raise_for_status()
         nexus_status = response.json()
 
-        now_queuing = nexus_status.get("nowQueuing")
+        matches_payload = nexus_status.get("matches")
+        if not isinstance(matches_payload, list):
+            matches_payload = []
+
+        now_queuing = nexus_status.get("nowQueuing") or nexus_status.get("now_queuing")
         announcements = nexus_status.get("announcements") or []
         parts_requests = nexus_status.get("partsRequests") or []
         parts_requests_display = _format_parts_requests(parts_requests, display_tz)
-        current_match, _ = _derive_current_match_from_matches(nexus_status.get("matches"))
+        current_match = nexus_status.get("currentMatch") or nexus_status.get("current_match")
+        if not current_match:
+            current_match, _ = _derive_current_match_from_matches(matches_payload)
 
         if not now_queuing:
-            derived_label, derived_match_num = _derive_now_queuing_from_matches(nexus_status.get("matches"))
+            derived_label, derived_match_num = _derive_now_queuing_from_matches(matches_payload)
             if derived_label:
                 now_queuing = derived_label
                 current_qual_match_num = derived_match_num
@@ -959,7 +988,7 @@ def view_pit_dashboard(request):
                 current_qual_match_num = int(match.group(1))
 
         # Pull estimated queue time for qualification matches from Nexus payload.
-        for nexus_match in nexus_status.get("matches", []):
+        for nexus_match in matches_payload:
             if not isinstance(nexus_match, dict):
                 continue
             label = nexus_match.get("label") or ""
