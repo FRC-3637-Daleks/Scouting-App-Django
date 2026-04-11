@@ -274,10 +274,24 @@
                     </div>
                 </div>
 
-                <div class="card mt-3" id="event-rank-widget">
-                    <div class="card-header"><strong>Event Rank</strong></div>
-                    <div class="card-body p-0">
+                <div class="card mt-3 slot-machine-card" id="event-rank-widget">
+                    <div class="slot-machine-marquee" aria-hidden="true">
+                        <span class="slot-bulb"></span><span class="slot-bulb"></span><span class="slot-bulb"></span>
+                        <span class="slot-bulb"></span><span class="slot-bulb"></span><span class="slot-bulb"></span>
+                        <span class="slot-bulb"></span><span class="slot-bulb"></span><span class="slot-bulb"></span>
+                        <span class="slot-bulb"></span><span class="slot-bulb"></span><span class="slot-bulb"></span>
+                    </div>
+                    <div class="card-header slot-machine-header d-flex align-items-center justify-content-between">
+                        <strong class="slot-machine-title">Event Rank Slots</strong>
+                        <span class="slot-machine-jackpot">Team 3637 Jackpot Reel</span>
+                    </div>
+                    <div class="card-body p-0 slot-machine-body">
                         {% if event_rank_rows %}
+                            <div class="slot-machine-window-glow"></div>
+                            <div class="slot-machine-lever slot-machine-lever-left" aria-hidden="true"></div>
+                            <div class="slot-machine-lever slot-machine-lever-right" aria-hidden="true"></div>
+                            <div class="slot-machine-reel-divider slot-machine-reel-divider-1" aria-hidden="true"></div>
+                            <div class="slot-machine-reel-divider slot-machine-reel-divider-2" aria-hidden="true"></div>
                             <div class="table-responsive event-rank-table-wrap">
                                 <table class="table table-sm table-striped m-0 align-middle">
                                     <thead>
@@ -306,6 +320,8 @@
                                     </tbody>
                                 </table>
                             </div>
+                            <div class="slot-machine-overlay slot-machine-overlay-top"></div>
+                            <div class="slot-machine-overlay slot-machine-overlay-bottom"></div>
                         {% else %}
                             <div class="p-3">
                                 <p class="text-muted mb-0">No event ranking data available.</p>
@@ -452,11 +468,149 @@
         .event-rank-table-wrap {
             max-height: min(40vh, 420px);
             overflow: hidden;
+            position: relative;
+            z-index: 2;
         }
         .event-rank-our-team td {
             background-color: #8b1e2d !important;
             color: #fff !important;
             font-weight: 700;
+        }
+        .slot-machine-card {
+            position: relative;
+            border: 2px solid #8f5a00;
+            box-shadow: 0 8px 18px rgba(0, 0, 0, 0.22), inset 0 0 0 2px rgba(255, 205, 96, 0.2);
+            background: linear-gradient(165deg, #4f2b00, #2c1700);
+            overflow: hidden;
+        }
+        .slot-machine-marquee {
+            display: grid;
+            grid-template-columns: repeat(12, 1fr);
+            gap: 8px;
+            padding: 8px 10px;
+            background: linear-gradient(90deg, #7b1e00, #ce5a00, #7b1e00);
+            border-bottom: 2px solid #482400;
+        }
+        .slot-bulb {
+            width: 100%;
+            aspect-ratio: 1 / 1;
+            border-radius: 999px;
+            background: radial-gradient(circle at 30% 30%, #fff8c8, #ffc24b 60%, #b55e00 100%);
+            box-shadow: 0 0 10px rgba(255, 195, 77, 0.9);
+            animation: slot-bulb-pulse 1.2s ease-in-out infinite alternate;
+        }
+        .slot-bulb:nth-child(even) {
+            animation-delay: 0.3s;
+        }
+        @keyframes slot-bulb-pulse {
+            from { transform: scale(0.95); opacity: 0.78; }
+            to { transform: scale(1); opacity: 1; }
+        }
+        .slot-machine-header {
+            background: linear-gradient(90deg, #9c5e00, #d4972f, #9c5e00);
+            border-bottom: 2px solid #643900;
+            color: #211100;
+        }
+        .slot-machine-title {
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+        }
+        .slot-machine-jackpot {
+            font-size: 0.72rem;
+            font-weight: 700;
+            letter-spacing: 0.06em;
+            text-transform: uppercase;
+            background: #2f1700;
+            color: #ffd37c;
+            border-radius: 999px;
+            padding: 0.25rem 0.55rem;
+        }
+        .slot-machine-body {
+            position: relative;
+            background:
+                repeating-linear-gradient(
+                    90deg,
+                    rgba(255, 204, 112, 0.09) 0 16px,
+                    rgba(255, 143, 20, 0.06) 16px 32px
+                ),
+                #20130a;
+            border-top: 2px solid rgba(255, 205, 96, 0.24);
+            padding-left: 22px;
+            padding-right: 22px;
+        }
+        .slot-machine-lever {
+            position: absolute;
+            top: 52%;
+            width: 14px;
+            height: 130px;
+            border-radius: 999px;
+            background: linear-gradient(to bottom, #d8d8d8, #8e8e8e 45%, #d8d8d8);
+            transform: translateY(-50%);
+            box-shadow: inset 0 0 0 1px rgba(20, 20, 20, 0.45), 0 0 8px rgba(0, 0, 0, 0.35);
+            z-index: 4;
+        }
+        .slot-machine-lever::after {
+            content: "";
+            position: absolute;
+            top: -16px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 22px;
+            height: 22px;
+            border-radius: 999px;
+            background: radial-gradient(circle at 35% 35%, #ffdf8a, #d77300 72%, #8e3e00);
+            box-shadow: 0 0 10px rgba(255, 169, 60, 0.65);
+        }
+        .slot-machine-lever-left { left: 4px; }
+        .slot-machine-lever-right { right: 4px; }
+        .slot-machine-reel-divider {
+            position: absolute;
+            top: 0;
+            bottom: 0;
+            width: 2px;
+            background: linear-gradient(to bottom, rgba(255, 205, 96, 0.9), rgba(255, 205, 96, 0.2), rgba(255, 205, 96, 0.9));
+            z-index: 3;
+            pointer-events: none;
+        }
+        .slot-machine-reel-divider-1 { left: 34%; }
+        .slot-machine-reel-divider-2 { left: 66%; }
+        .slot-machine-window-glow {
+            position: absolute;
+            inset: 0;
+            pointer-events: none;
+            box-shadow: inset 0 0 28px rgba(255, 193, 79, 0.2);
+            z-index: 1;
+        }
+        .slot-machine-overlay {
+            position: absolute;
+            left: 0;
+            right: 0;
+            height: 42px;
+            z-index: 3;
+            pointer-events: none;
+        }
+        .slot-machine-overlay-top {
+            top: 0;
+            background: linear-gradient(to bottom, rgba(32, 19, 10, 0.98), rgba(32, 19, 10, 0));
+        }
+        .slot-machine-overlay-bottom {
+            bottom: 0;
+            background: linear-gradient(to top, rgba(32, 19, 10, 0.98), rgba(32, 19, 10, 0));
+        }
+        #event-rank-widget table thead th {
+            background-color: #5a3200 !important;
+            color: #ffdd9f !important;
+            border-color: rgba(255, 209, 129, 0.26) !important;
+        }
+        #event-rank-widget table tbody td {
+            border-color: rgba(255, 209, 129, 0.18) !important;
+            color: #ffe8c2;
+        }
+        #event-rank-widget table tbody tr:nth-child(odd) td {
+            background-color: rgba(255, 214, 140, 0.08) !important;
+        }
+        #event-rank-widget table tbody tr:nth-child(even) td {
+            background-color: rgba(255, 181, 71, 0.05) !important;
         }
         .parts-request-title {
             font-size: 1rem;
@@ -658,39 +812,40 @@
         (function () {
             const widget = document.getElementById('event-rank-widget');
             if (!widget) return;
-            const rows = Array.from(widget.querySelectorAll('tbody tr.event-rank-row'));
             const wrap = widget.querySelector('.event-rank-table-wrap');
-            if (!wrap || rows.length === 0) return;
+            const tbody = widget.querySelector('tbody');
+            const rows = Array.from(widget.querySelectorAll('tbody tr.event-rank-row'));
+            if (!wrap || !tbody || rows.length < 2) return;
 
-            let page = 0;
-            const rowsPerPage = 10;
-            let totalPages = 1;
-            const intervalMs = 10000;
+            // Duplicate once for seamless looping.
+            const fragment = document.createDocumentFragment();
+            rows.forEach(function (row) {
+                fragment.appendChild(row.cloneNode(true));
+            });
+            tbody.appendChild(fragment);
 
-            function getTimeBasedPage() {
-                if (totalPages <= 1) return 0;
-                return Math.floor(Date.now() / intervalMs) % totalPages;
+            let paused = false;
+            let lastTick = performance.now();
+            const pixelsPerSecond = 30;
+            const resetPoint = tbody.scrollHeight / 2;
+
+            function tick(now) {
+                const deltaSeconds = (now - lastTick) / 1000;
+                lastTick = now;
+
+                if (!paused) {
+                    wrap.scrollTop += pixelsPerSecond * deltaSeconds;
+                    if (wrap.scrollTop >= resetPoint) {
+                        wrap.scrollTop -= resetPoint;
+                    }
+                }
+
+                requestAnimationFrame(tick);
             }
 
-            function recalcAndRender(resetPage) {
-                totalPages = Math.max(1, Math.ceil(rows.length / rowsPerPage));
-                if (resetPage) page = getTimeBasedPage();
-                if (page >= totalPages) page = 0;
-
-                const start = page * rowsPerPage;
-                const end = start + rowsPerPage;
-                rows.forEach(function (row, index) {
-                    row.style.display = (index >= start && index < end) ? '' : 'none';
-                });
-            }
-
-            recalcAndRender(true);
-
-            setInterval(function () {
-                if (totalPages <= 1) return;
-                page = getTimeBasedPage();
-                recalcAndRender(false);
-            }, intervalMs);
+            wrap.addEventListener('mouseenter', function () { paused = true; });
+            wrap.addEventListener('mouseleave', function () { paused = false; });
+            requestAnimationFrame(tick);
         })();
 
         (function () {
