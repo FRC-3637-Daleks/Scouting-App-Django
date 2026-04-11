@@ -95,19 +95,25 @@
     </main>
 
     <footer class="footer bg-body border-top py-3">
-        <div class="container-fluid d-flex align-items-center">
-            <div class="d-flex align-items-center" style="width: 33.3333%;">
-                <img alt="Team 3637 Logo" src="{% static 'images/logo.png' %}" height="56" class="ms-3"/>
+        <div class="container-fluid">
+            <div class="row g-3 align-items-center">
+                <div class="col-12 col-xl-6">
+                    <div class="d-flex flex-wrap align-items-center gap-3">
+                        <img alt="Team 3637 Logo" src="{% static 'images/logo.png' %}" height="56" class="ms-1"/>
+                        <p class="m-0">
+                            &copy; FIRST Robotics Team 3637 - The Daleks 2026
+                            {% if user.is_staff or user.is_superuser %}
+                                - SwVer {% git_version %}
+                            {% endif %}
+                        </p>
+                    </div>
+                </div>
+                <div class="col-12 col-xl-6">
+                    <div class="border rounded p-2 h-100 d-flex align-items-center justify-content-center text-center bg-body-tertiary">
+                        <p id="inspirationalQuote" class="m-0 fst-italic">"Loading inspiration..."</p>
+                    </div>
+                </div>
             </div>
-            <div class="text-center" style="width: 33.3333%;">
-                <p class="m-0">
-                    &copy; FIRST Robotics Team 3637 - The Daleks 2026
-                    {% if user.is_staff or user.is_superuser %}
-                        - SwVer {% git_version %}
-                    {% endif %}
-                </p>
-            </div>
-            <div style="width: 33.3333%;"></div>
         </div>
     </footer>
 
@@ -169,6 +175,51 @@
 
         updateNavbarClock();
         setInterval(updateNavbarClock, 1000);
+
+        (function () {
+            var quoteEl = document.getElementById('inspirationalQuote');
+            if (!quoteEl) {
+                return;
+            }
+
+            var quotesUrl = "{% static 'data/inspirational_quotes.txt' %}";
+            var quotes = [];
+            var lastIndex = -1;
+            var cycleMs = 10 * 60 * 1000;
+
+            function showRandomQuote() {
+                if (!quotes.length) {
+                    quoteEl.textContent = '"Build. Test. Improve. Repeat."';
+                    return;
+                }
+
+                var index = Math.floor(Math.random() * quotes.length);
+                if (quotes.length > 1 && index === lastIndex) {
+                    index = (index + 1) % quotes.length;
+                }
+                lastIndex = index;
+                quoteEl.textContent = '"' + quotes[index] + '"';
+            }
+
+            fetch(quotesUrl, { cache: 'no-store' })
+                .then(function (response) {
+                    if (!response.ok) {
+                        throw new Error('Failed to load quotes');
+                    }
+                    return response.text();
+                })
+                .then(function (text) {
+                    quotes = text
+                        .split(/\r?\n/)
+                        .map(function (line) { return line.trim(); })
+                        .filter(function (line) { return line.length > 0; });
+                    showRandomQuote();
+                    setInterval(showRandomQuote, cycleMs);
+                })
+                .catch(function () {
+                    quoteEl.textContent = '"Build. Test. Improve. Repeat."';
+                });
+        })();
     </script>
 </body>
 </html>

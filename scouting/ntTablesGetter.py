@@ -8,12 +8,13 @@ Run:      python robot_status.py
 """
 
 import ntcore
+
 import time
 import os
 
+
 # ── Configuration ─────────────────────────────────────────────────────────────
 TEAM        = 3637
-OUTPUT_FILE = os.path.join(os.path.dirname(os.path.abspath(__file__)), "robot_status.txt")
 POLL_HZ     = 5  # how often to update the file
 
 # ── NetworkTables ─────────────────────────────────────────────────────────────
@@ -26,36 +27,10 @@ inst.setServerTeam(TEAM)
 fms_table = inst.getTable("FMSInfo")
 control_data_sub = fms_table.getIntegerTopic("FMSControlData").subscribe(0)
 
-print(f"Connecting to robot at 10.{TEAM//100}.{TEAM%100}.2 ...")
-print(f"Writing status to: {OUTPUT_FILE}")
 
+#States: ENABLED, DISABLED, NOT_CONNECTED
 def get_status() -> str:
     if not inst.isConnected():
         return "NOT_CONNECTED"
     control_data = control_data_sub.get()
     return "ENABLED" if (control_data & 0x01) else "DISABLED"
-
-def write_status(status: str) -> None:
-    timestamp = int(time.time())
-    tmp_path = OUTPUT_FILE + ".tmp"
-    with open(tmp_path, "w") as f:
-        f.write(f"{status}\n{timestamp}\n")
-    os.replace(tmp_path, OUTPUT_FILE)  # atomic write
-
-try:
-    last_status = None
-    while True:
-        status = get_status()
-        write_status(status)
-
-        if status != last_status:
-            print(f"\n[{time.strftime('%H:%M:%S')}] Status changed: {status}")
-            last_status = status
-        else:
-            print(f"\r  Status: {status}  ", end="", flush=True)
-
-        time.sleep(1.0 / POLL_HZ)
-
-except KeyboardInterrupt:
-    print("\nStopping.")
-    inst.stopClient()

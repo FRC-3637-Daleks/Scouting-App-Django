@@ -1,4 +1,5 @@
 {% extends 'scouting/base.html' %}
+{% load static %}
 
 {% block title %} | Pit Dashboard {% endblock %}
 
@@ -42,8 +43,10 @@
                                         <th scope="col" class="text-nowrap">Match #</th>
                                         <th scope="col" class="text-nowrap">Queue Time</th>
                                         <th scope="col" class="text-nowrap">3637 Win %</th>
-                                        <th scope="col" class="text-nowrap">Blue #</th>
-                                        <th scope="col" class="text-nowrap">Red #</th>
+                                        {% if show_alliance_number_columns %}
+                                            <th scope="col" class="text-nowrap">Blue #</th>
+                                            <th scope="col" class="text-nowrap">Red #</th>
+                                        {% endif %}
                                         <th scope="col" class="text-nowrap">Blue 1</th>
                                         <th scope="col" class="text-nowrap">Blue 2</th>
                                         <th scope="col" class="text-nowrap">Blue 3</th>
@@ -65,8 +68,10 @@
                                                     </a>
                                                 </strong>
                                             </td>
-                                            <td>{{ row.blue_alliance_number }}</td>
-                                            <td>{{ row.red_alliance_number }}</td>
+                                            {% if show_alliance_number_columns %}
+                                                <td>{{ row.blue_alliance_number }}</td>
+                                                <td>{{ row.red_alliance_number }}</td>
+                                            {% endif %}
                                             <td class="{% if match.team_blue_1.team_number == team_number %}team-highlight-blue{% else %}alliance-blue{% endif %}">
                                                 <a class="team-link d-inline-flex align-items-center justify-content-center gap-2" href="{% url 'scouting:team_statistics' match.team_blue_1.team_number %}">
                                                     {% if match.team_blue_1.team_logo %}
@@ -119,7 +124,7 @@
                                         {% endwith %}
                                     {% empty %}
                                         <tr>
-                                            <td colspan="11" class="text-center">No upcoming matches found.</td>
+                                            <td colspan="{% if show_alliance_number_columns %}11{% else %}9{% endif %}" class="text-center">No upcoming matches found.</td>
                                         </tr>
                                     {% endfor %}
                                 </tbody>
@@ -310,9 +315,88 @@
                 </div>
             </div>
         </div>
+
+        {% if show_rsl_wall %}
+            <div class="pit-rsl-footer mt-4">
+                <div class="pit-rsl-header d-flex flex-wrap align-items-center justify-content-between gap-2">
+                    <h3 class="m-0">Robot Signal Light Wall</h3>
+                    <span id="pit-rsl-status-text" class="badge bg-secondary">Checking robot status...</span>
+                </div>
+                <div
+                    id="pit-rsl-row"
+                    class="pit-rsl-row mt-2"
+                    data-initial-status="{{ robot_nt_status|default:'n' }}"
+                    data-on-src="{% static 'images/rsl/rsl_on.png' %}"
+                    data-off-src="{% static 'images/rsl/rsl_off.png' %}"
+                >
+                    <img class="pit-rsl-lamp" src="{% static 'images/rsl/rsl_off.png' %}" alt="RSL lamp 1">
+                    <img class="pit-rsl-lamp" src="{% static 'images/rsl/rsl_off.png' %}" alt="RSL lamp 2">
+                    <img class="pit-rsl-lamp" src="{% static 'images/rsl/rsl_off.png' %}" alt="RSL lamp 3">
+                    <img class="pit-rsl-lamp" src="{% static 'images/rsl/rsl_off.png' %}" alt="RSL lamp 4">
+                    <img class="pit-rsl-lamp" src="{% static 'images/rsl/rsl_off.png' %}" alt="RSL lamp 5">
+                    <img class="pit-rsl-lamp" src="{% static 'images/rsl/rsl_off.png' %}" alt="RSL lamp 6">
+                    <img class="pit-rsl-lamp" src="{% static 'images/rsl/rsl_off.png' %}" alt="RSL lamp 7">
+                    <img class="pit-rsl-lamp" src="{% static 'images/rsl/rsl_off.png' %}" alt="RSL lamp 8">
+                    <img class="pit-rsl-lamp" src="{% static 'images/rsl/rsl_off.png' %}" alt="RSL lamp 9">
+                    <img class="pit-rsl-lamp" src="{% static 'images/rsl/rsl_off.png' %}" alt="RSL lamp 10">
+                    <img class="pit-rsl-lamp" src="{% static 'images/rsl/rsl_off.png' %}" alt="RSL lamp 11">
+                    <img class="pit-rsl-lamp" src="{% static 'images/rsl/rsl_off.png' %}" alt="RSL lamp 12">
+                    <img class="pit-rsl-lamp" src="{% static 'images/rsl/rsl_off.png' %}" alt="RSL lamp 13">
+                    <img class="pit-rsl-lamp" src="{% static 'images/rsl/rsl_off.png' %}" alt="RSL lamp 14">
+                </div>
+            </div>
+        {% endif %}
     </div>
 
     <style>
+        .pit-rsl-footer {
+            border: 1px solid rgba(255, 255, 255, 0.22);
+            border-radius: 14px;
+            padding: 20px;
+            min-height: 132px;
+            background:
+                radial-gradient(circle at 20% 30%, rgba(255, 0, 0, 0.14), transparent 45%),
+                radial-gradient(circle at 80% 70%, rgba(255, 120, 0, 0.14), transparent 42%),
+                linear-gradient(120deg, rgba(20, 22, 28, 0.92), rgba(37, 29, 24, 0.9));
+            box-shadow: inset 0 0 28px rgba(255, 140, 0, 0.1), 0 10px 28px rgba(0, 0, 0, 0.35);
+        }
+        .pit-rsl-header h3 {
+            font-size: 1.05rem;
+            letter-spacing: 0.06em;
+            text-transform: uppercase;
+            color: #ffd28a;
+        }
+        .pit-rsl-row {
+            display: grid;
+            gap: 4px;
+            min-height: 200px;
+            align-content: space-evenly;
+            grid-template-columns: repeat(auto-fit, minmax(106px, 1fr));
+        }
+        .pit-rsl-lamp {
+            width: 100%;
+            max-width: 186px;
+            aspect-ratio: 1 / 1;
+            object-fit: contain;
+            margin: 0 auto;
+            filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.45));
+            transition: transform 0.12s ease-out, filter 0.2s ease-out;
+        }
+        .pit-rsl-row.status-enabled .pit-rsl-lamp {
+            animation: pit-rsl-blink 0.55s steps(1, end) infinite;
+            filter: drop-shadow(0 0 14px rgba(255, 65, 0, 0.82));
+        }
+        .pit-rsl-row.status-disabled .pit-rsl-lamp {
+            filter: drop-shadow(0 0 11px rgba(255, 90, 0, 0.7));
+        }
+        .pit-rsl-row.status-disconnected .pit-rsl-lamp {
+            filter: grayscale(0.9) brightness(0.75);
+        }
+        @keyframes pit-rsl-blink {
+            0% { opacity: 1; transform: translateY(0); }
+            50% { opacity: 0.2; transform: translateY(-1px); }
+            100% { opacity: 1; transform: translateY(0); }
+        }
         .team-highlight-red {
             background-color: #8b1e2d !important;
             color: #fff !important;
@@ -607,6 +691,62 @@
                 page = getTimeBasedPage();
                 recalcAndRender(false);
             }, intervalMs);
+        })();
+
+        (function () {
+            const row = document.getElementById('pit-rsl-row');
+            const statusText = document.getElementById('pit-rsl-status-text');
+            if (!row || !statusText) return;
+
+            const onSrc = row.getAttribute('data-on-src');
+            const offSrc = row.getAttribute('data-off-src');
+            const initialStatus = row.getAttribute('data-initial-status') || 'n';
+            const lamps = Array.from(row.querySelectorAll('.pit-rsl-lamp'));
+            const statusUrl = "{% url 'scouting:pit_dashboard_robot_status' %}";
+
+            function applyStatus(statusCode, labelText) {
+                row.classList.remove('status-enabled', 'status-disabled', 'status-disconnected');
+
+                if (statusCode === 'e') {
+                    row.classList.add('status-enabled');
+                    statusText.className = 'badge bg-success';
+                    statusText.textContent = labelText || 'Robot Enabled';
+                    lamps.forEach(function (lamp) { lamp.src = onSrc; });
+                    return;
+                }
+
+                if (statusCode === 'd') {
+                    row.classList.add('status-disabled');
+                    statusText.className = 'badge bg-warning text-dark';
+                    statusText.textContent = labelText || 'Robot Disabled';
+                    lamps.forEach(function (lamp) { lamp.src = onSrc; });
+                    return;
+                }
+
+                row.classList.add('status-disconnected');
+                statusText.className = 'badge bg-danger';
+                statusText.textContent = labelText || 'Robot Disconnected';
+                lamps.forEach(function (lamp) { lamp.src = offSrc; });
+            }
+
+            async function refreshStatus() {
+                try {
+                    const response = await fetch(statusUrl, {
+                        method: 'GET',
+                        cache: 'no-store',
+                        headers: { 'X-Requested-With': 'XMLHttpRequest' }
+                    });
+                    if (!response.ok) throw new Error('bad status');
+                    const payload = await response.json();
+                    applyStatus(payload.status_code || 'n', payload.label || 'Robot Disconnected');
+                } catch (e) {
+                    applyStatus('n', 'Robot Disconnected');
+                }
+            }
+
+            applyStatus(initialStatus, null);
+            refreshStatus();
+            setInterval(refreshStatus, 1000);
         })();
 
         setTimeout(function () {

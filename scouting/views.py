@@ -23,9 +23,53 @@ from pathlib import Path
 from PIL import Image
 import requests
 import re
+import ipaddress
 from datetime import datetime, timezone as dt_timezone
 from zoneinfo import ZoneInfo
+from scouting.ntTablesGetter import get_status
 
+#Enabled = "e", disabled = "d", not connected = "n"
+def _get_NT_tables():
+    try:
+        nt_status = get_status()
+    except Exception:
+        return "n"
+
+    if nt_status == "ENABLED":
+        return "e"
+    if nt_status == "DISABLED":
+        return "d"
+    return "n"
+
+
+def _get_robot_status_payload_from_nt():
+    status_code = _get_NT_tables()
+    label_map = {
+        "e": "Robot Enabled",
+        "d": "Robot Disabled",
+        "n": "Robot Disconnected",
+    }
+    return {
+        "status_code": status_code,
+        "label": label_map.get(status_code, "Robot Disconnected"),
+    }
+
+
+def _is_localhost_or_local_ip(request):
+    host = (request.get_host() or "").strip()
+    if host.startswith("[") and "]" in host:
+        host = host[1:].split("]", 1)[0]
+    elif ":" in host:
+        host = host.split(":", 1)[0]
+
+    if host.lower() in {"localhost", "127.0.0.1", "::1"}:
+        return True
+
+    try:
+        ip_value = ipaddress.ip_address(host)
+        return bool(ip_value.is_private or ip_value.is_loopback)
+    except ValueError:
+        return False
 
 def _get_standscout_compressed_url(image_field, max_width=900, quality=65):
     """
@@ -1199,6 +1243,7 @@ def view_pit_dashboard(request):
         "event": event,
         "team_number": team_number,
         "match_rows": match_rows,
+        "show_alliance_number_columns": bool(playoff_rows),
         "playoff_bracket_slots": playoff_bracket_slots,
         "playoff_finals_payload": finals_payload,
         "show_playoff_bracket": show_playoff_bracket,
@@ -1214,8 +1259,17 @@ def view_pit_dashboard(request):
         "parts_requests": parts_requests_display,
         "nexus_error": nexus_error,
         "statbotics_error": statbotics_error,
+        "robot_nt_status": _get_NT_tables(),
+        "show_rsl_wall": _is_localhost_or_local_ip(request),
     }
     return render(request, "scouting/pit_dashboard.html", context)
+
+
+@login_required()
+def pit_dashboard_robot_status(request):
+    if request.method != "GET":
+        return JsonResponse({"error": "Method not allowed"}, status=405)
+    return JsonResponse(_get_robot_status_payload_from_nt())
 
 
 @api_view(['POST'])  # Specify the allowed HTTP methods
