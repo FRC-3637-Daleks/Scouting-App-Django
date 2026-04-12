@@ -107,6 +107,23 @@ class PlayoffMatch(TimeStampedModel):
         return f"{self.tba_match_key}"
 
 
+class PitDashboardLiveStatus(TimeStampedModel):
+    event = models.OneToOneField(Event, on_delete=models.CASCADE, related_name="pit_dashboard_live_status")
+    source_timestamp = models.DateTimeField(null=True, blank=True)
+    match_label = models.CharField(max_length=50, blank=True, default="")
+    blue_score = models.CharField(max_length=16, blank=True, default="?")
+    red_score = models.CharField(max_length=16, blank=True, default="?")
+    game_time = models.CharField(max_length=16, blank=True, default="?")
+    match_started = models.BooleanField(null=True, blank=True)
+    last_raw_payload = models.JSONField(default=dict, blank=True)
+
+    class Meta:
+        verbose_name_plural = "Pit dashboard live status"
+
+    def __str__(self):
+        return f"{self.event.event_name} | {self.match_label or 'Unknown match'}"
+
+
 class TbaApiKey(models.Model):
     api_key = models.CharField(max_length=100, null=False, blank=False)
     active = models.BooleanField(default=False)

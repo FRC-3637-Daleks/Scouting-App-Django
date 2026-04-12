@@ -1,0 +1,129 @@
+import subprocess
+import time
+import os
+from datetime import datetime
+
+import cv2
+import pytesseract
+import requests
+import static_ffmpeg
+import yt_dlp
+
+# Initialize static-ffmpeg paths
+static_ffmpeg.add_paths()
+
+# Configuration
+YOUTUBE_URL = "https://www.youtube.com/watch?v=VNEqq03jaG4"
+INTERVAL = 10
+INGEST_TOKEN = "a_good_team_stands_tallest_when_BDubs_has_BOGO"
+REMOTE_SERVER_URL = "https://team3637.logangreif.com/pitdashboard/live-feed/"
+
+
+def get_stats(image_path):
+    """Process the image and extract scoreboard data."""
+    img = cv2.imread(image_path)
+    if img is None:
+        return None
+
+    # Your specific coordinates: [y1:y2, x1:x2]
+    regions = {
+        "Blue Score": img[977:1067, 625:832],
+        "Time": img[984:1070, 853:1063],
+        "Red Score": img[989:1072, 1078:1302],
+        "Match": img[842:886, 1001:1051],
+    }
+
+    results = {}
+    # OCR config: single line, whitelist numbers and colon
+    custom_config = r"--oem 3 --psm 7 -c tessedit_char_whitelist=0123456789:"
+
+    for name, roi in regions.items():
+        gray = cv2.cvtColor(roi, cv2.COLOR_BGR2GRAY)
+        _, thresh = cv2.threshold(gray, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)
+        text = pytesseract.image_to_string(thresh, config=custom_config).strip()
+        results[name] = text if text else "?"
+
+    return results
+
+
+def post_to_dashboard(stats):
+    payload = {
+        "timestamp": datetime.now().isoformat(),
+        "match": stats["Match"],
+        "blue_score": stats["Blue Score"],
+        "red_score": stats["Red Score"],
+        "game_time": stats["Time"],
+    }
+
+    headers = {}
+    if INGEST_TOKEN:
+        headers["X-Pit-Ingest-Token"] = INGEST_TOKEN
+
+    response = requests.post(
+        REMOTE_SERVER_URL,
+        json=payload,
+        headers=headers,
+        timeout=5,
+    )
+    return response
+
+
+def capture_and_process():
+    filename = "temp_frame.jpg"
+
+    try:
+        # Step 1: Get stream URL
+        ydl_opts = {"format": "best", "quiet": True, "no_warnings": True}
+        with yt_dlp.YoutubeDL(ydl_opts) as ydl:
+            info = ydl.extract_info(YOUTUBE_URL, download=False)
+            stream_url = info["url"]
+
+        # Step 2: Capture one frame
+        cmd_ffmpeg = [
+            "ffmpeg",
+            "-y",
+            "-i",
+            stream_url,
+            "-frames:v",
+            "1",
+            "-q:v",
+            "2",
+            "-loglevel",
+            "error",
+            filename,
+        ]
+        subprocess.run(cmd_ffmpeg, check=True)
+
+        # Step 3: OCR the frame
+        if os.path.exists(filename):
+            stats = get_stats(filename)
+            ts = datetime.now().strftime("%H:%M:%S")
+
+            if stats:
+                print(
+                    f"[{ts}] {stats['Match']} | Blue: {stats['Blue Score']} | "
+                    f"Red: {stats['Red Score']} | Time: {stats['Time']}"
+                )
+
+                try:
+                    response = post_to_dashboard(stats)
+                    print(f"Sent to server! Status: {response.status_code}")
+                except Exception as e:
+                    print(f"Failed to reach server: {e}")
+    except Exception as e:
+        print(f"Error: {e}")
+    finally:
+        # Step 4: Cleanup to save disk space
+        if os.path.exists(filename):
+            try:
+                os.remove(filename)
+            except OSError:
+                pass
+
+
+if __name__ == "__main__":
+    print(f"Starting Robot Data Stream (Interval: {INTERVAL}s)...")
+    while True:
+        capture_and_process()
+        time.sleep(INTERVAL)
+

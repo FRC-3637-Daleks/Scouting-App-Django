@@ -6,7 +6,7 @@ from django.conf import settings
 from django.contrib.auth.decorators import login_required, permission_required
 from rest_framework.authentication import TokenAuthentication
 from rest_framework.decorators import api_view, authentication_classes, permission_classes
-from rest_framework.permissions import IsAuthenticated
+from rest_framework.permissions import IsAuthenticated, AllowAny
 from .models import Team, Event, PitScoutData
 from .forms import PitScoutDataForm
 from django.shortcuts import render, get_object_or_404
@@ -14,9 +14,17 @@ from django.http import JsonResponse
 from django.core.management import call_command
 from django.core.cache import cache
 from django.contrib.auth.decorators import login_required
+from django.utils.dateparse import parse_datetime
 import json
 from django.shortcuts import render
-from .models import TeamRanking, Match, MatchResult, NexusApiKey, PlayoffMatch
+from .models import (
+    TeamRanking,
+    Match,
+    MatchResult,
+    NexusApiKey,
+    PlayoffMatch,
+    PitDashboardLiveStatus,
+)
 from django.db.models import F
 from django.db.models import OuterRef, Subquery, Value, FloatField, IntegerField
 from pathlib import Path
@@ -53,6 +61,52 @@ def _get_robot_status_payload_from_nt():
         "status_code": status_code,
         "label": label_map.get(status_code, "Robot Disconnected"),
     }
+
+
+def _normalize_live_field(value, default="?"):
+    text = str(value).strip() if value is not None else ""
+    return text if text else default
+
+
+def _parse_match_clock_to_seconds(clock_text):
+    match = re.match(r"^(\d{1,2}):([0-5]\d)$", str(clock_text or "").strip())
+    if not match:
+        return None
+    minutes = int(match.group(1))
+    seconds = int(match.group(2))
+    return (minutes * 60) + seconds
+
+
+def _infer_match_started(previous_status, new_match, new_time, new_blue_score, new_red_score):
+    if not previous_status:
+        return None
+
+    previous_match = (previous_status.match_label or "").strip()
+    previous_time = (previous_status.game_time or "").strip()
+    previous_blue_score = _normalize_live_field(previous_status.blue_score)
+    previous_red_score = _normalize_live_field(previous_status.red_score)
+
+    if not previous_match or previous_match != new_match:
+        return None
+
+    # If game clock and scores are unchanged from the last sample, treat as "not started yet".
+    if (
+        previous_time
+        and previous_time == new_time
+        and previous_blue_score == new_blue_score
+        and previous_red_score == new_red_score
+    ):
+        return False
+
+    previous_seconds = _parse_match_clock_to_seconds(previous_time)
+    new_seconds = _parse_match_clock_to_seconds(new_time)
+    if previous_seconds is not None and new_seconds is not None and new_seconds < previous_seconds:
+        return True
+
+    if previous_blue_score != new_blue_score or previous_red_score != new_red_score:
+        return True
+
+    return previous_status.match_started
 
 
 def _is_localhost_or_local_ip(request):
@@ -509,6 +563,76 @@ def _format_parts_requests(parts_requests, display_tz):
             "item": requested_item,
             "requested_at": requested_at,
         })
+    return formatted
+
+
+def _format_announcements(announcements, display_tz):
+    formatted = []
+    for item in announcements or []:
+        if isinstance(item, str):
+            formatted.append(
+                {
+                    "title": "Announcement",
+                    "body": item,
+                    "posted_at": "-",
+                }
+            )
+            continue
+
+        if not isinstance(item, dict):
+            continue
+
+        title = (
+            item.get("title")
+            or item.get("headline")
+            or item.get("subject")
+            or item.get("name")
+            or item.get("type")
+            or "Announcement"
+        )
+        body = (
+            item.get("message")
+            or item.get("text")
+            or item.get("body")
+            or item.get("announcement")
+            or item.get("details")
+            or item.get("content")
+        )
+        if not body:
+            body = json.dumps(item, separators=(", ", ": "))
+
+        raw_ts = (
+            item.get("postedTime")
+            or item.get("createdAt")
+            or item.get("timestamp")
+            or item.get("time")
+            or item.get("date")
+        )
+
+        posted_at = "-"
+        try:
+            if isinstance(raw_ts, (int, float)):
+                ts = float(raw_ts)
+                if ts > 10_000_000_000:
+                    ts = ts / 1000.0
+                local_dt = datetime.fromtimestamp(ts, tz=dt_timezone.utc).astimezone(display_tz)
+                posted_at = local_dt.strftime("%b %d, %I:%M %p").replace(" 0", " ")
+            elif isinstance(raw_ts, str) and raw_ts.strip():
+                parsed = datetime.fromisoformat(raw_ts.replace("Z", "+00:00"))
+                if parsed.tzinfo is None:
+                    parsed = parsed.replace(tzinfo=dt_timezone.utc)
+                local_dt = parsed.astimezone(display_tz)
+                posted_at = local_dt.strftime("%b %d, %I:%M %p").replace(" 0", " ")
+        except Exception:
+            posted_at = str(raw_ts) if raw_ts else "-"
+
+        formatted.append(
+            {
+                "title": str(title),
+                "body": str(body),
+                "posted_at": posted_at,
+            }
+        )
     return formatted
 
 
@@ -985,7 +1109,7 @@ def view_pit_dashboard(request):
     team_matches = team_matches.order_by("match_number").distinct()
 
     nexus_status = {}
-    announcements = []
+    announcements_display = []
     parts_requests = []
     parts_requests_display = []
     current_match = None
@@ -1014,6 +1138,7 @@ def view_pit_dashboard(request):
 
         now_queuing = nexus_status.get("nowQueuing") or nexus_status.get("now_queuing")
         announcements = nexus_status.get("announcements") or []
+        announcements_display = _format_announcements(announcements, display_tz)
         parts_requests = nexus_status.get("partsRequests") or []
         parts_requests_display = _format_parts_requests(parts_requests, display_tz)
         current_match = nexus_status.get("currentMatch") or nexus_status.get("current_match")
@@ -1217,6 +1342,7 @@ def view_pit_dashboard(request):
     ).values_list("rank", flat=True).first()
     total_teams = event.teams.count()
     matches_played = len(team_match_results)
+
     climbs_completed = 0
     for result in completed_results:
         match_obj = result.match
@@ -1239,6 +1365,37 @@ def view_pit_dashboard(request):
         ).order_by("rank", "team__team_number")
     ]
 
+    _our_rank = 0
+    _other_rank = 60
+    for team in event_rank_rows:
+        if team['team_number'] == 4361:
+            _other_rank = team['rank']
+        if team['team_number'] == 3637:
+            _our_rank = team['rank'] 
+    rbd = _other_rank - _our_rank
+    live_status = PitDashboardLiveStatus.objects.filter(event=event).first()
+    live_match_data = None
+    if live_status:
+        source_ts = live_status.source_timestamp
+        if source_ts is None:
+            source_ts = live_status.modified
+
+        staleness_seconds = None
+        if source_ts:
+            staleness_seconds = int(
+                max(0, (datetime.now(dt_timezone.utc) - source_ts.astimezone(dt_timezone.utc)).total_seconds())
+            )
+
+        live_match_data = {
+            "match_label": live_status.match_label or "?",
+            "blue_score": _normalize_live_field(live_status.blue_score),
+            "red_score": _normalize_live_field(live_status.red_score),
+            "game_time": _normalize_live_field(live_status.game_time),
+            "match_started": live_status.match_started,
+            "last_update": source_ts.astimezone(display_tz) if source_ts else None,
+            "is_stale": bool(staleness_seconds is not None and staleness_seconds > 35),
+        }
+
     context = {
         "event": event,
         "team_number": team_number,
@@ -1251,16 +1408,18 @@ def view_pit_dashboard(request):
         "our_rank": our_rank,
         "total_teams": total_teams,
         "matches_played": matches_played,
+        "RBD" : rbd,
         "climb_success_rate": climb_success_rate,
         "event_rank_rows": event_rank_rows,
         "current_match": current_match,
         "now_queuing": now_queuing,
-        "announcements": announcements,
+        "announcements": announcements_display,
         "parts_requests": parts_requests_display,
         "nexus_error": nexus_error,
         "statbotics_error": statbotics_error,
         "robot_nt_status": _get_NT_tables(),
         "show_rsl_wall": _is_localhost_or_local_ip(request),
+        "live_match_data": live_match_data,
     }
     return render(request, "scouting/pit_dashboard.html", context)
 
@@ -1270,6 +1429,72 @@ def pit_dashboard_robot_status(request):
     if request.method != "GET":
         return JsonResponse({"error": "Method not allowed"}, status=405)
     return JsonResponse(_get_robot_status_payload_from_nt())
+
+
+@api_view(["POST"])
+@authentication_classes([])
+@permission_classes([AllowAny])
+def pit_dashboard_live_feed_ingest(request):
+    configured_token = str(getattr(settings, "PIT_DASH_INGEST_TOKEN", "") or "").strip()
+    if configured_token:
+        provided_token = str(request.headers.get("X-Pit-Ingest-Token", "")).strip()
+        if provided_token != configured_token:
+            return JsonResponse({"error": "Unauthorized"}, status=401)
+
+    try:
+        event = Event.objects.get(active=True)
+    except Event.DoesNotExist:
+        return JsonResponse({"error": "No active event configured"}, status=400)
+
+    payload = request.data if isinstance(request.data, dict) else {}
+    match_label = _normalize_live_field(payload.get("match"), default="")
+    game_time = _normalize_live_field(payload.get("game_time"))
+    blue_score = _normalize_live_field(payload.get("blue_score"))
+    red_score = _normalize_live_field(payload.get("red_score"))
+
+    source_timestamp = parse_datetime(str(payload.get("timestamp") or "").strip())
+    if source_timestamp is None:
+        source_timestamp = datetime.now(dt_timezone.utc)
+    elif source_timestamp.tzinfo is None:
+        source_timestamp = source_timestamp.replace(tzinfo=dt_timezone.utc)
+
+    status_obj, _ = PitDashboardLiveStatus.objects.get_or_create(event=event)
+    match_started = _infer_match_started(
+        previous_status=status_obj,
+        new_match=match_label,
+        new_time=game_time,
+        new_blue_score=blue_score,
+        new_red_score=red_score,
+    )
+
+    status_obj.source_timestamp = source_timestamp
+    status_obj.match_label = match_label
+    status_obj.game_time = game_time
+    status_obj.blue_score = blue_score
+    status_obj.red_score = red_score
+    status_obj.match_started = match_started
+    status_obj.last_raw_payload = payload
+    status_obj.save(
+        update_fields=[
+            "source_timestamp",
+            "match_label",
+            "game_time",
+            "blue_score",
+            "red_score",
+            "match_started",
+            "last_raw_payload",
+            "modified",
+        ]
+    )
+
+    return JsonResponse(
+        {
+            "status": "ok",
+            "match": status_obj.match_label,
+            "game_time": status_obj.game_time,
+            "match_started": status_obj.match_started,
+        }
+    )
 
 
 @api_view(['POST'])  # Specify the allowed HTTP methods

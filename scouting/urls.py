@@ -19,6 +19,7 @@ urlpatterns = [
     path('pitscoutteam/<int:team_number>', views.view_pit_scout_team, name="pit_scout_team"),
     path('pitdashboard/', views.view_pit_dashboard, name="pit_dashboard"),
     path('pitdashboard/robot-status/', views.pit_dashboard_robot_status, name="pit_dashboard_robot_status"),
+    path('pitdashboard/live-feed/', views.pit_dashboard_live_feed_ingest, name="pit_dashboard_live_feed_ingest"),
     path('scouting/teamstatistics/<int:team_number>', views.view_team_statistics, name="team_statistics"),
     path('scouting/teamstatisticslist', views.team_statistics_list, name="team_statistics_list"),
     path('sync/matchdata', views.sync_data, name="sync_match_data"),

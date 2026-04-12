@@ -21,7 +21,7 @@ from django.conf.urls.static import static
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 
-
+PIT_DASH_INGEST_TOKEN = "a_good_team_stands_tallest_when_BDubs_has_BOGO"
 
 # SECURITY WARNING: keep the secret key used in production secret!
 SECRET_KEY = 'django-insecure-ehi_jfso7%e(zfeuv1_46yxm4nr@-dz-85yhs6eo_a)axaqmp#'

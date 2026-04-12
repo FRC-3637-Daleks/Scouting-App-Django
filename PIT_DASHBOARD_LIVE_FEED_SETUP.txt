@@ -1,0 +1,138 @@
+Pit Dashboard Live Feed Setup (Server + Sender)
+
+Overview
+- Your remote OCR sender posts compact match data to your Django server.
+- Django stores the latest live sample for the active event.
+- Pit Dashboard displays that live sample:
+  - Match label
+  - Blue score
+  - Red score
+  - Game time
+  - Match state badge
+
+Match state logic (your requested rule)
+- "Match Not Started Yet" when:
+  - New sample has same match as previous sample, AND
+  - New game_time equals previous game_time, AND
+  - Blue and Red scores are also unchanged.
+- "Match In Progress" when:
+  - Game time decreases (example 0:20 -> 0:19), OR
+  - Either score changes.
+- "Match State Unknown" can show when there is not enough history yet.
+
+Server endpoint to receive data
+- Route:
+  /pitdashboard/live-feed/
+- Full URL while using Django runserver on LAN:
+  http://<YOUR_DJANGO_HOST>:8000/pitdashboard/live-feed/
+- If behind reverse proxy with HTTPS:
+  https://<YOUR_DOMAIN>/pitdashboard/live-feed/
+
+What was added in this repo
+- Model:
+  scouting.models.PitDashboardLiveStatus
+- Ingest view:
+  scouting.views.pit_dashboard_live_feed_ingest
+- URL:
+  scouting/urls.py -> path("pitdashboard/live-feed/", ...)
+- Dashboard UI:
+  scouting/templates/scouting/pit_dashboard.html (Live Stream Match Feed card)
+
+One-time server steps
+1) Run migrations:
+   python manage.py migrate
+2) Restart your Django process/service.
+
+Optional security token (recommended on public networks)
+- In Django settings.py add:
+  PIT_DASH_INGEST_TOKEN = "your-long-random-token"
+- Sender must then include header:
+  X-Pit-Ingest-Token: your-long-random-token
+- If token is not set on server, endpoint accepts posts without auth header.
+
+Sender/client updates you must make
+
+1) Fix imports
+- Add:
+  import requests
+
+2) Fix URL and endpoint
+- Use:
+  REMOTE_SERVER_URL = "http://<YOUR_DJANGO_HOST>:8000/pitdashboard/live-feed/"
+
+3) (Optional) token variable
+- Add:
+  INGEST_TOKEN = ""  # set only if server has PIT_DASH_INGEST_TOKEN
+
+4) Post payload format
+- Must send JSON keys:
+  timestamp, match, blue_score, red_score, game_time
+
+Example sender post block
+
+------------------------------------------------------------
+headers = {}
+if INGEST_TOKEN:
+    headers["X-Pit-Ingest-Token"] = INGEST_TOKEN
+
+payload = {
+    "timestamp": datetime.now().isoformat(),
+    "match": stats["Match"],
+    "blue_score": stats["Blue Score"],
+    "red_score": stats["Red Score"],
+    "game_time": stats["Time"],
+}
+
+response = requests.post(
+    REMOTE_SERVER_URL,
+    json=payload,
+    headers=headers,
+    timeout=5,
+)
+print(f"Sent to server! Status: {response.status_code}")
+------------------------------------------------------------
+
+Important bug fixes in your original sender snippet
+- You had:
+  REMOTE_SERVER_URL = "http://your-server-ip:5000/data
+  This has:
+  - Missing closing quote
+  - Wrong endpoint for Django app
+- Correct it to:
+  REMOTE_SERVER_URL = "http://<YOUR_DJANGO_HOST>:8000/pitdashboard/live-feed/"
+
+How to choose <YOUR_DJANGO_HOST>
+- Same machine: use 127.0.0.1 only if sender runs on same machine as Django.
+- Different machine on same network:
+  - Use Django machine LAN IP, e.g. 192.168.1.42
+  - Example:
+    http://192.168.1.42:8000/pitdashboard/live-feed/
+- If using a domain and reverse proxy:
+  - Example:
+    https://scouting.example.org/pitdashboard/live-feed/
+
+Quick connectivity checks
+1) From sender machine, test URL reachability with browser or curl:
+   - Expect method error on GET sometimes; that still confirms route exists.
+2) Post a test JSON manually:
+   - If token enabled and missing/wrong token -> 401
+   - If active event missing -> 400
+   - On success -> JSON with status: ok
+
+Common issues
+- 404:
+  Wrong path; ensure exactly /pitdashboard/live-feed/
+- Connection refused / timeout:
+  Host/port unreachable; check firewall, server bind address, service running.
+- 401 Unauthorized:
+  Token configured on server but sender missing/incorrect X-Pit-Ingest-Token.
+- 400 No active event configured:
+  Set one Event record active=True in Django admin.
+
+Data freshness behavior on dashboard
+- Dashboard marks feed stale if last update is older than ~35 seconds.
+- Your sender interval is 10 seconds, so stale should only appear on failures.
+
+Recommended sender interval
+- Keep INTERVAL at 10s (your current value) unless bandwidth/CPU suggests otherwise.
+
