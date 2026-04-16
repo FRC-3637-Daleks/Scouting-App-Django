@@ -1552,7 +1552,8 @@ def view_pit_dashboard(request):
 
     next_match_alert = None
     next_match_clock = None
-    queue_soon_window_seconds = 5 * 60
+    queue_soon_window_seconds = 7 * 60 + 30
+    queue_now_window_seconds = 60
     if match_rows:
         next_row = match_rows[0]
         countdown_seconds = None
@@ -1601,6 +1602,11 @@ def view_pit_dashboard(request):
                     queue_now = True
                     alert_reason = "Previous match is 1:00+ in"
 
+        if isinstance(countdown_seconds, int) and countdown_seconds <= queue_now_window_seconds:
+            if not queue_now:
+                alert_reason = "Under 1:00 to queue"
+            queue_now = True
+
         if isinstance(countdown_seconds, int):
             next_match_clock = {
                 "match_label": next_row.get("match_label"),
@@ -1614,9 +1620,12 @@ def view_pit_dashboard(request):
             and countdown_seconds <= queue_soon_window_seconds
         )
         if queue_now or show_queue_soon:
+            alert_level = "now" if queue_now else "soon"
             next_match_alert = {
                 "match_label": next_row.get("match_label"),
                 "queue_now": queue_now,
+                "level": alert_level,
+                "status_text": "CUE NOW" if queue_now else "Cueing Soon",
                 "countdown_seconds": countdown_seconds,
                 "est_start_seconds": est_start_seconds,
                 "reason": alert_reason or "Estimated",

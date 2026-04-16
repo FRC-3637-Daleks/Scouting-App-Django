@@ -24,8 +24,15 @@
                     {% endif %}
                 </h2>
             </div>
-            <div class="pit-nextmatch-panel">
-                <div class="pit-nextmatch-title">Next Match</div>
+            <div class="pit-nextmatch-panel {% if next_match_alert and next_match_alert.level == 'now' %}pit-nextmatch-panel-now{% elif next_match_alert and next_match_alert.level == 'soon' %}pit-nextmatch-panel-soon{% endif %}">
+                <div class="pit-nextmatch-head">
+                    <div class="pit-nextmatch-title">Next Match</div>
+                    {% if next_match_alert %}
+                        <div class="pit-nextmatch-state {% if next_match_alert.level == 'now' %}pit-nextmatch-state-now{% else %}pit-nextmatch-state-soon{% endif %}">
+                            {{ next_match_alert.status_text }}
+                        </div>
+                    {% endif %}
+                </div>
                 {% if next_match_clock %}
                     <div class="pit-nextmatch-label">{{ next_match_clock.match_label }}</div>
                     <div class="d-flex flex-wrap gap-2 justify-content-end mt-1">
@@ -35,11 +42,6 @@
                         {% if next_match_clock.est_start_seconds is not None %}
                             <span class="badge bg-secondary queue-countdown-pill js-countdown" data-seconds="{{ next_match_clock.est_start_seconds }}" data-prefix="Est Start">
                                 Est Start {{ next_match_clock.est_start_seconds }}s
-                            </span>
-                        {% endif %}
-                        {% if next_match_alert %}
-                            <span class="badge {% if next_match_alert.queue_now %}bg-danger{% else %}bg-warning text-dark{% endif %} queue-now-pill">
-                                {% if next_match_alert.queue_now %}QUEUE NOW{% else %}Queue Soon{% endif %}
                             </span>
                         {% endif %}
                     </div>
@@ -431,7 +433,7 @@
         </div>
 
         {% if show_rsl_wall %}
-            <div class="pit-rsl-footer mt-4">
+            <div id="pit-rsl-footer" class="pit-rsl-footer mt-4">
                 <div class="pit-rsl-header d-flex flex-wrap align-items-center justify-content-between gap-2">
                     <h3 class="m-0">Robot Signal Light Wall</h3>
                     <span id="pit-rsl-status-text" class="badge bg-secondary">Checking robot status...</span>
@@ -479,9 +481,23 @@
             padding: 10px 12px;
             background: rgba(255, 255, 255, 0.92);
         }
+        .pit-nextmatch-panel-soon {
+            border: 4px solid #f0ad00;
+        }
+        .pit-nextmatch-panel-now {
+            border: 4px solid #dc3545;
+            box-shadow: 0 0 0 2px rgba(220, 53, 69, 0.18), 0 10px 30px rgba(0, 0, 0, 0.25);
+        }
         [data-bs-theme="dark"] .pit-nextmatch-panel {
             background: rgba(35, 38, 44, 0.92);
             border-color: rgba(255, 193, 7, 0.75);
+        }
+        .pit-nextmatch-head {
+            display: flex;
+            align-items: center;
+            justify-content: flex-end;
+            gap: 10px;
+            margin-bottom: 2px;
         }
         .pit-nextmatch-title {
             font-size: 0.78rem;
@@ -489,6 +505,25 @@
             letter-spacing: 0.05em;
             opacity: 0.8;
             font-weight: 700;
+        }
+        .pit-nextmatch-state {
+            font-size: 0.86rem;
+            letter-spacing: 0.05em;
+            font-weight: 800;
+            text-transform: uppercase;
+            border-radius: 8px;
+            padding: 0.28rem 0.6rem;
+            border: 2px solid transparent;
+        }
+        .pit-nextmatch-state-soon {
+            background: #fff3cd;
+            color: #5b4300;
+            border-color: #f0ad00;
+        }
+        .pit-nextmatch-state-now {
+            background: #f8d7da;
+            color: #6a0f19;
+            border-color: #dc3545;
         }
         .pit-nextmatch-label {
             font-size: 1.2rem;
@@ -549,6 +584,12 @@
                 radial-gradient(circle at 80% 70%, rgba(255, 120, 0, 0.14), transparent 42%),
                 linear-gradient(120deg, rgba(20, 22, 28, 0.92), rgba(37, 29, 24, 0.9));
             box-shadow: inset 0 0 28px rgba(255, 140, 0, 0.1), 0 10px 28px rgba(0, 0, 0, 0.35);
+            transition: border 0.25s ease, box-shadow 0.25s ease;
+        }
+        .pit-rsl-footer.rsl-enabled {
+            border: 3px solid transparent;
+            border-image: linear-gradient(120deg, rgba(255, 162, 0, 0.95), rgba(255, 108, 0, 0.9), rgba(255, 184, 77, 0.95)) 1;
+            box-shadow: inset 0 0 24px rgba(255, 145, 0, 0.22), 0 10px 28px rgba(0, 0, 0, 0.35);
         }
         .pit-rsl-header h3 {
             font-size: 1.05rem;
@@ -936,6 +977,7 @@
 
         (function () {
             const row = document.getElementById('pit-rsl-row');
+            const footer = document.getElementById('pit-rsl-footer');
             const statusText = document.getElementById('pit-rsl-status-text');
             if (!row || !statusText) return;
 
@@ -947,9 +989,15 @@
 
             function applyStatus(statusCode, labelText) {
                 row.classList.remove('status-enabled', 'status-disabled', 'status-disconnected');
+                if (footer) {
+                    footer.classList.remove('rsl-enabled');
+                }
 
                 if (statusCode === 'e') {
                     row.classList.add('status-enabled');
+                    if (footer) {
+                        footer.classList.add('rsl-enabled');
+                    }
                     statusText.className = 'badge bg-success';
                     statusText.textContent = labelText || 'Robot Enabled';
                     lamps.forEach(function (lamp) { lamp.src = onSrc; });
