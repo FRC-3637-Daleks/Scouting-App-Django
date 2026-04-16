@@ -1,0 +1,52 @@
+﻿2026 Lehigh / Auto-Pull Setup Notes (as of April 16, 2026)
+
+What I verified
+- Your active event in DB is:
+  - name: Lehigh
+  - key: 2026mrcmp
+  - active: True
+- Active API keys exist:
+  - TBA key: present
+  - Nexus key: present
+- Manual sync command succeeds:
+  - python manage.py sync_teams_matches_tba
+  - Output: Teams, matches, logos, and pit metadata updated successfully.
+
+Important key detail
+- There is no published 2026 TBA event key "2026lehi" right now.
+- For FMA events, Bethlehem/Lehigh-area championship is keyed as:
+  - 2026mrcmp (FIRST Mid-Atlantic District Championship, Bethlehem, PA)
+
+So for the app, using 2026mrcmp is correct for that event.
+
+Why "auto pull" feels broken
+- This repo does NOT have a built-in scheduler that auto-runs TBA sync commands.
+- The commands work, but they only run when you manually run them (or when a Task Scheduler/cron job runs them).
+
+What to run manually (from repo root)
+1) .venv\Scripts\activate
+2) python manage.py sync_teams_matches_tba
+3) python manage.py sync_rank
+4) python manage.py sync_opr
+5) python manage.py sync_copr
+
+Quick event check in Django admin
+- Go to /admin -> Events
+- Ensure only ONE event is active
+- Ensure that active event has the right tba_event_key (for Lehigh/Bethlehem champs: 2026mrcmp)
+
+If you wanted a different 2026 FMA event, valid keys include
+- 2026pahat (Hatboro-Horsham)
+- 2026paben (Bensalem)
+- 2026paphi (Philadelphia)
+- 2026pawar (Centennial/Warminster)
+- 2026njski (Montgomery)
+- 2026njwas (Warren Hills)
+- 2026mrcmp (District Championship)
+
+Optional: make it truly automatic on Windows
+- Use Task Scheduler to run every 5-10 minutes:
+  - Program/script: C:\Users\Team3637Pit\Documents\GitHub\Scouting-App-Django\.venv\Scripts\python.exe
+  - Arguments: manage.py sync_teams_matches_tba
+  - Start in: C:\Users\Team3637Pit\Documents\GitHub\Scouting-App-Django
+- Add additional tasks for sync_rank / sync_opr / sync_copr if desired.

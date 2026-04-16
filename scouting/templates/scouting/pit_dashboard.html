@@ -5,55 +5,49 @@
 
 {% block content %}
     <div class="container-fluid py-3">
-        <div class="text-center mb-3">
-            <h1 class="m-0">Pit Dashboard | Team {{ team_number }} | {{ event.event_name }}</h1>
-            <h2 class="mt-2 mb-0">
-                Current Match:
-                {% if current_match %}
-                    <span class="badge bg-primary">{{ current_match }}</span>
-                {% else %}
-                    <span class="badge bg-secondary">Unavailable</span>
-                {% endif %}
-                <span class="mx-2">|</span>
-                Now Queueing:
-                {% if now_queuing %}
-                    <span class="badge bg-success">{{ now_queuing }}</span>
-                {% else %}
-                    <span class="badge bg-secondary">Unavailable</span>
-                {% endif %}
-            </h2>
-        </div>
-        <div class="card mb-3">
-            <div class="card-header"><strong>Live Stream Match Feed</strong></div>
-            <div class="card-body">
-                {% if live_match_data %}
-                    <div class="d-flex flex-wrap align-items-center gap-2 mb-2">
-                        <span class="badge bg-dark">Match {{ live_match_data.match_label }}</span>
-                        <span class="badge bg-primary">Blue {{ live_match_data.blue_score }}</span>
-                        <span class="badge bg-danger">Red {{ live_match_data.red_score }}</span>
-                        <span class="badge bg-secondary">Time {{ live_match_data.game_time }}</span>
-                        {% if live_match_data.match_started is False %}
-                            <span class="badge bg-warning text-dark">Match Not Started Yet</span>
-                        {% elif live_match_data.match_started is True %}
-                            <span class="badge bg-success">Match In Progress</span>
-                        {% else %}
-                            <span class="badge bg-secondary">Match State Unknown</span>
+        <div class="pit-header-wrap mb-3">
+            <div class="text-center">
+                <h1 class="m-0">Pit Dashboard | Team {{ team_number }} | {{ event.event_name }}</h1>
+                <h2 class="mt-2 mb-0">
+                    Current Match:
+                    {% if current_match %}
+                        <span class="badge bg-primary">{{ current_match }}</span>
+                    {% else %}
+                        <span class="badge bg-secondary">Unavailable</span>
+                    {% endif %}
+                    <span class="mx-2">|</span>
+                    Now Queueing:
+                    {% if now_queuing %}
+                        <span class="badge bg-success">{{ now_queuing }}</span>
+                    {% else %}
+                        <span class="badge bg-secondary">Unavailable</span>
+                    {% endif %}
+                </h2>
+            </div>
+            <div class="pit-nextmatch-panel">
+                <div class="pit-nextmatch-title">Next Match</div>
+                {% if next_match_clock %}
+                    <div class="pit-nextmatch-label">{{ next_match_clock.match_label }}</div>
+                    <div class="d-flex flex-wrap gap-2 justify-content-end mt-1">
+                        <span class="badge bg-dark queue-countdown-pill js-countdown" data-seconds="{{ next_match_clock.countdown_seconds }}" data-prefix="Queue In">
+                            Queue In {{ next_match_clock.countdown_seconds }}s
+                        </span>
+                        {% if next_match_clock.est_start_seconds is not None %}
+                            <span class="badge bg-secondary queue-countdown-pill js-countdown" data-seconds="{{ next_match_clock.est_start_seconds }}" data-prefix="Est Start">
+                                Est Start {{ next_match_clock.est_start_seconds }}s
+                            </span>
                         {% endif %}
-                        {% if live_match_data.is_stale %}
-                            <span class="badge bg-danger">Feed Stale</span>
+                        {% if next_match_alert %}
+                            <span class="badge {% if next_match_alert.queue_now %}bg-danger{% else %}bg-warning text-dark{% endif %} queue-now-pill">
+                                {% if next_match_alert.queue_now %}QUEUE NOW{% else %}Queue Soon{% endif %}
+                            </span>
                         {% endif %}
                     </div>
-                    {% if live_match_data.last_update %}
-                        <div class="small text-muted">
-                            Last update: {{ live_match_data.last_update|date:"g:i:s A" }}
-                        </div>
-                    {% endif %}
                 {% else %}
-                    <p class="text-muted mb-0">No live stream data received yet.</p>
+                    <div class="pit-nextmatch-label">No active queue timing</div>
                 {% endif %}
             </div>
         </div>
-
         {% if nexus_error %}
             <div class="alert alert-warning">{{ nexus_error }}</div>
         {% endif %}
@@ -232,8 +226,23 @@
                             </div>
                             <div class="col-12 col-md-4">
                                 <div class="border rounded p-2 text-center h-100">
-                                    <div class="small text-muted">RBD</div>
-                                    <div class="fs-4 fw-bold">{{ RBD }}</div>
+                                    <div class="small text-muted">Video Library</div>
+                                    {% if show_rsl_wall %}
+                                        {% if recording_library %}
+                                            <select id="video-library-select" class="form-select form-select-sm clip-picker-select">
+                                                <option value="">Select clip to open...</option>
+                                                {% for rec in recording_library %}
+                                                    <option value="/media/{{ rec.output_file }}">
+                                                        {{ rec.started_at|date:"m/d g:i:s A" }} | {% if rec.assigned_match %}Q{{ rec.assigned_match.match_number }}{% elif rec.assigned_playoff_match %}{{ rec.assigned_playoff_match.comp_level|upper }} {{ rec.assigned_playoff_match.match_number }}{% else %}General{% endif %}{% if rec.assignment_note %} | {{ rec.assignment_note }}{% endif %} | {{ rec.output_file }}
+                                                    </option>
+                                                {% endfor %}
+                                            </select>
+                                        {% else %}
+                                            <div class="small text-muted">No saved clips</div>
+                                        {% endif %}
+                                    {% else %}
+                                        <div class="small text-muted">Local only</div>
+                                    {% endif %}
                                 </div>
                             </div>
                             <div class="col-12 col-md-4">
@@ -352,6 +361,72 @@
                         {% endif %}
                     </div>
                 </div>
+
+                {% if show_rsl_wall %}
+                    <div class="card mt-3">
+                        <div class="card-header"><strong>Local Match Video Assignments</strong></div>
+                        <div class="card-body p-2">
+                            {% if local_recordings %}
+                                <div class="table-responsive">
+                                    <table class="table table-sm table-striped m-0 align-middle">
+                                        <thead>
+                                            <tr>
+                                                <th>Clip</th>
+                                                <th>Assigned</th>
+                                                <th>Update</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            {% for rec in local_recordings %}
+                                                <tr>
+                                                    <td>
+                                                        <a href="/media/{{ rec.output_file }}" target="_blank" rel="noopener">{{ rec.output_file }}</a><br>
+                                                        <small class="text-muted">{{ rec.started_at|date:"m/d g:i:s A" }}{% if rec.is_active %} | recording{% endif %}</small>
+                                                    </td>
+                                                    <td>
+                                                        {% if rec.assigned_match %}
+                                                            Q{{ rec.assigned_match.match_number }}
+                                                        {% elif rec.assigned_playoff_match %}
+                                                            {{ rec.assigned_playoff_match.comp_level|upper }} {{ rec.assigned_playoff_match.match_number }}
+                                                        {% else %}
+                                                            General
+                                                        {% endif %}
+                                                    </td>
+                                                    <td>
+                                                        <form method="post" action="{% url 'scouting:assign_recording_to_match' rec.id %}" class="d-flex flex-column gap-1">
+                                                            {% csrf_token %}
+                                                            <select name="assignment_type" class="form-select form-select-sm">
+                                                                <option value="general">General / Unassigned</option>
+                                                                <option value="qual">Qualification Match</option>
+                                                                <option value="playoff">Playoff Match</option>
+                                                            </select>
+                                                            <select name="qual_match_id" class="form-select form-select-sm">
+                                                                <option value="">Select qual...</option>
+                                                                {% for opt in recording_match_options.qual %}
+                                                                    <option value="{{ opt.id }}">{{ opt.label }}</option>
+                                                                {% endfor %}
+                                                            </select>
+                                                            <select name="playoff_match_id" class="form-select form-select-sm">
+                                                                <option value="">Select playoff...</option>
+                                                                {% for opt in recording_match_options.playoff %}
+                                                                    <option value="{{ opt.id }}">{{ opt.label }}</option>
+                                                                {% endfor %}
+                                                            </select>
+                                                            <input type="text" name="assignment_note" class="form-control form-control-sm" placeholder="Optional note" value="{{ rec.assignment_note }}">
+                                                            <button type="submit" class="btn btn-sm btn-primary">Save</button>
+                                                        </form>
+                                                    </td>
+                                                </tr>
+                                            {% endfor %}
+                                        </tbody>
+                                    </table>
+                                </div>
+                            {% else %}
+                                <p class="text-muted mb-0">No local recordings yet.</p>
+                            {% endif %}
+                        </div>
+                    </div>
+                {% endif %}
             </div>
         </div>
 
@@ -388,6 +463,82 @@
     </div>
 
     <style>
+        .pit-header-wrap {
+            position: relative;
+            min-height: 92px;
+        }
+        .pit-nextmatch-panel {
+            position: absolute;
+            top: 0;
+            right: 0;
+            min-width: 360px;
+            max-width: min(46vw, 620px);
+            text-align: right;
+            border: 1px solid rgba(255, 193, 7, 0.55);
+            border-radius: 10px;
+            padding: 10px 12px;
+            background: rgba(255, 255, 255, 0.92);
+        }
+        [data-bs-theme="dark"] .pit-nextmatch-panel {
+            background: rgba(35, 38, 44, 0.92);
+            border-color: rgba(255, 193, 7, 0.75);
+        }
+        .pit-nextmatch-title {
+            font-size: 0.78rem;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            opacity: 0.8;
+            font-weight: 700;
+        }
+        .pit-nextmatch-label {
+            font-size: 1.2rem;
+            font-weight: 800;
+            line-height: 1.2;
+        }
+        .queue-now-pill {
+            font-size: 1rem;
+            letter-spacing: 0.05em;
+            padding: 0.55rem 0.75rem;
+        }
+        .queue-countdown-pill {
+            font-size: 0.95rem;
+            padding: 0.55rem 0.75rem;
+        }
+        .clip-picker-select {
+            width: 100%;
+            max-width: 100%;
+            position: relative;
+            left: 0;
+            font-size: 0.9rem;
+            z-index: 5;
+            transition: width 0.18s ease, left 0.18s ease;
+        }
+        .clip-picker-select.expanded {
+            width: min(94vw, 1050px);
+            max-width: none;
+            left: calc(-1 * min(55vw, 600px));
+        }
+        @media (max-width: 1200px) {
+            .clip-picker-select {
+                width: 100%;
+                max-width: 100%;
+                left: 0;
+            }
+            .clip-picker-select.expanded {
+                width: 100%;
+                max-width: 100%;
+                left: 0;
+            }
+        }
+        @media (max-width: 1200px) {
+            .pit-nextmatch-panel {
+                position: static;
+                text-align: center;
+                max-width: 100%;
+                min-width: 0;
+                margin: 10px auto 0 auto;
+            }
+        }
         .pit-rsl-footer {
             border: 1px solid rgba(255, 255, 255, 0.22);
             border-radius: 14px;
@@ -705,7 +856,7 @@
             if (!wrap || rows.length === 0) return;
 
             let page = 0;
-            const rowsPerPage = 9;
+            const rowsPerPage = 11;
             let totalPages = 1;
             const intervalMs = 10000;
 
@@ -733,6 +884,54 @@
                 page = getTimeBasedPage();
                 recalcAndRender(false);
             }, intervalMs);
+        })();
+
+        (function () {
+            const clipSelect = document.getElementById('video-library-select');
+            if (!clipSelect) return;
+            function expandPicker() {
+                clipSelect.classList.add('expanded');
+            }
+            function collapsePicker() {
+                clipSelect.classList.remove('expanded');
+            }
+            clipSelect.addEventListener('focus', expandPicker);
+            clipSelect.addEventListener('click', expandPicker);
+            clipSelect.addEventListener('blur', collapsePicker);
+            clipSelect.addEventListener('change', function () {
+                const url = clipSelect.value;
+                collapsePicker();
+                if (!url) return;
+                window.open(url, '_blank', 'noopener');
+            });
+        })();
+
+        (function () {
+            function formatSeconds(seconds) {
+                const clamped = Math.max(0, Number(seconds) || 0);
+                const hours = Math.floor(clamped / 3600);
+                const mins = Math.floor((clamped % 3600) / 60);
+                const secs = clamped % 60;
+                return String(hours).padStart(2, '0') + ':' + String(mins).padStart(2, '0') + ':' + String(secs).padStart(2, '0');
+            }
+
+            function initSimpleCountdown(el) {
+                let seconds = parseInt(el.getAttribute('data-seconds') || '', 10);
+                if (!Number.isFinite(seconds)) return;
+                const prefix = el.getAttribute('data-prefix') || '';
+
+                function render() {
+                    el.textContent = prefix + ' ' + formatSeconds(seconds);
+                }
+                render();
+                setInterval(function () {
+                    if (seconds <= 0) return;
+                    seconds -= 1;
+                    render();
+                }, 1000);
+            }
+
+            document.querySelectorAll('.js-countdown').forEach(initSimpleCountdown);
         })();
 
         (function () {

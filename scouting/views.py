@@ -3,14 +3,15 @@ from django.shortcuts import redirect
 from django.forms.models import model_to_dict
 from django.core import serializers
 from django.conf import settings
+from django.contrib import messages
 from django.contrib.auth.decorators import login_required, permission_required
 from rest_framework.authentication import TokenAuthentication
 from rest_framework.decorators import api_view, authentication_classes, permission_classes
 from rest_framework.permissions import IsAuthenticated, AllowAny
-from .models import Team, Event, PitScoutData
+from .models import Team, Event, PitScoutData, LivestreamRecording
 from .forms import PitScoutDataForm
 from django.shortcuts import render, get_object_or_404
-from django.http import JsonResponse
+from django.http import JsonResponse, HttpResponseForbidden
 from django.core.management import call_command
 from django.core.cache import cache
 from django.contrib.auth.decorators import login_required
@@ -25,6 +26,7 @@ from .models import (
     PlayoffMatch,
     PitDashboardLiveStatus,
 )
+from .recording_service import get_active_recording, start_recording, stop_recording
 from django.db.models import F
 from django.db.models import OuterRef, Subquery, Value, FloatField, IntegerField
 from pathlib import Path
@@ -34,6 +36,7 @@ import re
 import ipaddress
 from datetime import datetime, timezone as dt_timezone
 from zoneinfo import ZoneInfo
+from django.views.decorators.http import require_POST
 from scouting.ntTablesGetter import get_status
 
 #Enabled = "e", disabled = "d", not connected = "n"
@@ -63,6 +66,14 @@ def _get_robot_status_payload_from_nt():
     }
 
 
+def _recording_file_exists(recording_obj):
+    rel_path = str(getattr(recording_obj, "output_file", "") or "").strip().replace("\\", "/")
+    if not rel_path:
+        return False
+    abs_path = Path(settings.MEDIA_ROOT) / rel_path
+    return abs_path.is_file()
+
+
 def _normalize_live_field(value, default="?"):
     text = str(value).strip() if value is not None else ""
     return text if text else default
@@ -75,6 +86,113 @@ def _parse_match_clock_to_seconds(clock_text):
     minutes = int(match.group(1))
     seconds = int(match.group(2))
     return (minutes * 60) + seconds
+
+
+def _extract_first_int(value):
+    match = re.search(r"(\d+)", str(value or ""))
+    if not match:
+        return None
+    try:
+        return int(match.group(1))
+    except (TypeError, ValueError):
+        return None
+
+
+def _looks_like_no_match_sample(match_label, game_time, blue_score, red_score):
+    match_text = str(match_label or "").strip().lower()
+    time_text = str(game_time or "").strip()
+    blue_text = str(blue_score or "").strip()
+    red_text = str(red_score or "").strip()
+
+    no_match_labels = {"", "0", "00", "?", "q0"}
+    default_times = {"0:20", "00:20", "0:00", "00:00", "?"}
+    default_scores = {"0", "00", "?"}
+
+    return (
+        match_text in no_match_labels
+        and time_text in default_times
+        and blue_text in default_scores
+        and red_text in default_scores
+    )
+
+
+def _is_valid_score_text(value):
+    text = str(value or "").strip()
+    if not text or text == "?":
+        return False
+    if not re.fullmatch(r"\d{1,3}", text):
+        return False
+    try:
+        parsed = int(text)
+    except (TypeError, ValueError):
+        return False
+    return 0 <= parsed <= 999
+
+
+def _looks_like_garbage_live_sample(match_label, game_time, blue_score, red_score):
+    match_text = str(match_label or "").strip()
+    time_text = str(game_time or "").strip()
+    blue_text = str(blue_score or "").strip()
+    red_text = str(red_score or "").strip()
+
+    if "?" in {match_text, time_text, blue_text, red_text}:
+        return True
+
+    if not _is_valid_score_text(blue_text) or not _is_valid_score_text(red_text):
+        return True
+
+    # Reject absurd OCR outputs (e.g. 1000+, mixed chars already rejected above).
+    if int(blue_text) >= 1000 or int(red_text) >= 1000:
+        return True
+
+    match_num = _extract_first_int(match_text)
+    if match_num is None:
+        return True
+    if match_num < 0 or match_num > 300:
+        return True
+
+    clock_seconds = _parse_match_clock_to_seconds(time_text)
+    if clock_seconds is None:
+        return True
+    if clock_seconds > 150:
+        return True
+
+    return False
+
+
+def _is_intermediate_period_sample(previous_status, match_label, game_time, blue_score, red_score):
+    if _looks_like_no_match_sample(match_label, game_time, blue_score, red_score):
+        return True
+    if _looks_like_garbage_live_sample(match_label, game_time, blue_score, red_score):
+        return True
+
+    time_text = str(game_time or "").strip()
+    is_020 = time_text in {"0:20", "00:20"}
+    if not is_020:
+        return False
+
+    if previous_status and previous_status.match_started is False:
+        return True
+
+    if not previous_status:
+        return False
+
+    prev_time = str(previous_status.game_time or "").strip()
+    prev_blue = _normalize_live_field(previous_status.blue_score)
+    prev_red = _normalize_live_field(previous_status.red_score)
+    prev_match = str(previous_status.match_label or "").strip()
+    new_match = str(match_label or "").strip()
+
+    return (
+        prev_time in {"0:20", "00:20"}
+        and prev_blue == _normalize_live_field(blue_score)
+        and prev_red == _normalize_live_field(red_score)
+        and (not prev_match or prev_match == new_match)
+    )
+
+
+def _normalize_label_for_compare(value):
+    return re.sub(r"[^a-z0-9]+", "", str(value or "").lower())
 
 
 def _infer_match_started(previous_status, new_match, new_time, new_blue_score, new_red_score):
@@ -1107,6 +1225,7 @@ def view_pit_dashboard(request):
         event_id=event, team_blue_3__team_number=team_number
     )
     team_matches = team_matches.order_by("match_number").distinct()
+    all_team_qual_matches = list(team_matches)
 
     nexus_status = {}
     announcements_display = []
@@ -1118,6 +1237,7 @@ def view_pit_dashboard(request):
     current_qual_match_num = None
     queueing_match_numbers = set()
     queue_time_by_match = {}
+    queue_eta_epoch_by_match = {}
     display_tz = ZoneInfo("America/New_York")
     statbotics_error = None
     win_chance_by_match = {}
@@ -1181,6 +1301,7 @@ def view_pit_dashboard(request):
             try:
                 local_dt = datetime.fromtimestamp(queue_time_ms / 1000, tz=dt_timezone.utc).astimezone(display_tz)
                 queue_time_by_match[match_number] = local_dt.strftime("%I:%M %p").lstrip("0")
+                queue_eta_epoch_by_match[match_number] = int(local_dt.timestamp())
             except Exception:
                 continue
     except NexusApiKey.DoesNotExist:
@@ -1220,6 +1341,7 @@ def view_pit_dashboard(request):
             "match": m,
             "match_label": f"Q{m.match_number}",
             "queue_time": queue_time_by_match.get(m.match_number, "-"),
+            "queue_eta_epoch": queue_eta_epoch_by_match.get(m.match_number),
             "win_chance": win_chance_by_match.get(m.match_number, "-"),
             "statbotics_match_url": f"https://www.statbotics.io/match/{event.tba_event_key}_qm{m.match_number}",
             "is_queueing": bool(current_qual_match_num and m.match_number <= current_qual_match_num),
@@ -1249,12 +1371,30 @@ def view_pit_dashboard(request):
         )
     )
     playoff_matches = playoff_matches.distinct()
+    all_team_playoff_matches = (
+        PlayoffMatch.objects.filter(event=event)
+        .filter(
+            team_red_1__team_number=team_number
+        ) | PlayoffMatch.objects.filter(
+            event=event, team_red_2__team_number=team_number
+        ) | PlayoffMatch.objects.filter(
+            event=event, team_red_3__team_number=team_number
+        ) | PlayoffMatch.objects.filter(
+            event=event, team_blue_1__team_number=team_number
+        ) | PlayoffMatch.objects.filter(
+            event=event, team_blue_2__team_number=team_number
+        ) | PlayoffMatch.objects.filter(
+            event=event, team_blue_3__team_number=team_number
+        )
+    )
+    all_team_playoff_matches = all_team_playoff_matches.distinct()
     comp_order = {"ef": 1, "qf": 2, "sf": 3, "f": 4}
     playoff_rows = [
         {
             "match": m,
             "match_label": _format_playoff_label(m.comp_level, m.set_number, m.match_number),
             "queue_time": "-",
+            "queue_eta_epoch": None,
             "win_chance": "-",
             "statbotics_match_url": f"https://www.statbotics.io/match/{m.tba_match_key}",
             "is_queueing": False,
@@ -1375,6 +1515,7 @@ def view_pit_dashboard(request):
     rbd = _other_rank - _our_rank
     live_status = PitDashboardLiveStatus.objects.filter(event=event).first()
     live_match_data = None
+    live_stream_match_number = None
     if live_status:
         source_ts = live_status.source_timestamp
         if source_ts is None:
@@ -1386,6 +1527,17 @@ def view_pit_dashboard(request):
                 max(0, (datetime.now(dt_timezone.utc) - source_ts.astimezone(dt_timezone.utc)).total_seconds())
             )
 
+        is_live_none = _looks_like_no_match_sample(
+            live_status.match_label,
+            live_status.game_time,
+            live_status.blue_score,
+            live_status.red_score,
+        ) or not (live_status.match_label or "").strip()
+        parsed_seconds_remaining = _parse_match_clock_to_seconds(live_status.game_time)
+        if parsed_seconds_remaining is not None and parsed_seconds_remaining > 135:
+            parsed_seconds_remaining = None
+        live_stream_match_number = _extract_first_int(live_status.match_label)
+
         live_match_data = {
             "match_label": live_status.match_label or "?",
             "blue_score": _normalize_live_field(live_status.blue_score),
@@ -1394,7 +1546,115 @@ def view_pit_dashboard(request):
             "match_started": live_status.match_started,
             "last_update": source_ts.astimezone(display_tz) if source_ts else None,
             "is_stale": bool(staleness_seconds is not None and staleness_seconds > 35),
+            "is_active_match": not is_live_none,
+            "seconds_remaining": parsed_seconds_remaining,
         }
+
+    next_match_alert = None
+    next_match_clock = None
+    queue_soon_window_seconds = 5 * 60
+    if match_rows:
+        next_row = match_rows[0]
+        countdown_seconds = None
+        est_start_seconds = None
+        queue_now = False
+        alert_reason = None
+
+        eta_epoch = next_row.get("queue_eta_epoch")
+        if isinstance(eta_epoch, int):
+            countdown_seconds = max(0, eta_epoch - int(datetime.now(dt_timezone.utc).timestamp()))
+            est_start_seconds = countdown_seconds + 60
+            if countdown_seconds == 0:
+                queue_now = True
+                alert_reason = "Queue ETA reached"
+
+        normalized_next_label = _normalize_label_for_compare(next_row.get("match_label"))
+        normalized_now_queuing = _normalize_label_for_compare(now_queuing)
+        normalized_current_match = _normalize_label_for_compare(current_match)
+        if not queue_now and normalized_next_label and (
+            normalized_next_label in normalized_now_queuing
+            or normalized_next_label in normalized_current_match
+        ):
+            queue_now = True
+            alert_reason = "Now queuing"
+
+        if (
+            live_match_data
+            and live_match_data.get("is_active_match")
+            and isinstance(live_match_data.get("seconds_remaining"), int)
+            and isinstance(live_stream_match_number, int)
+        ):
+            prev_match_number = max(0, int(next_row.get("sort_match", 0)) - 1)
+            if prev_match_number and live_stream_match_number == prev_match_number:
+                elapsed = max(0, 135 - int(live_match_data["seconds_remaining"]))
+                queue_trigger_in = max(0, 60 - elapsed)
+                estimated_start_in = max(0, int(live_match_data["seconds_remaining"]) + 30)
+                if countdown_seconds is None:
+                    countdown_seconds = queue_trigger_in
+                else:
+                    countdown_seconds = min(countdown_seconds, queue_trigger_in)
+                if est_start_seconds is None:
+                    est_start_seconds = estimated_start_in
+                else:
+                    est_start_seconds = min(est_start_seconds, estimated_start_in)
+                if elapsed >= 60:
+                    queue_now = True
+                    alert_reason = "Previous match is 1:00+ in"
+
+        if isinstance(countdown_seconds, int):
+            next_match_clock = {
+                "match_label": next_row.get("match_label"),
+                "countdown_seconds": countdown_seconds,
+                "est_start_seconds": est_start_seconds,
+            }
+
+        show_queue_soon = (
+            not queue_now
+            and isinstance(countdown_seconds, int)
+            and countdown_seconds <= queue_soon_window_seconds
+        )
+        if queue_now or show_queue_soon:
+            next_match_alert = {
+                "match_label": next_row.get("match_label"),
+                "queue_now": queue_now,
+                "countdown_seconds": countdown_seconds,
+                "est_start_seconds": est_start_seconds,
+                "reason": alert_reason or "Estimated",
+            }
+
+    local_recordings = []
+    recording_library = []
+    recording_match_options = {"qual": [], "playoff": []}
+    if _is_localhost_or_local_ip(request):
+        local_recordings = list(
+            LivestreamRecording.objects.select_related("assigned_match", "assigned_playoff_match")
+            .filter(event=event, assignment_completed=False)
+            .order_by("-started_at")[:25]
+        )
+        local_recordings = [
+            rec for rec in local_recordings
+            if rec.is_active or _recording_file_exists(rec)
+        ]
+        recording_library = list(
+            LivestreamRecording.objects.select_related("assigned_match", "assigned_playoff_match")
+            .filter(event=event, is_active=False)
+            .order_by("-started_at")[:200]
+        )
+        recording_library = [rec for rec in recording_library if _recording_file_exists(rec)]
+        recording_match_options["qual"] = [
+            {"id": m.id, "label": f"Q{m.match_number}"}
+            for m in sorted(all_team_qual_matches, key=lambda item: item.match_number)
+        ]
+        recording_match_options["playoff"] = [
+            {
+                "id": m.id,
+                "label": _format_playoff_label(m.comp_level, m.set_number, m.match_number),
+            }
+            for m in sorted(
+                list(all_team_playoff_matches),
+                key=lambda item: (comp_order.get((item.comp_level or "").lower(), 9), item.set_number or 0, item.match_number or 0),
+            )
+        ]
 
     context = {
         "event": event,
@@ -1420,8 +1680,90 @@ def view_pit_dashboard(request):
         "robot_nt_status": _get_NT_tables(),
         "show_rsl_wall": _is_localhost_or_local_ip(request),
         "live_match_data": live_match_data,
+        "next_match_clock": next_match_clock,
+        "next_match_alert": next_match_alert,
+        "local_recordings": local_recordings,
+        "recording_library": recording_library,
+        "recording_match_options": recording_match_options,
     }
     return render(request, "scouting/pit_dashboard.html", context)
+
+
+def view_recording_control(request):
+    active_event = Event.objects.filter(active=True).first()
+
+    if request.method == "POST":
+        action = str(request.POST.get("action") or "").strip().lower()
+        if action == "start":
+            ok, msg, _ = start_recording(event=active_event)
+            if ok:
+                messages.success(request, msg)
+            else:
+                messages.error(request, msg)
+        elif action == "stop":
+            ok, msg, _ = stop_recording()
+            if ok:
+                messages.success(request, msg)
+            else:
+                messages.warning(request, msg)
+        else:
+            messages.error(request, "Invalid action.")
+        return redirect("scouting:recording_control")
+
+    active_recording = get_active_recording()
+    recent_recordings = list(LivestreamRecording.objects.order_by("-started_at")[:40])
+    recent_recordings = [
+        rec for rec in recent_recordings
+        if rec.is_active or _recording_file_exists(rec)
+    ][:20]
+    media_base = "/" + str(settings.MEDIA_URL).strip("/") + "/"
+    public_control_url = request.build_absolute_uri(request.path)
+
+    context = {
+        "active_event": active_event,
+        "active_recording": active_recording,
+        "recent_recordings": recent_recordings,
+        "media_base": media_base,
+        "public_control_url": public_control_url,
+        "source_url": str(getattr(settings, "LIVESTREAM_SOURCE_URL", "") or ""),
+    }
+    return render(request, "scouting/recording_control.html", context)
+
+
+@login_required()
+@require_POST
+def assign_recording_to_match(request, recording_id):
+    if not _is_localhost_or_local_ip(request):
+        return HttpResponseForbidden("Local access only.")
+
+    recording = get_object_or_404(LivestreamRecording, id=recording_id)
+    assignment_type = str(request.POST.get("assignment_type") or "").strip().lower()
+    note = str(request.POST.get("assignment_note") or "").strip()[:120]
+
+    recording.assigned_match = None
+    recording.assigned_playoff_match = None
+    recording.assignment_note = note
+    recording.assignment_completed = True
+
+    if assignment_type == "qual":
+        match_id = request.POST.get("qual_match_id")
+        if match_id:
+            recording.assigned_match = Match.objects.filter(id=match_id).first()
+    elif assignment_type == "playoff":
+        playoff_id = request.POST.get("playoff_match_id")
+        if playoff_id:
+            recording.assigned_playoff_match = PlayoffMatch.objects.filter(id=playoff_id).first()
+
+    recording.save(
+        update_fields=[
+            "assigned_match",
+            "assigned_playoff_match",
+            "assignment_note",
+            "assignment_completed",
+            "modified",
+        ]
+    )
+    return redirect("scouting:pit_dashboard")
 
 
 @login_required()
@@ -1459,6 +1801,28 @@ def pit_dashboard_live_feed_ingest(request):
         source_timestamp = source_timestamp.replace(tzinfo=dt_timezone.utc)
 
     status_obj, _ = PitDashboardLiveStatus.objects.get_or_create(event=event)
+    if _is_intermediate_period_sample(status_obj, match_label, game_time, blue_score, red_score):
+        status_obj.source_timestamp = source_timestamp
+        status_obj.match_label = ""
+        status_obj.game_time = "?"
+        status_obj.blue_score = "?"
+        status_obj.red_score = "?"
+        status_obj.match_started = None
+        status_obj.last_raw_payload = payload
+        status_obj.save(
+            update_fields=[
+                "source_timestamp",
+                "match_label",
+                "game_time",
+                "blue_score",
+                "red_score",
+                "match_started",
+                "last_raw_payload",
+                "modified",
+            ]
+        )
+        return JsonResponse({"status": "intermediate_period"})
+
     match_started = _infer_match_started(
         previous_status=status_obj,
         new_match=match_label,

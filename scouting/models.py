@@ -1,6 +1,7 @@
 from django.db import models
 from django_extensions.db.models import TimeStampedModel
 from django.conf import settings
+from django.utils import timezone
 import os
 import uuid
 
@@ -253,4 +254,37 @@ class MatchData2026(TimeStampedModel):
         permissions = (
             ("stands_scout_team", "Can stands scout teams"),
         )
+
+
+class LivestreamRecording(TimeStampedModel):
+    event = models.ForeignKey(Event, on_delete=models.SET_NULL, null=True, blank=True)
+    source_url = models.URLField()
+    output_file = models.CharField(max_length=255)
+    ffmpeg_pid = models.IntegerField(null=True, blank=True)
+    is_active = models.BooleanField(default=True)
+    started_at = models.DateTimeField(default=timezone.now)
+    stopped_at = models.DateTimeField(null=True, blank=True)
+    assigned_match = models.ForeignKey(
+        Match,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="livestream_recordings",
+    )
+    assigned_playoff_match = models.ForeignKey(
+        PlayoffMatch,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="livestream_recordings",
+    )
+    assignment_note = models.CharField(max_length=120, blank=True, default="")
+    assignment_completed = models.BooleanField(default=False)
+
+    class Meta:
+        ordering = ["-started_at"]
+
+    def __str__(self):
+        status = "ACTIVE" if self.is_active else "saved"
+        return f"{self.output_file} ({status})"
 
