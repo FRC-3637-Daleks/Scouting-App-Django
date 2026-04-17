@@ -4,7 +4,27 @@
 {% block title %} | Pit Dashboard {% endblock %}
 
 {% block content %}
-    <div class="container-fluid py-3">
+    <div id="pit-robot-alert-banner" class="pit-robot-alert-banner" aria-hidden="true">
+        <div class="pit-robot-alert-track">
+            <div class="pit-robot-alert-group">
+                <span>ROBOT ACTIVE - KEEP AWAY</span>
+                <span>ROBOT ACTIVE - KEEP AWAY</span>
+                <span>ROBOT ACTIVE - KEEP AWAY</span>
+                <span>ROBOT ACTIVE - KEEP AWAY</span>
+                <span>ROBOT ACTIVE - KEEP AWAY</span>
+                <span>ROBOT ACTIVE - KEEP AWAY</span>
+            </div>
+            <div class="pit-robot-alert-group" aria-hidden="true">
+                <span>ROBOT ACTIVE - KEEP AWAY</span>
+                <span>ROBOT ACTIVE - KEEP AWAY</span>
+                <span>ROBOT ACTIVE - KEEP AWAY</span>
+                <span>ROBOT ACTIVE - KEEP AWAY</span>
+                <span>ROBOT ACTIVE - KEEP AWAY</span>
+                <span>ROBOT ACTIVE - KEEP AWAY</span>
+            </div>
+        </div>
+    </div>
+    <div id="pit-dashboard-root" class="container-fluid py-3">
         {% if statbotics_last_pulled_display %}
             <div class="statbotics-pull-chip">
                 Statbotics: {{ statbotics_last_pulled_display }}
@@ -708,6 +728,44 @@
             -webkit-mask-composite: xor;
             mask-composite: exclude;
             animation: pit-enabled-border-pulse 1.1s ease-in-out infinite;
+        }
+        .pit-robot-alert-banner {
+            display: none;
+            position: fixed;
+            bottom: 10px;
+            left: 14px;
+            right: 14px;
+            z-index: 10001;
+            border: 2px solid rgba(255, 68, 0, 0.98);
+            border-radius: 9px;
+            background: linear-gradient(90deg, #2c0700 0%, #5f0f00 42%, #8d1600 100%);
+            box-shadow: 0 0 18px rgba(255, 76, 0, 0.58);
+            overflow: hidden;
+        }
+        .pit-robot-alert-track {
+            display: flex;
+            width: max-content;
+            min-width: 200%;
+            animation: pit-robot-alert-marquee 11s linear infinite;
+        }
+        .pit-robot-alert-group {
+            display: inline-flex;
+            align-items: center;
+            gap: 4.5rem;
+            padding: 7px 2.6rem;
+            white-space: nowrap;
+            font-size: 1.02rem;
+            font-weight: 900;
+            letter-spacing: 0.07em;
+            color: #ffd9c7;
+            text-transform: uppercase;
+        }
+        body.pit-enabled-warning .pit-robot-alert-banner {
+            display: block;
+        }
+        @keyframes pit-robot-alert-marquee {
+            0% { transform: translateX(0); }
+            100% { transform: translateX(-50%); }
         }
         @keyframes pit-enabled-border-pulse {
             0%, 100% {
