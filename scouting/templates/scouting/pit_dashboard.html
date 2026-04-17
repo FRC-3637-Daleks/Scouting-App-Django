@@ -5,6 +5,11 @@
 
 {% block content %}
     <div class="container-fluid py-3">
+        {% if statbotics_last_pulled_display %}
+            <div class="statbotics-pull-chip">
+                Statbotics: {{ statbotics_last_pulled_display }}
+            </div>
+        {% endif %}
         <div class="pit-header-wrap mb-3">
             <div class="text-center">
                 <h1 class="m-0">Pit Dashboard | Team {{ team_number }} | {{ event.event_name }}</h1>
@@ -56,7 +61,6 @@
         {% if statbotics_error %}
             <div class="alert alert-warning">{{ statbotics_error }}</div>
         {% endif %}
-
         <div class="row g-3">
             <div class="col-12 col-xxl-8">
                 <div class="card">
@@ -88,11 +92,9 @@
                                             <th scope="row">{{ row.match_label }}</th>
                                             <td>{{ row.queue_time }}</td>
                                             <td>
-                                                <strong>
-                                                    <a href="{{ row.statbotics_match_url }}" target="_blank" rel="noopener noreferrer" class="team-link">
-                                                        {{ row.win_chance }}
-                                                    </a>
-                                                </strong>
+                                                <a href="{{ row.statbotics_match_url }}" target="_blank" rel="noopener noreferrer" class="team-link win-chance-text {{ row.win_chance_class }}">
+                                                    {{ row.win_chance }}
+                                                </a>
                                             </td>
                                             {% if show_alliance_number_columns %}
                                                 <td>{{ row.blue_alliance_number }}</td>
@@ -234,11 +236,12 @@
                                             <select id="video-library-select" class="form-select form-select-sm clip-picker-select">
                                                 <option value="">Select clip to open...</option>
                                                 {% for rec in recording_library %}
-                                                    <option value="/media/{{ rec.output_file }}">
+                                                    <option value="{% url 'scouting:open_recording_local' rec.id %}">
                                                         {{ rec.started_at|date:"m/d g:i:s A" }} | {% if rec.assigned_match %}Q{{ rec.assigned_match.match_number }}{% elif rec.assigned_playoff_match %}{{ rec.assigned_playoff_match.comp_level|upper }} {{ rec.assigned_playoff_match.match_number }}{% else %}General{% endif %}{% if rec.assignment_note %} | {{ rec.assignment_note }}{% endif %} | {{ rec.output_file }}
                                                     </option>
                                                 {% endfor %}
                                             </select>
+                                            <div id="video-library-status" class="small text-muted mt-1"></div>
                                         {% else %}
                                             <div class="small text-muted">No saved clips</div>
                                         {% endif %}
@@ -325,7 +328,13 @@
                 </div>
 
                 <div class="card mt-3" id="event-rank-widget">
-                    <div class="card-header"><strong>Event Rank</strong></div>
+                    <div class="card-header d-flex align-items-center justify-content-between gap-2">
+                        <strong>Event Rank</strong>
+                        <div class="form-check form-switch m-0">
+                            <input class="form-check-input" type="checkbox" role="switch" id="event-rank-skip-last-toggle">
+                            <label class="form-check-label small" for="event-rank-skip-last-toggle">Skip uneven last page</label>
+                        </div>
+                    </div>
                     <div class="card-body p-0">
                         {% if event_rank_rows %}
                             <div class="table-responsive event-rank-table-wrap">
@@ -469,6 +478,19 @@
             position: relative;
             min-height: 92px;
         }
+        .statbotics-pull-chip {
+            display: inline-block;
+            margin-bottom: 6px;
+            margin-left: 2px;
+            padding: 0.25rem 0.55rem;
+            border-radius: 6px;
+            border: 1px solid rgba(148, 163, 184, 0.55);
+            background: rgba(148, 163, 184, 0.13);
+            color: #cfd6e4;
+            font-size: 0.76rem;
+            line-height: 1.1;
+            letter-spacing: 0.01em;
+        }
         .pit-nextmatch-panel {
             position: absolute;
             top: 0;
@@ -480,17 +502,50 @@
             border-radius: 10px;
             padding: 10px 12px;
             background: rgba(255, 255, 255, 0.92);
+            isolation: isolate;
+        }
+        .pit-nextmatch-panel > * {
+            position: relative;
+            z-index: 2;
         }
         .pit-nextmatch-panel-soon {
             border: 4px solid #f0ad00;
         }
         .pit-nextmatch-panel-now {
             border: 4px solid #dc3545;
-            box-shadow: 0 0 0 2px rgba(220, 53, 69, 0.18), 0 10px 30px rgba(0, 0, 0, 0.25);
+            box-shadow: 0 0 0 6px rgba(220, 53, 69, 0.24), 0 10px 30px rgba(0, 0, 0, 0.25);
+            background:
+                linear-gradient(130deg, rgba(220, 53, 69, 0.24), rgba(255, 99, 132, 0.14), rgba(35, 38, 44, 0.92));
+        }
+        .pit-nextmatch-panel-now::after {
+            content: "";
+            position: absolute;
+            inset: -3px;
+            border-radius: 12px;
+            pointer-events: none;
+            z-index: 1;
+            border: 4px solid transparent;
+            background:
+                linear-gradient(120deg, rgba(255, 125, 125, 0.95), rgba(255, 72, 116, 0.9), rgba(255, 160, 124, 0.95)) border-box;
+            -webkit-mask:
+                linear-gradient(#000 0 0) padding-box,
+                linear-gradient(#000 0 0);
+            -webkit-mask-composite: xor;
+            mask-composite: exclude;
+            opacity: 0.82;
+            filter: blur(0.15px);
+            background-size: 220% 220%;
+            animation: cue-now-border-pulse 1.2s ease-in-out infinite;
         }
         [data-bs-theme="dark"] .pit-nextmatch-panel {
             background: rgba(35, 38, 44, 0.92);
             border-color: rgba(255, 193, 7, 0.75);
+        }
+        [data-bs-theme="dark"] .pit-nextmatch-panel-soon {
+            border-color: #f0ad00;
+        }
+        [data-bs-theme="dark"] .pit-nextmatch-panel-now {
+            border-color: #dc3545;
         }
         .pit-nextmatch-head {
             display: flex;
@@ -524,6 +579,41 @@
             background: #f8d7da;
             color: #6a0f19;
             border-color: #dc3545;
+            animation: cue-now-pill-pulse 1.2s ease-in-out infinite;
+        }
+        @keyframes cue-now-pill-pulse {
+            0%, 100% {
+                transform: scale(1);
+                filter: saturate(1);
+            }
+            32% {
+                transform: scale(1.07);
+                filter: saturate(1.16);
+            }
+            62% {
+                transform: scale(1.03);
+                filter: saturate(1.1);
+            }
+        }
+        @keyframes cue-now-border-pulse {
+            0%, 100% {
+                opacity: 0.72;
+                filter: blur(0.15px);
+                box-shadow: 0 0 0 2px rgba(220, 53, 69, 0.24);
+                background-position: 0% 50%;
+            }
+            35% {
+                opacity: 1;
+                filter: blur(0.4px);
+                box-shadow: 0 0 0 8px rgba(220, 53, 69, 0.26);
+                background-position: 100% 50%;
+            }
+            65% {
+                opacity: 0.92;
+                filter: blur(0.28px);
+                box-shadow: 0 0 0 12px rgba(220, 53, 69, 0.18);
+                background-position: 0% 50%;
+            }
         }
         .pit-nextmatch-label {
             font-size: 1.2rem;
@@ -538,6 +628,18 @@
         .queue-countdown-pill {
             font-size: 0.95rem;
             padding: 0.55rem 0.75rem;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            font-variant-numeric: tabular-nums;
+            font-feature-settings: "tnum" 1;
+            white-space: nowrap;
+        }
+        .queue-countdown-pill[data-prefix="Queue In"] {
+            min-width: 17ch;
+        }
+        .queue-countdown-pill[data-prefix="Est Start"] {
+            min-width: 18ch;
         }
         .clip-picker-select {
             width: 100%;
@@ -590,6 +692,34 @@
             border: 3px solid transparent;
             border-image: linear-gradient(120deg, rgba(255, 162, 0, 0.95), rgba(255, 108, 0, 0.9), rgba(255, 184, 77, 0.95)) 1;
             box-shadow: inset 0 0 24px rgba(255, 145, 0, 0.22), 0 10px 28px rgba(0, 0, 0, 0.35);
+        }
+        body.pit-enabled-warning::before {
+            content: "";
+            position: fixed;
+            inset: 8px;
+            pointer-events: none;
+            z-index: 9999;
+            border: 6px solid transparent;
+            border-radius: 10px;
+            background: linear-gradient(120deg, rgba(255, 170, 0, 0.95), rgba(255, 95, 0, 0.92), rgba(255, 200, 90, 0.95)) border-box;
+            -webkit-mask:
+                linear-gradient(#000 0 0) padding-box,
+                linear-gradient(#000 0 0);
+            -webkit-mask-composite: xor;
+            mask-composite: exclude;
+            animation: pit-enabled-border-pulse 1.1s ease-in-out infinite;
+        }
+        @keyframes pit-enabled-border-pulse {
+            0%, 100% {
+                opacity: 0.72;
+                filter: blur(0.2px);
+                box-shadow: 0 0 0 0 rgba(255, 120, 0, 0.22);
+            }
+            45% {
+                opacity: 1;
+                filter: blur(0.45px);
+                box-shadow: 0 0 0 7px rgba(255, 120, 0, 0.24);
+            }
         }
         .pit-rsl-header h3 {
             font-size: 1.05rem;
@@ -661,6 +791,22 @@
         }
         .team-link:hover {
             text-decoration: underline;
+        }
+        .win-chance-text {
+            font-weight: 400;
+            font-size: 1.08rem;
+            -webkit-text-stroke: 0;
+            text-shadow: none;
+        }
+        .win-chance-unknown { color: #c9ced6 !important; }
+        .win-chance-excellent {
+            color: #226c34 !important;
+        }
+        .win-chance-good { color: #a9e8b7 !important; }
+        .win-chance-lean-green { color: #d6f4dc !important; }
+        .win-chance-lean-red { color: #f2c4c4 !important; }
+        .win-chance-danger {
+            color: #781d1d !important;
         }
         .team-icon {
             height: 22px;
@@ -894,12 +1040,19 @@
             if (!widget) return;
             const rows = Array.from(widget.querySelectorAll('tbody tr.event-rank-row'));
             const wrap = widget.querySelector('.event-rank-table-wrap');
+            const skipLastToggle = document.getElementById('event-rank-skip-last-toggle');
             if (!wrap || rows.length === 0) return;
 
             let page = 0;
             const rowsPerPage = 11;
             let totalPages = 1;
             const intervalMs = 10000;
+            const storageKey = 'pit_event_rank_skip_last_page';
+            let shouldSkipLastPage = false;
+            if (skipLastToggle) {
+                shouldSkipLastPage = localStorage.getItem(storageKey) === '1';
+                skipLastToggle.checked = shouldSkipLastPage;
+            }
 
             function getTimeBasedPage() {
                 if (totalPages <= 1) return 0;
@@ -907,7 +1060,13 @@
             }
 
             function recalcAndRender(resetPage) {
-                totalPages = Math.max(1, Math.ceil(rows.length / rowsPerPage));
+                const fullPages = Math.floor(rows.length / rowsPerPage);
+                const hasRemainder = (rows.length % rowsPerPage) !== 0;
+                if (shouldSkipLastPage && hasRemainder && fullPages >= 1) {
+                    totalPages = fullPages;
+                } else {
+                    totalPages = Math.max(1, Math.ceil(rows.length / rowsPerPage));
+                }
                 if (resetPage) page = getTimeBasedPage();
                 if (page >= totalPages) page = 0;
 
@@ -925,11 +1084,24 @@
                 page = getTimeBasedPage();
                 recalcAndRender(false);
             }, intervalMs);
+
+            if (skipLastToggle) {
+                skipLastToggle.addEventListener('change', function () {
+                    shouldSkipLastPage = !!skipLastToggle.checked;
+                    localStorage.setItem(storageKey, shouldSkipLastPage ? '1' : '0');
+                    recalcAndRender(true);
+                });
+            }
         })();
 
         (function () {
             const clipSelect = document.getElementById('video-library-select');
             if (!clipSelect) return;
+            const statusEl = document.getElementById('video-library-status');
+            function getCsrfToken() {
+                const cookie = document.cookie.split('; ').find(row => row.startsWith('csrftoken='));
+                return cookie ? decodeURIComponent(cookie.split('=')[1]) : '';
+            }
             function expandPicker() {
                 clipSelect.classList.add('expanded');
             }
@@ -939,11 +1111,24 @@
             clipSelect.addEventListener('focus', expandPicker);
             clipSelect.addEventListener('click', expandPicker);
             clipSelect.addEventListener('blur', collapsePicker);
-            clipSelect.addEventListener('change', function () {
+            clipSelect.addEventListener('change', async function () {
                 const url = clipSelect.value;
                 collapsePicker();
                 if (!url) return;
-                window.open(url, '_blank', 'noopener');
+                if (statusEl) statusEl.textContent = 'Opening...';
+                try {
+                    const response = await fetch(url, {
+                        method: 'POST',
+                        headers: {
+                            'X-CSRFToken': getCsrfToken(),
+                            'X-Requested-With': 'XMLHttpRequest',
+                        },
+                    });
+                    const payload = await response.json();
+                    if (statusEl) statusEl.textContent = payload.message || (payload.ok ? 'Opened.' : 'Failed to open.');
+                } catch (err) {
+                    if (statusEl) statusEl.textContent = 'Could not open recording.';
+                }
             });
         })();
 
@@ -989,12 +1174,14 @@
 
             function applyStatus(statusCode, labelText) {
                 row.classList.remove('status-enabled', 'status-disabled', 'status-disconnected');
+                document.body.classList.remove('pit-enabled-warning');
                 if (footer) {
                     footer.classList.remove('rsl-enabled');
                 }
 
                 if (statusCode === 'e') {
                     row.classList.add('status-enabled');
+                    document.body.classList.add('pit-enabled-warning');
                     if (footer) {
                         footer.classList.add('rsl-enabled');
                     }

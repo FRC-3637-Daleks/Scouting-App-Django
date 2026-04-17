@@ -21,6 +21,7 @@ urlpatterns = [
     path('pitdashboard/robot-status/', views.pit_dashboard_robot_status, name="pit_dashboard_robot_status"),
     path('pitdashboard/live-feed/', views.pit_dashboard_live_feed_ingest, name="pit_dashboard_live_feed_ingest"),
     path('pitdashboard/recordings/<int:recording_id>/assign/', views.assign_recording_to_match, name="assign_recording_to_match"),
+    path('pitdashboard/recordings/<int:recording_id>/open-local/', views.open_recording_local, name="open_recording_local"),
     path('recording-control/', views.view_recording_control, name="recording_control"),
     path('scouting/teamstatistics/<int:team_number>', views.view_team_statistics, name="team_statistics"),
     path('scouting/teamstatisticslist', views.team_statistics_list, name="team_statistics_list"),

@@ -1,6 +1,7 @@
 import os
 import shutil
 import subprocess
+import sys
 from datetime import datetime, timezone
 from pathlib import Path
 
@@ -71,6 +72,31 @@ def _get_ffmpeg_path():
         return None
 
 
+def _get_vlc_path():
+    configured = str(getattr(settings, "VLC_PATH", "") or "").strip()
+    if configured and Path(configured).exists():
+        return configured
+
+    from_path = shutil.which("vlc")
+    if from_path:
+        return from_path
+
+    if os.name == "nt":
+        candidates = [
+            Path("C:/Program Files/VideoLAN/VLC/vlc.exe"),
+            Path("C:/Program Files (x86)/VideoLAN/VLC/vlc.exe"),
+        ]
+        local_appdata = os.getenv("LOCALAPPDATA")
+        if local_appdata:
+            candidates.append(Path(local_appdata) / "Programs/VideoLAN/VLC/vlc.exe")
+
+        for candidate in candidates:
+            if candidate.exists():
+                return str(candidate)
+
+    return None
+
+
 def _get_recordings_dir():
     subdir = str(getattr(settings, "LIVESTREAM_RECORDINGS_SUBDIR", "recordings") or "recordings")
     output_dir = Path(settings.MEDIA_ROOT) / subdir
@@ -123,7 +149,7 @@ def start_recording(event=None):
         "-i",
         stream_url,
         "-vf",
-        "scale=-2:480",
+        "scale=-2:720",
         "-c:v",
         "libx264",
         "-preset",
@@ -206,3 +232,53 @@ def stop_recording():
     if stopped:
         return True, "Recording stopped.", recording
     return False, "Recording process ended with warnings.", recording
+
+
+def open_recording_or_folder(recording):
+    rel_path = str(getattr(recording, "output_file", "") or "").strip().replace("\\", "/")
+    if not rel_path:
+        return False, "Recording file path is missing."
+
+    abs_path = Path(settings.MEDIA_ROOT) / rel_path
+    recordings_dir = abs_path.parent
+
+    if abs_path.is_file():
+        vlc_path = _get_vlc_path()
+        if vlc_path:
+            try:
+                subprocess.Popen([vlc_path, str(abs_path)])
+                return True, f"Opened recording in VLC ({vlc_path})."
+            except Exception as exc:
+                vlc_error = str(exc)
+        else:
+            vlc_error = "VLC executable not found"
+
+        # Next best: open the video with system default app.
+        try:
+            if os.name == "nt":
+                os.startfile(str(abs_path))  # type: ignore[attr-defined]
+            elif sys.platform == "darwin":
+                subprocess.Popen(["open", str(abs_path)])
+            else:
+                subprocess.Popen(["xdg-open", str(abs_path)])
+            return True, "Opened recording in default video player."
+        except Exception as exc:
+            default_app_error = str(exc)
+    else:
+        vlc_error = "Recording file missing"
+        default_app_error = "Recording file missing"
+
+    # Fallback: open the folder that contains recordings.
+    try:
+        if os.name == "nt":
+            os.startfile(str(recordings_dir))  # type: ignore[attr-defined]
+        elif sys.platform == "darwin":
+            subprocess.Popen(["open", str(recordings_dir)])
+        else:
+            subprocess.Popen(["xdg-open", str(recordings_dir)])
+        return True, (
+            "Opened recordings folder. "
+            f"VLC: {vlc_error}. Default app: {default_app_error}."
+        )
+    except Exception as exc:
+        return False, f"Could not open VLC or recordings folder: {exc}"

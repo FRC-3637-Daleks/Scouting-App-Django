@@ -27,15 +27,18 @@ from .models import (
     PitDashboardLiveStatus,
 )
 from .recording_service import get_active_recording, start_recording, stop_recording
+from .recording_service import open_recording_or_folder
 from django.db.models import F
 from django.db.models import OuterRef, Subquery, Value, FloatField, IntegerField
 from pathlib import Path
 from PIL import Image
 import requests
+from requests.adapters import HTTPAdapter
 import re
 import ipaddress
 from datetime import datetime, timezone as dt_timezone
 from zoneinfo import ZoneInfo
+from urllib3.util.retry import Retry
 from django.views.decorators.http import require_POST
 from scouting.ntTablesGetter import get_status
 
@@ -423,6 +426,49 @@ def _extract_qual_match_number(label, payload_row=None):
     return _parse_match_number_from_payload(payload_row)
 
 
+def _extract_first_epoch_ms(times_payload, key_names):
+    if not isinstance(times_payload, dict):
+        return None
+    for key_name in key_names:
+        value = times_payload.get(key_name)
+        if isinstance(value, (int, float)) and value > 0:
+            return int(value)
+    return None
+
+
+def _win_chance_class(win_chance_text):
+    match = re.search(r"(\d+)", str(win_chance_text or ""))
+    if not match:
+        return "win-chance-unknown"
+    value = int(match.group(1))
+    if value >= 85:
+        return "win-chance-excellent"
+    if value >= 70:
+        return "win-chance-good"
+    if value >= 50:
+        return "win-chance-lean-green"
+    if value >= 30:
+        return "win-chance-lean-red"
+    return "win-chance-danger"
+
+
+def _get_statbotics_session():
+    session = requests.Session()
+    retry = Retry(
+        total=3,
+        connect=3,
+        read=3,
+        backoff_factor=0.5,
+        status_forcelist=[429, 500, 502, 503, 504],
+        allowed_methods=frozenset(["GET"]),
+        raise_on_status=False,
+    )
+    adapter = HTTPAdapter(max_retries=retry)
+    session.mount("https://", adapter)
+    session.mount("http://", adapter)
+    return session
+
+
 def _derive_now_queuing_from_matches(nexus_matches):
     """
     Fallback when Nexus no longer returns top-level nowQueuing.
@@ -760,28 +806,34 @@ def _load_statbotics_rest_win_chances(event_key, team_number, matches):
     Uses Statbotics REST API per match key.
     """
     cache_key = f"pit_dash_statbotics:{event_key}:{team_number}"
+    stale_cache_key = f"{cache_key}:stale"
+    pulled_at_cache_key = f"{cache_key}:pulled_at"
+    stale_pulled_at_cache_key = f"{stale_cache_key}:pulled_at"
     cached = cache.get(cache_key)
     if isinstance(cached, dict):
-        return cached, None
+        return cached, None, cache.get(pulled_at_cache_key)
+    stale_cached = cache.get(stale_cache_key)
+    stale_map = stale_cached if isinstance(stale_cached, dict) else {}
 
     match_lookup = {m.match_number: m for m in matches}
     match_number_set = set(match_lookup.keys())
     if not match_number_set:
-        return {}, None
+        return {}, None, None
 
     base_url = "https://api.statbotics.io/v3/matches"
     win_chance_by_match = {}
     had_request_error = False
+    session = _get_statbotics_session()
 
     try:
-        response = requests.get(
+        response = session.get(
             base_url,
             params={
                 "team": team_number,
                 "event": event_key,
-                "limit": max(50, len(match_number_set) + 10),
+                "limit": max(100, len(match_number_set) + 20),
             },
-            timeout=6,
+            timeout=10,
         )
         response.raise_for_status()
         payload = response.json()
@@ -829,7 +881,7 @@ def _load_statbotics_rest_win_chances(event_key, team_number, matches):
 
         match_key = f"{event_key}_qm{match_number}"
         try:
-            response = requests.get(f"https://api.statbotics.io/v3/match/{match_key}", timeout=4)
+            response = session.get(f"https://api.statbotics.io/v3/match/{match_key}", timeout=7)
             if response.status_code == 404:
                 continue
             response.raise_for_status()
@@ -845,12 +897,27 @@ def _load_statbotics_rest_win_chances(event_key, team_number, matches):
         if probability is not None:
             win_chance_by_match[match_number] = f"{round(probability * 100)}%"
 
-    if win_chance_by_match:
-        cache.set(cache_key, win_chance_by_match, 120)
+    # If live API only resolves some matches, reuse stale values for the rest.
+    for match_number in match_number_set:
+        if match_number in win_chance_by_match:
+            continue
+        stale_value = stale_map.get(match_number)
+        if stale_value:
+            win_chance_by_match[match_number] = stale_value
 
-    if not win_chance_by_match and had_request_error:
-        return {}, "Unable to load Statbotics win probabilities."
-    return win_chance_by_match, None
+    if win_chance_by_match:
+        pulled_at = datetime.now(dt_timezone.utc).isoformat()
+        cache.set(cache_key, win_chance_by_match, 120)
+        cache.set(stale_cache_key, win_chance_by_match, 1800)
+        cache.set(pulled_at_cache_key, pulled_at, 120)
+        cache.set(stale_pulled_at_cache_key, pulled_at, 1800)
+        return win_chance_by_match, None, pulled_at
+
+    if had_request_error and stale_map:
+        return stale_map, None, cache.get(stale_pulled_at_cache_key)
+    if had_request_error:
+        return {}, "Unable to load Statbotics win probabilities.", None
+    return win_chance_by_match, None, None
 
 
 @login_required()
@@ -1238,8 +1305,10 @@ def view_pit_dashboard(request):
     queueing_match_numbers = set()
     queue_time_by_match = {}
     queue_eta_epoch_by_match = {}
+    start_eta_epoch_by_match = {}
     display_tz = ZoneInfo("America/New_York")
     statbotics_error = None
+    statbotics_last_pulled_display = None
     win_chance_by_match = {}
 
     try:
@@ -1294,14 +1363,24 @@ def view_pit_dashboard(request):
                 and "soon" not in status_text
             ):
                 queueing_match_numbers.add(match_number)
-            queue_time_ms = (nexus_match.get("times") or {}).get("estimatedQueueTime")
-            if not queue_time_ms:
-                continue
+            times_payload = nexus_match.get("times") or {}
+            queue_time_ms = _extract_first_epoch_ms(
+                times_payload,
+                ("estimatedQueueTime", "estQueueTime", "queueTime"),
+            )
+            start_time_ms = _extract_first_epoch_ms(
+                times_payload,
+                ("estimatedStartTime", "estStartTime", "scheduledStartTime", "actualStartTime"),
+            )
 
             try:
-                local_dt = datetime.fromtimestamp(queue_time_ms / 1000, tz=dt_timezone.utc).astimezone(display_tz)
-                queue_time_by_match[match_number] = local_dt.strftime("%I:%M %p").lstrip("0")
-                queue_eta_epoch_by_match[match_number] = int(local_dt.timestamp())
+                if start_time_ms:
+                    start_local = datetime.fromtimestamp(start_time_ms / 1000, tz=dt_timezone.utc).astimezone(display_tz)
+                    start_eta_epoch_by_match[match_number] = int(start_local.timestamp())
+                if queue_time_ms:
+                    local_dt = datetime.fromtimestamp(queue_time_ms / 1000, tz=dt_timezone.utc).astimezone(display_tz)
+                    queue_time_by_match[match_number] = local_dt.strftime("%I:%M %p").lstrip("0")
+                    queue_eta_epoch_by_match[match_number] = int(local_dt.timestamp())
             except Exception:
                 continue
     except NexusApiKey.DoesNotExist:
@@ -1330,11 +1409,19 @@ def view_pit_dashboard(request):
         match_obj for match_obj in team_matches
         if match_obj.match_number not in completed_match_numbers
     ]
-    win_chance_by_match, statbotics_error = _load_statbotics_rest_win_chances(
+    win_chance_by_match, statbotics_error, statbotics_last_pulled = _load_statbotics_rest_win_chances(
         event_key=event.tba_event_key,
         team_number=team_number,
         matches=shown_matches,
     )
+    if statbotics_last_pulled:
+        try:
+            parsed = datetime.fromisoformat(str(statbotics_last_pulled).replace("Z", "+00:00"))
+            if parsed.tzinfo is None:
+                parsed = parsed.replace(tzinfo=dt_timezone.utc)
+            statbotics_last_pulled_display = parsed.astimezone(display_tz).strftime("%b %d, %I:%M:%S %p").replace(" 0", " ")
+        except Exception:
+            statbotics_last_pulled_display = str(statbotics_last_pulled)
 
     qual_rows = [
         {
@@ -1342,7 +1429,9 @@ def view_pit_dashboard(request):
             "match_label": f"Q{m.match_number}",
             "queue_time": queue_time_by_match.get(m.match_number, "-"),
             "queue_eta_epoch": queue_eta_epoch_by_match.get(m.match_number),
+            "start_eta_epoch": start_eta_epoch_by_match.get(m.match_number),
             "win_chance": win_chance_by_match.get(m.match_number, "-"),
+            "win_chance_class": _win_chance_class(win_chance_by_match.get(m.match_number, "-")),
             "statbotics_match_url": f"https://www.statbotics.io/match/{event.tba_event_key}_qm{m.match_number}",
             "is_queueing": bool(current_qual_match_num and m.match_number <= current_qual_match_num),
             "blue_alliance_number": "-",
@@ -1395,7 +1484,9 @@ def view_pit_dashboard(request):
             "match_label": _format_playoff_label(m.comp_level, m.set_number, m.match_number),
             "queue_time": "-",
             "queue_eta_epoch": None,
+            "start_eta_epoch": None,
             "win_chance": "-",
+            "win_chance_class": _win_chance_class("-"),
             "statbotics_match_url": f"https://www.statbotics.io/match/{m.tba_match_key}",
             "is_queueing": False,
             "blue_alliance_number": m.blue_alliance_number if m.blue_alliance_number is not None else "-",
@@ -1560,14 +1651,24 @@ def view_pit_dashboard(request):
         est_start_seconds = None
         queue_now = False
         alert_reason = None
+        now_epoch = int(datetime.now(dt_timezone.utc).timestamp())
+        default_queue_to_start_seconds = 25 * 60
 
         eta_epoch = next_row.get("queue_eta_epoch")
+        start_epoch = next_row.get("start_eta_epoch")
+        if isinstance(start_epoch, int):
+            est_start_seconds = max(0, start_epoch - now_epoch)
+
         if isinstance(eta_epoch, int):
-            countdown_seconds = max(0, eta_epoch - int(datetime.now(dt_timezone.utc).timestamp()))
-            est_start_seconds = countdown_seconds + 60
+            countdown_seconds = max(0, eta_epoch - now_epoch)
+            if est_start_seconds is None:
+                est_start_seconds = countdown_seconds + default_queue_to_start_seconds
             if countdown_seconds == 0:
                 queue_now = True
                 alert_reason = "Queue ETA reached"
+        elif est_start_seconds is not None:
+            # If queue ETA is missing, derive a usable queue estimate from start ETA.
+            countdown_seconds = max(0, est_start_seconds - default_queue_to_start_seconds)
 
         normalized_next_label = _normalize_label_for_compare(next_row.get("match_label"))
         normalized_now_queuing = _normalize_label_for_compare(now_queuing)
@@ -1589,7 +1690,7 @@ def view_pit_dashboard(request):
             if prev_match_number and live_stream_match_number == prev_match_number:
                 elapsed = max(0, 135 - int(live_match_data["seconds_remaining"]))
                 queue_trigger_in = max(0, 60 - elapsed)
-                estimated_start_in = max(0, int(live_match_data["seconds_remaining"]) + 30)
+                estimated_start_in = max(0, int(live_match_data["seconds_remaining"]) + 110)
                 if countdown_seconds is None:
                     countdown_seconds = queue_trigger_in
                 else:
@@ -1686,6 +1787,7 @@ def view_pit_dashboard(request):
         "parts_requests": parts_requests_display,
         "nexus_error": nexus_error,
         "statbotics_error": statbotics_error,
+        "statbotics_last_pulled_display": statbotics_last_pulled_display,
         "robot_nt_status": _get_NT_tables(),
         "show_rsl_wall": _is_localhost_or_local_ip(request),
         "live_match_data": live_match_data,
@@ -1773,6 +1875,17 @@ def assign_recording_to_match(request, recording_id):
         ]
     )
     return redirect("scouting:pit_dashboard")
+
+
+@login_required()
+@require_POST
+def open_recording_local(request, recording_id):
+    if not _is_localhost_or_local_ip(request):
+        return HttpResponseForbidden("Local access only.")
+
+    recording = get_object_or_404(LivestreamRecording, id=recording_id)
+    ok, message = open_recording_or_folder(recording)
+    return JsonResponse({"ok": ok, "message": message}, status=200 if ok else 400)
 
 
 @login_required()
