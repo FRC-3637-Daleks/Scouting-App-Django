@@ -541,12 +541,33 @@ def _win_chance_class(win_chance_text):
 def _get_statbotics_session():
     session = requests.Session()
     retry = Retry(
-        total=0,
-        connect=0,
-        read=0,
+        total=2,
+        connect=2,
+        read=2,
         redirect=0,
-        status=0,
-        backoff_factor=0,
+        status=2,
+        status_forcelist=[429, 500, 502, 503, 504],
+        allowed_methods=frozenset(["GET"]),
+        backoff_factor=0.2,
+        raise_on_status=False,
+    )
+    adapter = HTTPAdapter(max_retries=retry)
+    session.mount("https://", adapter)
+    session.mount("http://", adapter)
+    return session
+
+
+def _get_nexus_session():
+    session = requests.Session()
+    retry = Retry(
+        total=2,
+        connect=2,
+        read=2,
+        redirect=0,
+        status=2,
+        status_forcelist=[429, 500, 502, 503, 504],
+        allowed_methods=frozenset(["GET"]),
+        backoff_factor=0.2,
         raise_on_status=False,
     )
     adapter = HTTPAdapter(max_retries=retry)
@@ -910,7 +931,7 @@ def _load_statbotics_rest_win_chances(event_key, team_number, matches):
     win_chance_by_match = {}
     had_request_error = False
     session = _get_statbotics_session()
-    fetch_budget_seconds = 2.0
+    fetch_budget_seconds = 2.0 if stale_map else 6.0
     fetch_started = time.monotonic()
 
     try:
@@ -921,7 +942,7 @@ def _load_statbotics_rest_win_chances(event_key, team_number, matches):
                 "event": event_key,
                 "limit": max(100, len(match_number_set) + 20),
             },
-            timeout=min(2.0, fetch_budget_seconds),
+            timeout=min(fetch_budget_seconds, 6.0),
         )
         response.raise_for_status()
         payload = response.json()
@@ -1412,6 +1433,7 @@ def view_pit_dashboard(request):
 
     nexus_cache_key = f"pit_dash_nexus:{event.tba_event_key}"
     cached_nexus_status = cache.get(nexus_cache_key)
+    nexus_fetch_timeout_seconds = 2.0 if isinstance(cached_nexus_status, dict) else 6.0
     if isinstance(cached_nexus_status, dict):
         nexus_status = cached_nexus_status
         parsed_nexus = _parse_nexus_dashboard_payload(nexus_status, display_tz)
@@ -1428,10 +1450,10 @@ def view_pit_dashboard(request):
 
     try:
         nexus_key = NexusApiKey.objects.get(active=True).api_key
-        response = requests.get(
+        response = _get_nexus_session().get(
             f"https://frc.nexus/api/v1/event/{event.tba_event_key}",
             headers={"Nexus-Api-Key": nexus_key},
-            timeout=2,
+            timeout=nexus_fetch_timeout_seconds,
         )
         response.raise_for_status()
         live_nexus_status = response.json()
