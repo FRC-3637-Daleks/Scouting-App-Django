@@ -17,6 +17,7 @@ from django.core.cache import cache
 from django.contrib.auth.decorators import login_required
 from django.utils.dateparse import parse_datetime
 import json
+import time
 from django.shortcuts import render
 from .models import (
     TeamRanking,
@@ -27,7 +28,7 @@ from .models import (
     PitDashboardLiveStatus,
 )
 from .recording_service import get_active_recording, start_recording, stop_recording
-from .recording_service import open_recording_or_folder
+from .recording_service import open_recording_or_folder, get_recording_source_preflight
 from django.db.models import F
 from django.db.models import OuterRef, Subquery, Value, FloatField, IntegerField
 from pathlib import Path
@@ -38,6 +39,7 @@ import re
 import ipaddress
 from datetime import datetime, timezone as dt_timezone
 from zoneinfo import ZoneInfo
+from statistics import median
 from urllib3.util.retry import Retry
 from django.views.decorators.http import require_POST
 from scouting.ntTablesGetter import get_status
@@ -426,6 +428,90 @@ def _extract_qual_match_number(label, payload_row=None):
     return _parse_match_number_from_payload(payload_row)
 
 
+def _parse_nexus_dashboard_payload(nexus_status, display_tz):
+    matches_payload = nexus_status.get("matches")
+    if not isinstance(matches_payload, list):
+        matches_payload = []
+
+    now_queuing = nexus_status.get("nowQueuing") or nexus_status.get("now_queuing")
+    announcements = nexus_status.get("announcements") or []
+    announcements_display = _format_announcements(announcements, display_tz)
+    parts_requests = nexus_status.get("partsRequests") or []
+    parts_requests_display = _format_parts_requests(parts_requests, display_tz)
+    current_match = nexus_status.get("currentMatch") or nexus_status.get("current_match")
+    if not current_match:
+        current_match, _ = _derive_current_match_from_matches(matches_payload)
+
+    current_qual_match_num = None
+    if not now_queuing:
+        derived_label, derived_match_num = _derive_now_queuing_from_matches(matches_payload)
+        if derived_label:
+            now_queuing = derived_label
+            current_qual_match_num = derived_match_num
+
+    if isinstance(now_queuing, str):
+        match = re.search(r"Qualification\s+(\d+)", now_queuing, flags=re.IGNORECASE)
+        if match:
+            current_qual_match_num = int(match.group(1))
+
+    queueing_match_numbers = set()
+    queue_time_by_match = {}
+    queue_eta_epoch_by_match = {}
+    start_eta_epoch_by_match = {}
+    queue_status_by_match = {}
+
+    for nexus_match in matches_payload:
+        if not isinstance(nexus_match, dict):
+            continue
+        label = nexus_match.get("label") or ""
+        match = re.search(r"^Qualification\s+(\d+)", label, flags=re.IGNORECASE)
+        if not match:
+            continue
+
+        match_number = int(match.group(1))
+        status_text = str(nexus_match.get("status") or "").lower().strip()
+        queue_status_by_match[match_number] = status_text
+        if (
+            ("queue" in status_text or "queu" in status_text or "on deck" in status_text)
+            and "soon" not in status_text
+        ):
+            queueing_match_numbers.add(match_number)
+
+        times_payload = nexus_match.get("times") or {}
+        queue_time_ms = _extract_first_epoch_ms(
+            times_payload,
+            ("estimatedQueueTime", "estQueueTime", "queueTime"),
+        )
+        start_time_ms = _extract_first_epoch_ms(
+            times_payload,
+            ("estimatedStartTime", "estStartTime", "scheduledStartTime", "actualStartTime"),
+        )
+
+        try:
+            if start_time_ms:
+                start_local = datetime.fromtimestamp(start_time_ms / 1000, tz=dt_timezone.utc).astimezone(display_tz)
+                start_eta_epoch_by_match[match_number] = int(start_local.timestamp())
+            if queue_time_ms:
+                local_dt = datetime.fromtimestamp(queue_time_ms / 1000, tz=dt_timezone.utc).astimezone(display_tz)
+                queue_time_by_match[match_number] = local_dt.strftime("%I:%M %p").lstrip("0")
+                queue_eta_epoch_by_match[match_number] = int(local_dt.timestamp())
+        except Exception:
+            continue
+
+    return {
+        "now_queuing": now_queuing,
+        "announcements_display": announcements_display,
+        "parts_requests_display": parts_requests_display,
+        "current_match": current_match,
+        "current_qual_match_num": current_qual_match_num,
+        "queueing_match_numbers": queueing_match_numbers,
+        "queue_time_by_match": queue_time_by_match,
+        "queue_eta_epoch_by_match": queue_eta_epoch_by_match,
+        "start_eta_epoch_by_match": start_eta_epoch_by_match,
+        "queue_status_by_match": queue_status_by_match,
+    }
+
+
 def _extract_first_epoch_ms(times_payload, key_names):
     if not isinstance(times_payload, dict):
         return None
@@ -455,12 +541,12 @@ def _win_chance_class(win_chance_text):
 def _get_statbotics_session():
     session = requests.Session()
     retry = Retry(
-        total=3,
-        connect=3,
-        read=3,
-        backoff_factor=0.5,
-        status_forcelist=[429, 500, 502, 503, 504],
-        allowed_methods=frozenset(["GET"]),
+        total=0,
+        connect=0,
+        read=0,
+        redirect=0,
+        status=0,
+        backoff_factor=0,
         raise_on_status=False,
     )
     adapter = HTTPAdapter(max_retries=retry)
@@ -824,6 +910,8 @@ def _load_statbotics_rest_win_chances(event_key, team_number, matches):
     win_chance_by_match = {}
     had_request_error = False
     session = _get_statbotics_session()
+    fetch_budget_seconds = 2.0
+    fetch_started = time.monotonic()
 
     try:
         response = session.get(
@@ -833,7 +921,7 @@ def _load_statbotics_rest_win_chances(event_key, team_number, matches):
                 "event": event_key,
                 "limit": max(100, len(match_number_set) + 20),
             },
-            timeout=10,
+            timeout=min(2.0, fetch_budget_seconds),
         )
         response.raise_for_status()
         payload = response.json()
@@ -871,7 +959,14 @@ def _load_statbotics_rest_win_chances(event_key, team_number, matches):
 
     # Fallback to per-match endpoint only for unresolved rows.
     unresolved = [n for n in match_number_set if n not in win_chance_by_match]
-    for match_number in unresolved:
+    remaining_budget = fetch_budget_seconds - (time.monotonic() - fetch_started)
+    if remaining_budget <= 0:
+        unresolved = []
+
+    for match_number in unresolved[:3]:
+        remaining_budget = fetch_budget_seconds - (time.monotonic() - fetch_started)
+        if remaining_budget <= 0.25:
+            break
         match_obj = match_lookup.get(match_number)
         if not match_obj:
             continue
@@ -881,7 +976,10 @@ def _load_statbotics_rest_win_chances(event_key, team_number, matches):
 
         match_key = f"{event_key}_qm{match_number}"
         try:
-            response = session.get(f"https://api.statbotics.io/v3/match/{match_key}", timeout=7)
+            response = session.get(
+                f"https://api.statbotics.io/v3/match/{match_key}",
+                timeout=min(0.9, max(0.25, remaining_budget)),
+            )
             if response.status_code == 404:
                 continue
             response.raise_for_status()
@@ -1306,89 +1404,59 @@ def view_pit_dashboard(request):
     queue_time_by_match = {}
     queue_eta_epoch_by_match = {}
     start_eta_epoch_by_match = {}
+    queue_status_by_match = {}
     display_tz = ZoneInfo("America/New_York")
     statbotics_error = None
     statbotics_last_pulled_display = None
     win_chance_by_match = {}
+
+    nexus_cache_key = f"pit_dash_nexus:{event.tba_event_key}"
+    cached_nexus_status = cache.get(nexus_cache_key)
+    if isinstance(cached_nexus_status, dict):
+        nexus_status = cached_nexus_status
+        parsed_nexus = _parse_nexus_dashboard_payload(nexus_status, display_tz)
+        now_queuing = parsed_nexus["now_queuing"]
+        announcements_display = parsed_nexus["announcements_display"]
+        parts_requests_display = parsed_nexus["parts_requests_display"]
+        current_match = parsed_nexus["current_match"]
+        current_qual_match_num = parsed_nexus["current_qual_match_num"]
+        queueing_match_numbers = parsed_nexus["queueing_match_numbers"]
+        queue_time_by_match = parsed_nexus["queue_time_by_match"]
+        queue_eta_epoch_by_match = parsed_nexus["queue_eta_epoch_by_match"]
+        start_eta_epoch_by_match = parsed_nexus["start_eta_epoch_by_match"]
+        queue_status_by_match = parsed_nexus["queue_status_by_match"]
 
     try:
         nexus_key = NexusApiKey.objects.get(active=True).api_key
         response = requests.get(
             f"https://frc.nexus/api/v1/event/{event.tba_event_key}",
             headers={"Nexus-Api-Key": nexus_key},
-            timeout=10,
+            timeout=2,
         )
         response.raise_for_status()
-        nexus_status = response.json()
-
-        matches_payload = nexus_status.get("matches")
-        if not isinstance(matches_payload, list):
-            matches_payload = []
-
-        now_queuing = nexus_status.get("nowQueuing") or nexus_status.get("now_queuing")
-        announcements = nexus_status.get("announcements") or []
-        announcements_display = _format_announcements(announcements, display_tz)
-        parts_requests = nexus_status.get("partsRequests") or []
-        parts_requests_display = _format_parts_requests(parts_requests, display_tz)
-        current_match = nexus_status.get("currentMatch") or nexus_status.get("current_match")
-        if not current_match:
-            current_match, _ = _derive_current_match_from_matches(matches_payload)
-
-        if not now_queuing:
-            derived_label, derived_match_num = _derive_now_queuing_from_matches(matches_payload)
-            if derived_label:
-                now_queuing = derived_label
-                current_qual_match_num = derived_match_num
-
-        if isinstance(now_queuing, str):
-            match = re.search(r"Qualification\s+(\d+)", now_queuing, flags=re.IGNORECASE)
-            if match:
-                current_qual_match_num = int(match.group(1))
-
-        # Pull estimated queue time for qualification matches from Nexus payload.
-        for nexus_match in matches_payload:
-            if not isinstance(nexus_match, dict):
-                continue
-            label = nexus_match.get("label") or ""
-            match = re.search(r"^Qualification\s+(\d+)", label, flags=re.IGNORECASE)
-            if not match:
-                continue
-
-            match_number = int(match.group(1))
-            status_text = str(nexus_match.get("status") or "").lower().strip()
-            # Treat only actively queued/on-deck matches as "in queue".
-            # Do not flag "queuing soon" as in queue.
-            if (
-                ("queue" in status_text or "queu" in status_text or "on deck" in status_text)
-                and "soon" not in status_text
-            ):
-                queueing_match_numbers.add(match_number)
-            times_payload = nexus_match.get("times") or {}
-            queue_time_ms = _extract_first_epoch_ms(
-                times_payload,
-                ("estimatedQueueTime", "estQueueTime", "queueTime"),
-            )
-            start_time_ms = _extract_first_epoch_ms(
-                times_payload,
-                ("estimatedStartTime", "estStartTime", "scheduledStartTime", "actualStartTime"),
-            )
-
-            try:
-                if start_time_ms:
-                    start_local = datetime.fromtimestamp(start_time_ms / 1000, tz=dt_timezone.utc).astimezone(display_tz)
-                    start_eta_epoch_by_match[match_number] = int(start_local.timestamp())
-                if queue_time_ms:
-                    local_dt = datetime.fromtimestamp(queue_time_ms / 1000, tz=dt_timezone.utc).astimezone(display_tz)
-                    queue_time_by_match[match_number] = local_dt.strftime("%I:%M %p").lstrip("0")
-                    queue_eta_epoch_by_match[match_number] = int(local_dt.timestamp())
-            except Exception:
-                continue
+        live_nexus_status = response.json()
+        if isinstance(live_nexus_status, dict):
+            nexus_status = live_nexus_status
+            cache.set(nexus_cache_key, live_nexus_status, 60)
+            parsed_nexus = _parse_nexus_dashboard_payload(nexus_status, display_tz)
+            now_queuing = parsed_nexus["now_queuing"]
+            announcements_display = parsed_nexus["announcements_display"]
+            parts_requests_display = parsed_nexus["parts_requests_display"]
+            current_match = parsed_nexus["current_match"]
+            current_qual_match_num = parsed_nexus["current_qual_match_num"]
+            queueing_match_numbers = parsed_nexus["queueing_match_numbers"]
+            queue_time_by_match = parsed_nexus["queue_time_by_match"]
+            queue_eta_epoch_by_match = parsed_nexus["queue_eta_epoch_by_match"]
+            start_eta_epoch_by_match = parsed_nexus["start_eta_epoch_by_match"]
+            queue_status_by_match = parsed_nexus["queue_status_by_match"]
     except NexusApiKey.DoesNotExist:
         nexus_error = "No active Nexus API key configured."
     except requests.RequestException:
-        nexus_error = "Unable to load live event status from FRC Nexus."
+        if not isinstance(cached_nexus_status, dict):
+            nexus_error = "Unable to load live event status from FRC Nexus."
     except ValueError:
-        nexus_error = "FRC Nexus returned invalid data."
+        if not isinstance(cached_nexus_status, dict):
+            nexus_error = "FRC Nexus returned invalid data."
 
     # Show a rolling window: 3 matches before now-queuing plus current/upcoming.
     if current_qual_match_num:
@@ -1583,18 +1651,38 @@ def view_pit_dashboard(request):
         elif alliance == "blue" and result.blue_climb_success is True:
             climbs_completed += 1
     climb_success_rate = f"{climbs_completed} / {matches_played}"
-    event_rank_rows = [
-        {
-            "team_number": ranking.team.team_number,
-            "team_name": ranking.team.team_name,
-            "rank": ranking.rank,
-            "ranking_points": ranking.ranking_points,
-        }
-        for ranking in TeamRanking.objects.select_related("team").filter(
-            event=event,
-            rank__isnull=False,
-        ).order_by("rank", "team__team_number")
-    ]
+    event_rank_rows = []
+    for ranking in TeamRanking.objects.select_related("team").filter(
+        event=event,
+        rank__isnull=False,
+    ).order_by("rank", "team__team_number"):
+        is_null_team = (ranking.team.team_number == 0 and ranking.ranking_points is None)
+        is_unranked_entry = (
+            (ranking.rank in (0, None))
+            and (ranking.ranking_points is None or float(ranking.ranking_points) <= 0.0)
+        )
+        event_rank_rows.append(
+            {
+                "team_number": "-" if is_null_team else ranking.team.team_number,
+                "team_name": "Unassigned" if is_null_team else ranking.team.team_name,
+                "rank": ranking.rank,
+                "rank_display": "-" if is_unranked_entry else ranking.rank,
+                "ranking_points": ranking.ranking_points,
+                "is_null_team": is_null_team,
+                "is_unranked_entry": is_unranked_entry,
+                "_sort_team_number": ranking.team.team_number,
+            }
+        )
+
+    # Push placeholder/null rows and unranked rank-0/no-RP rows to the bottom.
+    event_rank_rows.sort(
+        key=lambda row: (
+            1 if row["is_null_team"] else 0,
+            1 if row["is_unranked_entry"] else 0,
+            row["rank"] if row["rank"] is not None else 10**6,
+            row["_sort_team_number"],
+        )
+    )
 
     _our_rank = 0
     _other_rank = 60
@@ -1644,15 +1732,23 @@ def view_pit_dashboard(request):
     next_match_alert = None
     next_match_clock = None
     queue_soon_window_seconds = 7 * 60 + 30
-    queue_now_window_seconds = 60
+    queue_now_tolerance_seconds = 5
+    queue_to_start_offsets = []
+    for match_num, queue_epoch in queue_eta_epoch_by_match.items():
+        start_epoch = start_eta_epoch_by_match.get(match_num)
+        if not isinstance(start_epoch, int):
+            continue
+        delta = start_epoch - queue_epoch
+        # Keep realistic deltas only.
+        if 5 * 60 <= delta <= 60 * 60:
+            queue_to_start_offsets.append(delta)
+    queue_to_start_seconds = int(median(queue_to_start_offsets)) if queue_to_start_offsets else None
+
     if match_rows:
         next_row = match_rows[0]
         countdown_seconds = None
         est_start_seconds = None
-        queue_now = False
-        alert_reason = None
         now_epoch = int(datetime.now(dt_timezone.utc).timestamp())
-        default_queue_to_start_seconds = 25 * 60
 
         eta_epoch = next_row.get("queue_eta_epoch")
         start_epoch = next_row.get("start_eta_epoch")
@@ -1661,24 +1757,19 @@ def view_pit_dashboard(request):
 
         if isinstance(eta_epoch, int):
             countdown_seconds = max(0, eta_epoch - now_epoch)
-            if est_start_seconds is None:
-                est_start_seconds = countdown_seconds + default_queue_to_start_seconds
-            if countdown_seconds == 0:
-                queue_now = True
-                alert_reason = "Queue ETA reached"
-        elif est_start_seconds is not None:
-            # If queue ETA is missing, derive a usable queue estimate from start ETA.
-            countdown_seconds = max(0, est_start_seconds - default_queue_to_start_seconds)
+            if est_start_seconds is None and queue_to_start_seconds is not None:
+                est_start_seconds = countdown_seconds + queue_to_start_seconds
+        elif est_start_seconds is not None and queue_to_start_seconds is not None:
+            # Derive queue ETA from start ETA only when we have observed Nexus queue->start offsets.
+            countdown_seconds = max(0, est_start_seconds - queue_to_start_seconds)
 
         normalized_next_label = _normalize_label_for_compare(next_row.get("match_label"))
         normalized_now_queuing = _normalize_label_for_compare(now_queuing)
         normalized_current_match = _normalize_label_for_compare(current_match)
-        if not queue_now and normalized_next_label and (
+        next_match_is_now_queueing = bool(normalized_next_label and (
             normalized_next_label in normalized_now_queuing
             or normalized_next_label in normalized_current_match
-        ):
-            queue_now = True
-            alert_reason = "Now queuing"
+        ))
 
         if (
             live_match_data
@@ -1687,26 +1778,22 @@ def view_pit_dashboard(request):
             and isinstance(live_stream_match_number, int)
         ):
             prev_match_number = max(0, int(next_row.get("sort_match", 0)) - 1)
-            if prev_match_number and live_stream_match_number == prev_match_number:
-                elapsed = max(0, 135 - int(live_match_data["seconds_remaining"]))
-                queue_trigger_in = max(0, 60 - elapsed)
-                estimated_start_in = max(0, int(live_match_data["seconds_remaining"]) + 110)
-                if countdown_seconds is None:
-                    countdown_seconds = queue_trigger_in
-                else:
-                    countdown_seconds = min(countdown_seconds, queue_trigger_in)
-                if est_start_seconds is None:
-                    est_start_seconds = estimated_start_in
-                else:
-                    est_start_seconds = min(est_start_seconds, estimated_start_in)
-                if elapsed >= 60:
-                    queue_now = True
-                    alert_reason = "Previous match is 1:00+ in"
+            # Use live stream only as a secondary source when Nexus gave no usable countdown.
+            if prev_match_number and live_stream_match_number == prev_match_number and countdown_seconds is None:
+                seconds_remaining = int(live_match_data["seconds_remaining"])
+                # Queueing threshold tied to field progression; do not force "now" without Nexus support.
+                countdown_seconds = max(0, seconds_remaining - 60)
+                if est_start_seconds is None and queue_to_start_seconds is not None:
+                    est_start_seconds = countdown_seconds + queue_to_start_seconds
 
-        if isinstance(countdown_seconds, int) and countdown_seconds <= queue_now_window_seconds:
-            if not queue_now:
-                alert_reason = "Under 1:00 to queue"
-            queue_now = True
+        # Do not show 00:00:00 unless this match is actually queueing now.
+        if isinstance(countdown_seconds, int):
+            if countdown_seconds <= 0 and next_match_is_now_queueing:
+                countdown_seconds = 0
+            elif countdown_seconds <= 0:
+                countdown_seconds = 1
+
+        queue_now = bool(isinstance(countdown_seconds, int) and countdown_seconds <= queue_now_tolerance_seconds)
 
         if isinstance(countdown_seconds, int):
             next_match_clock = {
@@ -1716,8 +1803,8 @@ def view_pit_dashboard(request):
             }
 
         show_queue_soon = (
-            not queue_now
-            and isinstance(countdown_seconds, int)
+            isinstance(countdown_seconds, int)
+            and countdown_seconds > queue_now_tolerance_seconds
             and countdown_seconds <= queue_soon_window_seconds
         )
         if queue_now or show_queue_soon:
@@ -1726,10 +1813,10 @@ def view_pit_dashboard(request):
                 "match_label": next_row.get("match_label"),
                 "queue_now": queue_now,
                 "level": alert_level,
-                "status_text": "CUE NOW" if queue_now else "Cueing Soon",
+                "status_text": "Queueing Now" if queue_now else "Queueing Soon",
                 "countdown_seconds": countdown_seconds,
                 "est_start_seconds": est_start_seconds,
-                "reason": alert_reason or "Estimated",
+                "reason": "Estimated",
             }
 
     local_recordings = []
@@ -1788,7 +1875,7 @@ def view_pit_dashboard(request):
         "nexus_error": nexus_error,
         "statbotics_error": statbotics_error,
         "statbotics_last_pulled_display": statbotics_last_pulled_display,
-        "robot_nt_status": _get_NT_tables(),
+        "robot_nt_status": "n",
         "show_rsl_wall": _is_localhost_or_local_ip(request),
         "live_match_data": live_match_data,
         "next_match_clock": next_match_clock,
@@ -1822,6 +1909,7 @@ def view_recording_control(request):
         return redirect("scouting:recording_control")
 
     active_recording = get_active_recording()
+    preflight = get_recording_source_preflight()
     recent_recordings = list(LivestreamRecording.objects.order_by("-started_at")[:40])
     recent_recordings = [
         rec for rec in recent_recordings
@@ -1837,6 +1925,7 @@ def view_recording_control(request):
         "media_base": media_base,
         "public_control_url": public_control_url,
         "source_url": str(getattr(settings, "LIVESTREAM_SOURCE_URL", "") or ""),
+        "preflight": preflight,
     }
     return render(request, "scouting/recording_control.html", context)
 

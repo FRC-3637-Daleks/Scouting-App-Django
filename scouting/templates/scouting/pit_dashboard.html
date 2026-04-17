@@ -29,11 +29,11 @@
                     {% endif %}
                 </h2>
             </div>
-            <div class="pit-nextmatch-panel {% if next_match_alert and next_match_alert.level == 'now' %}pit-nextmatch-panel-now{% elif next_match_alert and next_match_alert.level == 'soon' %}pit-nextmatch-panel-soon{% endif %}">
+            <div id="pit-nextmatch-panel" class="pit-nextmatch-panel {% if next_match_alert and next_match_alert.level == 'now' %}pit-nextmatch-panel-now{% elif next_match_alert and next_match_alert.level == 'soon' %}pit-nextmatch-panel-soon{% endif %}">
                 <div class="pit-nextmatch-head">
                     <div class="pit-nextmatch-title">Next Match</div>
                     {% if next_match_alert %}
-                        <div class="pit-nextmatch-state {% if next_match_alert.level == 'now' %}pit-nextmatch-state-now{% else %}pit-nextmatch-state-soon{% endif %}">
+                        <div id="pit-nextmatch-state" class="pit-nextmatch-state {% if next_match_alert.level == 'now' %}pit-nextmatch-state-now{% else %}pit-nextmatch-state-soon{% endif %}">
                             {{ next_match_alert.status_text }}
                         </div>
                     {% endif %}
@@ -352,7 +352,7 @@
                                             <tr class="event-rank-row {% if row.team_number == team_number %}event-rank-our-team{% endif %}">
                                                 <td class="text-center">{{ row.team_number }}</td>
                                                 <td>{{ row.team_name }}</td>
-                                                <td class="text-center">{{ row.rank }}</td>
+                                                <td class="text-center">{{ row.rank_display|default:row.rank }}</td>
                                                 <td class="text-center">
                                                     {% if row.ranking_points is not None %}
                                                         {{ row.ranking_points|floatformat:2 }}
@@ -1044,7 +1044,7 @@
             if (!wrap || rows.length === 0) return;
 
             let page = 0;
-            const rowsPerPage = 11;
+            const rowsPerPage = 8;
             let totalPages = 1;
             const intervalMs = 10000;
             const storageKey = 'pit_event_rank_skip_last_page';
@@ -1133,6 +1133,17 @@
         })();
 
         (function () {
+            function forceQueueNowVisualState() {
+                const panel = document.getElementById('pit-nextmatch-panel');
+                const stateBox = document.getElementById('pit-nextmatch-state');
+                if (!panel || !stateBox) return;
+                panel.classList.remove('pit-nextmatch-panel-soon');
+                panel.classList.add('pit-nextmatch-panel-now');
+                stateBox.classList.remove('pit-nextmatch-state-soon');
+                stateBox.classList.add('pit-nextmatch-state-now');
+                stateBox.textContent = 'Queueing Now';
+            }
+
             function formatSeconds(seconds) {
                 const clamped = Math.max(0, Number(seconds) || 0);
                 const hours = Math.floor(clamped / 3600);
@@ -1154,6 +1165,9 @@
                     if (seconds <= 0) return;
                     seconds -= 1;
                     render();
+                    if (prefix === 'Queue In' && seconds <= 5) {
+                        forceQueueNowVisualState();
+                    }
                 }, 1000);
             }
 

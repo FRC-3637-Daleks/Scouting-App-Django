@@ -54,10 +54,76 @@ def _resolve_stream_url(source_url):
             info = ydl.extract_info(source_url, download=False)
             resolved = info.get("url")
             if resolved:
-                return resolved, True
+                metadata = {
+                    "live_status": str(info.get("live_status") or "").strip().lower(),
+                    "is_live": bool(info.get("is_live")),
+                    "was_live": bool(info.get("was_live")),
+                    "duration": info.get("duration"),
+                    "title": str(info.get("title") or "").strip(),
+                    "webpage_url": str(info.get("webpage_url") or source_url),
+                }
+                return resolved, True, metadata
     except Exception:
         pass
-    return source_url, False
+    return source_url, False, {}
+
+
+def get_recording_source_preflight():
+    source_url = str(getattr(settings, "LIVESTREAM_SOURCE_URL", "") or "").strip()
+    require_live = bool(getattr(settings, "LIVESTREAM_REQUIRE_YT_LIVE", True))
+    if not source_url:
+        return {
+            "ok": False,
+            "is_live": False,
+            "live_status": "unknown",
+            "title": "",
+            "source_url": "",
+            "message": "LIVESTREAM_SOURCE_URL is not configured.",
+        }
+
+    source_lower = source_url.lower()
+    if "youtube.com" not in source_lower and "youtu.be" not in source_lower:
+        return {
+            "ok": True,
+            "is_live": True,
+            "live_status": "non_youtube",
+            "title": "",
+            "source_url": source_url,
+            "message": "Non-YouTube source (no live preflight check).",
+        }
+
+    _resolved, extracted, meta = _resolve_stream_url(source_url)
+    if not extracted:
+        return {
+            "ok": False,
+            "is_live": False,
+            "live_status": "unknown",
+            "title": "",
+            "source_url": source_url,
+            "message": "Could not resolve YouTube metadata (install yt-dlp).",
+        }
+
+    live_status = str(meta.get("live_status") or "").lower()
+    is_live = bool(meta.get("is_live")) or live_status == "is_live"
+    title = str(meta.get("title") or "").strip()
+    if require_live and not is_live:
+        return {
+            "ok": False,
+            "is_live": False,
+            "live_status": live_status or "not_live",
+            "title": title,
+            "source_url": source_url,
+            "message": "Source is not live. Update LIVESTREAM_SOURCE_URL.",
+        }
+
+    return {
+        "ok": True,
+        "is_live": is_live,
+        "live_status": live_status or "unknown",
+        "title": title,
+        "source_url": source_url,
+        "message": "Source is live." if is_live else "Source check passed.",
+    }
 
 
 def _get_ffmpeg_path():
@@ -133,10 +199,24 @@ def start_recording(event=None):
     if not source_url:
         return False, "LIVESTREAM_SOURCE_URL is not configured.", None
 
-    stream_url, extracted = _resolve_stream_url(source_url)
+    stream_url, extracted, source_meta = _resolve_stream_url(source_url)
     source_lower = source_url.lower()
     if ("youtube.com" in source_lower or "youtu.be" in source_lower) and not extracted:
         return False, "Install yt-dlp in the server environment to record YouTube streams.", None
+    if ("youtube.com" in source_lower or "youtu.be" in source_lower) and extracted:
+        require_live = bool(getattr(settings, "LIVESTREAM_REQUIRE_YT_LIVE", True))
+        live_status = str(source_meta.get("live_status") or "").lower()
+        is_live = bool(source_meta.get("is_live"))
+        # Guardrail: block stale/non-live links by default to avoid huge VOD downloads.
+        if require_live and not is_live and live_status not in {"is_live"}:
+            title = source_meta.get("title") or "Unknown stream"
+            return (
+                False,
+                f"Blocked non-live YouTube source ({live_status or 'not_live'}): {title}. "
+                "Update LIVESTREAM_SOURCE_URL to the current live stream.",
+                None,
+            )
+
     output_dir, subdir = _get_recordings_dir()
     stamp = datetime.now(timezone.utc).astimezone().strftime("%Y%m%d_%H%M%S")
     filename = f"match_recording_{stamp}.mp4"

@@ -17,6 +17,18 @@
         <div class="card-body">
             <div class="mb-2"><strong>Control URL:</strong> <code>{{ public_control_url }}</code></div>
             <div class="mb-2"><strong>Source URL:</strong> <code>{{ source_url|default:'Not configured' }}</code></div>
+            <div class="mb-2">
+                <strong>Preflight:</strong>
+                {% if preflight.is_live %}
+                    <span class="badge bg-success">LIVE</span>
+                {% else %}
+                    <span class="badge bg-danger">NOT LIVE</span>
+                {% endif %}
+                <span class="ms-2">{{ preflight.message }}</span>
+                {% if preflight.title %}
+                    <div class="small text-muted mt-1">{{ preflight.title }}</div>
+                {% endif %}
+            </div>
             {% if active_recording %}
                 <div class="alert alert-danger mb-3">
                     <strong>Recording Active</strong><br>
