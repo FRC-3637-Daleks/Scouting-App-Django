@@ -24,7 +24,8 @@
             </div>
         </div>
     </div>
-    <div id="pit-dashboard-root" class="container-fluid py-3">
+    <div id="casino-watermark-overlay" class="casino-watermark-overlay" aria-hidden="true"></div>
+    <div id="pit-dashboard-root" class="container-fluid pit-casino-root">
         {% if statbotics_last_pulled_display %}
             <div class="statbotics-pull-chip">
                 Statbotics: {{ statbotics_last_pulled_display }}
@@ -75,19 +76,69 @@
                 {% endif %}
             </div>
         </div>
+        <div id="casino-marquee-bulbs" class="casino-marquee-bulbs mb-0">
+            <div class="marquee-bulb-track" aria-hidden="true">
+                <span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span>
+                <span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span>
+            </div>
+        </div>
         {% if nexus_error %}
             <div class="alert alert-warning">{{ nexus_error }}</div>
         {% endif %}
         {% if statbotics_error %}
             <div class="alert alert-warning">{{ statbotics_error }}</div>
         {% endif %}
-        <div class="row g-3">
+        <div class="casino-visual-deck mb-0">
+            <section class="casino-wheel-panel">
+                <h3>Roulette Intel Wheel</h3>
+                <div class="roulette-wheel">
+                    <div class="roulette-pointer"></div>
+                    <div class="roulette-hub">
+                        <span>TEAM {{ team_number }}</span>
+                    </div>
+                </div>
+                <div class="roulette-legend">
+                    <span>Rank: {% if our_rank %}{{ our_rank }}{% else %}-{% endif %}</span>
+                    <span>Played: {{ matches_played }}</span>
+                    <span>Queue: {% if now_queuing %}{{ now_queuing }}{% else %}n/a{% endif %}</span>
+                </div>
+            </section>
+            <section class="casino-doomsday-panel">
+                <h3>Doomsday Clock</h3>
+                <p class="m-0 small text-uppercase">End Of The World In</p>
+                <div id="doomsday-clock" class="doomsday-clock-value">Calculating future catastrophe...</div>
+                <div id="doomsday-target" class="small"></div>
+            </section>
+            <section class="casino-table-panel">
+                <h3>High Roller Table</h3>
+                <div class="casino-table-grid">
+                    <div class="casino-chip">
+                        <div class="casino-chip-label">Current Match</div>
+                        <div class="casino-chip-value">{% if current_match %}{{ current_match }}{% else %}Unavailable{% endif %}</div>
+                    </div>
+                    <div class="casino-chip">
+                        <div class="casino-chip-label">Now Queueing</div>
+                        <div class="casino-chip-value">{% if now_queuing %}{{ now_queuing }}{% else %}Unavailable{% endif %}</div>
+                    </div>
+                    <div class="casino-chip">
+                        <div class="casino-chip-label">Event Teams</div>
+                        <div class="casino-chip-value">{{ total_teams }}</div>
+                    </div>
+                    <div class="casino-chip">
+                        <div class="casino-chip-label">Matches Played</div>
+                        <div class="casino-chip-value">{{ matches_played }}</div>
+                    </div>
+                </div>
+            </section>
+        </div>
+
+        <div class="row g-3 pit-floor-grid">
             <div class="col-12 col-xxl-8">
-                <div class="card">
-                    <div class="card-header"><strong>Upcoming Matches</strong></div>
+                <div class="card casino-physical-table">
+                    <div class="card-header"><strong>Blackjack Table: Upcoming Matches</strong></div>
                     <div class="card-body p-0">
                         <div class="table-responsive">
-                            <table class="table table-striped table-hover m-0 text-center align-middle">
+                            <table class="table table-striped table-hover m-0 text-center align-middle casino-felt-table">
                                 <thead class="table-dark">
                                     <tr>
                                         <th scope="col" class="text-nowrap">Match #</th>
@@ -182,8 +233,8 @@
                 </div>
 
                 {% if show_playoff_bracket %}
-                    <div class="card mt-2">
-                        <div class="card-header"><strong>Playoff Bracket</strong></div>
+                    <div class="card mt-2 casino-physical-table">
+                        <div class="card-header"><strong>Tournament Rail: Playoff Bracket</strong></div>
                         <div class="card-body p-2">
                             <div class="tba-bracket-wrap" id="tba-bracket-wrap">
                                 <div class="tba-bracket-canvas" id="tba-bracket-canvas">
@@ -232,8 +283,8 @@
             </div>
 
             <div class="col-12 col-xxl-4">
-                <div class="card mb-3">
-                    <div class="card-header"><strong>Event Stats</strong></div>
+                <div class="card mb-3 casino-craps-card">
+                    <div class="card-header"><strong>Craps Table: Event Stakes</strong></div>
                     <div class="card-body">
                         <div class="row g-2">
                             <div class="col-12 col-md-4">
@@ -313,8 +364,8 @@
                     </div>
                 {% endif %}
 
-                <div class="card mt-3">
-                    <div class="card-header"><strong>Team {{ team_number }} Match Results</strong></div>
+                <div class="card mt-3 casino-slot-card">
+                    <div class="card-header"><strong>Slot Machine: Team {{ team_number }} Results</strong></div>
                     <div class="card-body p-0">
                         {% if team_match_results %}
                             <div class="table-responsive">
@@ -347,9 +398,9 @@
                     </div>
                 </div>
 
-                <div class="card mt-3" id="event-rank-widget">
+                <div class="card mt-3 casino-wheelboard-card" id="event-rank-widget">
                     <div class="card-header d-flex align-items-center justify-content-between gap-2">
-                        <strong>Event Rank</strong>
+                        <strong>Wheel Of Fortune Rankings</strong>
                         <div class="form-check form-switch m-0">
                             <input class="form-check-input" type="checkbox" role="switch" id="event-rank-skip-last-toggle">
                             <label class="form-check-label small" for="event-rank-skip-last-toggle">Skip uneven last page</label>
@@ -461,55 +512,456 @@
             </div>
         </div>
 
-        {% if show_rsl_wall %}
-            <div id="pit-rsl-footer" class="pit-rsl-footer mt-4">
-                <div class="pit-rsl-header d-flex flex-wrap align-items-center justify-content-between gap-2">
-                    <h3 class="m-0">Robot Signal Light Wall</h3>
-                    <span id="pit-rsl-status-text" class="badge bg-secondary">Checking robot status...</span>
-                </div>
-                <div
-                    id="pit-rsl-row"
-                    class="pit-rsl-row mt-2"
-                    data-initial-status="{{ robot_nt_status|default:'n' }}"
-                    data-on-src="{% static 'images/rsl/rsl_on.png' %}"
-                    data-off-src="{% static 'images/rsl/rsl_off.png' %}"
-                >
-                    <img class="pit-rsl-lamp" src="{% static 'images/rsl/rsl_off.png' %}" alt="RSL lamp 1">
-                    <img class="pit-rsl-lamp" src="{% static 'images/rsl/rsl_off.png' %}" alt="RSL lamp 2">
-                    <img class="pit-rsl-lamp" src="{% static 'images/rsl/rsl_off.png' %}" alt="RSL lamp 3">
-                    <img class="pit-rsl-lamp" src="{% static 'images/rsl/rsl_off.png' %}" alt="RSL lamp 4">
-                    <img class="pit-rsl-lamp" src="{% static 'images/rsl/rsl_off.png' %}" alt="RSL lamp 5">
-                    <img class="pit-rsl-lamp" src="{% static 'images/rsl/rsl_off.png' %}" alt="RSL lamp 6">
-                    <img class="pit-rsl-lamp" src="{% static 'images/rsl/rsl_off.png' %}" alt="RSL lamp 7">
-                    <img class="pit-rsl-lamp" src="{% static 'images/rsl/rsl_off.png' %}" alt="RSL lamp 8">
-                    <img class="pit-rsl-lamp" src="{% static 'images/rsl/rsl_off.png' %}" alt="RSL lamp 9">
-                    <img class="pit-rsl-lamp" src="{% static 'images/rsl/rsl_off.png' %}" alt="RSL lamp 10">
-                    <img class="pit-rsl-lamp" src="{% static 'images/rsl/rsl_off.png' %}" alt="RSL lamp 11">
-                    <img class="pit-rsl-lamp" src="{% static 'images/rsl/rsl_off.png' %}" alt="RSL lamp 12">
-                    <img class="pit-rsl-lamp" src="{% static 'images/rsl/rsl_off.png' %}" alt="RSL lamp 13">
-                    <img class="pit-rsl-lamp" src="{% static 'images/rsl/rsl_off.png' %}" alt="RSL lamp 14">
-                </div>
-            </div>
-        {% endif %}
+        <div id="retro-popups-root" class="retro-popups-root" aria-live="polite"></div>
+        <div id="queue-fireworks-layer" class="queue-fireworks-layer" aria-hidden="true"></div>
     </div>
 
     <style>
+        .pit-casino-root {
+            --casino-bg: #07251f;
+            --casino-bg-2: #0e3b2f;
+            --casino-gold: #f8d067;
+            --casino-gold-2: #f4b642;
+            --casino-red: #b01226;
+            --casino-red-2: #7f0e1b;
+            --casino-ink: #f7f3e4;
+            --casino-ink-dim: #d9d4c3;
+            position: relative;
+            isolation: isolate;
+            border-radius: 18px;
+            padding-top: 0;
+            padding-bottom: 2rem;
+            color: var(--casino-ink);
+            font-family: "Trebuchet MS", "Segoe UI", sans-serif;
+            background:
+                radial-gradient(circle at 18% 16%, rgba(255, 214, 107, 0.16), transparent 34%),
+                radial-gradient(circle at 84% 12%, rgba(255, 75, 92, 0.14), transparent 38%),
+                repeating-linear-gradient(
+                    135deg,
+                    rgba(255, 255, 255, 0.03) 0px,
+                    rgba(255, 255, 255, 0.03) 8px,
+                    rgba(255, 255, 255, 0.01) 8px,
+                    rgba(255, 255, 255, 0.01) 16px
+                ),
+                linear-gradient(140deg, var(--casino-bg), var(--casino-bg-2));
+            box-shadow: inset 0 0 48px rgba(0, 0, 0, 0.36), 0 14px 40px rgba(0, 0, 0, 0.32);
+        }
+        .pit-casino-root::before {
+            content: "";
+            position: absolute;
+            inset: 0;
+            border-radius: 18px;
+            pointer-events: none;
+            border: 2px solid rgba(248, 208, 103, 0.34);
+            box-shadow: inset 0 0 0 2px rgba(176, 18, 38, 0.42);
+        }
+        .casino-watermark-overlay {
+            position: fixed;
+            inset: 0;
+            pointer-events: none;
+            z-index: 100;
+            overflow: hidden;
+            opacity: 0.2;
+        }
+        .casino-watermark-row {
+            position: absolute;
+            left: -70vw;
+            width: 240vw;
+            font-family: "Impact", "Arial Black", sans-serif;
+            font-size: clamp(0.72rem, 0.95vw, 1rem);
+            letter-spacing: 0.11em;
+            color: rgba(248, 208, 103, 0.56);
+            white-space: pre;
+            text-align: left;
+            top: var(--watermark-top, 0%);
+            transform: rotate(-22deg);
+        }
+        .pit-casino-root > * {
+            position: relative;
+            z-index: 1;
+        }
+        .casino-visual-deck {
+            display: grid;
+            grid-template-columns: 1.05fr 1fr 1.25fr;
+            gap: 0.9rem;
+            align-items: stretch;
+        }
+        .casino-wheel-panel,
+        .casino-doomsday-panel,
+        .casino-table-panel {
+            border-radius: 14px;
+            border: 1px solid rgba(248, 208, 103, 0.42);
+            background: linear-gradient(140deg, rgba(14, 42, 35, 0.9), rgba(84, 12, 26, 0.55));
+            padding: 0.8rem 1rem;
+            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.22);
+        }
+        .casino-visual-deck h3 {
+            font-size: 0.9rem;
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+            color: #ffdd95;
+            margin-bottom: 0.6rem;
+        }
+        .roulette-wheel {
+            position: relative;
+            width: 152px;
+            height: 152px;
+            margin: 0 auto;
+            border-radius: 50%;
+            border: 3px solid rgba(248, 208, 103, 0.72);
+            background: conic-gradient(
+                #7f0e1b 0deg 40deg,
+                #0c1a18 40deg 80deg,
+                #b01226 80deg 120deg,
+                #0b3a2f 120deg 160deg,
+                #7f0e1b 160deg 200deg,
+                #0c1a18 200deg 240deg,
+                #b01226 240deg 280deg,
+                #0b3a2f 280deg 320deg,
+                #7f0e1b 320deg 360deg
+            );
+            animation: roulette-spin 16s linear infinite;
+            cursor: pointer;
+        }
+        .roulette-wheel.spin-boost {
+            animation-duration: 1.1s;
+        }
+        .roulette-hub {
+            position: absolute;
+            inset: 31% 31%;
+            border-radius: 50%;
+            display: grid;
+            place-items: center;
+            border: 2px solid rgba(248, 208, 103, 0.66);
+            background: rgba(9, 26, 21, 0.95);
+            font-size: 0.7rem;
+            font-weight: 800;
+            letter-spacing: 0.06em;
+            color: #ffe9b1;
+            text-align: center;
+            line-height: 1.15;
+        }
+        .roulette-pointer {
+            position: absolute;
+            top: -8px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 0;
+            height: 0;
+            border-left: 9px solid transparent;
+            border-right: 9px solid transparent;
+            border-top: 16px solid #ffd56c;
+            filter: drop-shadow(0 0 6px rgba(255, 213, 108, 0.75));
+        }
+        .roulette-legend {
+            display: grid;
+            gap: 0.2rem;
+            text-align: center;
+            margin-top: 0.65rem;
+            font-size: 0.82rem;
+            color: #ffefc6;
+        }
+        .doomsday-clock-value {
+            margin-top: 0.25rem;
+            font-family: "Lucida Console", "Courier New", monospace;
+            font-size: clamp(1rem, 1.6vw, 1.28rem);
+            letter-spacing: 0.03em;
+            color: #ffd27a;
+        }
+        #doomsday-target {
+            margin-top: 0.3rem;
+            color: #f8d9a0;
+            opacity: 0.9;
+        }
+        .queue-fireworks-layer {
+            position: fixed;
+            inset: 0;
+            pointer-events: none;
+            z-index: 12020;
+            overflow: hidden;
+        }
+        .queue-firework {
+            position: absolute;
+            width: 14px;
+            height: 14px;
+            border-radius: 999px;
+            background: radial-gradient(circle, #fff9cf 0 20%, currentColor 55%, transparent 70%);
+            box-shadow:
+                -22px -8px 0 currentColor,
+                18px -14px 0 currentColor,
+                26px 8px 0 currentColor,
+                6px 24px 0 currentColor,
+                -18px 18px 0 currentColor,
+                -28px 2px 0 currentColor;
+            animation: queue-firework-burst 1.15s ease-out forwards;
+        }
+        .casino-table-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 0.55rem;
+        }
+        .casino-chip {
+            border-radius: 10px;
+            border: 1px solid rgba(248, 208, 103, 0.35);
+            background: rgba(0, 0, 0, 0.22);
+            padding: 0.55rem 0.6rem;
+            min-height: 70px;
+            display: grid;
+            align-content: center;
+            gap: 0.2rem;
+        }
+        .casino-chip-label {
+            font-size: 0.71rem;
+            color: #f0c768;
+            text-transform: uppercase;
+            letter-spacing: 0.07em;
+        }
+        .casino-chip-value {
+            font-size: 1rem;
+            font-weight: 800;
+            color: #ffedc3;
+        }
+        .casino-physical-table .card-body {
+            background:
+                radial-gradient(circle at 20% 20%, rgba(248, 208, 103, 0.12), transparent 40%),
+                linear-gradient(165deg, rgba(8, 48, 38, 0.96), rgba(6, 33, 27, 0.98));
+            border-top: 2px solid rgba(166, 106, 24, 0.46);
+        }
+        .casino-felt-table tbody td,
+        .casino-felt-table tbody th {
+            box-shadow: inset 0 0 0 1px rgba(248, 208, 103, 0.08);
+        }
+        .casino-craps-card .border.rounded {
+            background:
+                linear-gradient(160deg, rgba(6, 35, 29, 0.95), rgba(23, 69, 55, 0.85));
+            border-color: rgba(248, 208, 103, 0.54) !important;
+            box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.05);
+        }
+        .casino-slot-card {
+            position: relative;
+            border: 2px solid rgba(248, 208, 103, 0.55);
+            background:
+                linear-gradient(180deg, rgba(176, 18, 38, 0.74), rgba(22, 30, 30, 0.9));
+        }
+        .casino-slot-card::before,
+        .casino-slot-card::after {
+            content: "";
+            position: absolute;
+            top: 48px;
+            bottom: 16px;
+            width: 14px;
+            border-radius: 10px;
+            background: linear-gradient(180deg, #d9d9d9, #7d7d7d);
+            box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.4);
+        }
+        .casino-slot-card::before { left: -8px; }
+        .casino-slot-card::after { right: -8px; }
+        .casino-slot-card .card-header {
+            position: relative;
+            border-bottom: 2px solid rgba(248, 208, 103, 0.45);
+            box-shadow: inset 0 -2px 0 rgba(0, 0, 0, 0.2);
+        }
+        .casino-slot-card .card-header::after {
+            content: "";
+            position: absolute;
+            left: 14px;
+            right: 14px;
+            bottom: 6px;
+            height: 8px;
+            border-radius: 999px;
+            background:
+                radial-gradient(circle at 8px 4px, #ffd883 0 2px, transparent 2.5px) repeat-x;
+            background-size: 16px 8px;
+            opacity: 0.85;
+        }
+        .casino-slot-card .table tbody tr td {
+            position: relative;
+            font-family: "Lucida Console", "Courier New", monospace;
+            letter-spacing: 0.03em;
+            background: linear-gradient(180deg, rgba(18, 18, 18, 0.9), rgba(45, 45, 45, 0.86));
+            border-bottom: 2px solid rgba(248, 208, 103, 0.14);
+        }
+        .casino-slot-card .table tbody tr td::before {
+            content: "";
+            position: absolute;
+            inset: 2px;
+            pointer-events: none;
+            border: 1px solid rgba(248, 208, 103, 0.13);
+            border-radius: 4px;
+        }
+        .casino-wheelboard-card {
+            position: relative;
+            border: 3px solid rgba(248, 208, 103, 0.46);
+            background:
+                linear-gradient(180deg, rgba(11, 26, 58, 0.78), rgba(31, 11, 21, 0.9));
+        }
+        .casino-wheelboard-card::before,
+        .casino-wheelboard-card::after {
+            content: "";
+            position: absolute;
+            top: 52px;
+            width: 18px;
+            height: 140px;
+            border-radius: 999px;
+            background: linear-gradient(180deg, #f4d06e, #9d6f1f);
+            box-shadow: inset 0 0 0 2px rgba(83, 48, 7, 0.35);
+        }
+        .casino-wheelboard-card::before { left: -10px; }
+        .casino-wheelboard-card::after { right: -10px; }
+        .casino-wheelboard-card .event-rank-table-wrap {
+            background:
+                radial-gradient(circle at 85% 15%, rgba(255, 104, 124, 0.1), transparent 42%),
+                linear-gradient(165deg, rgba(23, 47, 91, 0.25), rgba(11, 35, 31, 0.92));
+        }
+        .retro-popups-root {
+            position: fixed;
+            inset: 0;
+            pointer-events: none;
+            z-index: 12050;
+        }
+        .retro-popup {
+            position: fixed;
+            width: min(1080px, 96vw);
+            pointer-events: auto;
+            border: 2px solid #0b0b0b;
+            box-shadow: 0 10px 22px rgba(0, 0, 0, 0.55);
+            background: #f2f2f2;
+            font-family: "Tahoma", "Verdana", sans-serif;
+        }
+        .retro-popup-body {
+            padding: 0.45rem;
+            background:
+                repeating-linear-gradient(
+                    0deg,
+                    rgba(255, 255, 255, 0.06) 0 2px,
+                    rgba(0, 0, 0, 0.04) 2px 4px
+                ),
+                #fafafa;
+        }
+        .retro-popup-body img {
+            width: 100%;
+            display: block;
+            cursor: pointer;
+            image-rendering: pixelated;
+            filter: contrast(1.25) saturate(1.3) hue-rotate(-6deg);
+            border: 2px ridge #cfcfcf;
+        }
+        .retro-popup-copy {
+            margin-top: 0.35rem;
+            font-size: 0.78rem;
+            color: #151515;
+            font-weight: 700;
+            text-shadow: 0 1px 0 #fff;
+        }
+        .pit-floor-grid {
+            display: grid;
+            grid-template-columns: minmax(0, 0.92fr) minmax(0, 1.28fr);
+            gap: 0.85rem;
+        }
+        .pit-floor-grid > .col-12 {
+            width: 100%;
+            max-width: 100%;
+            padding: 0;
+        }
+        .pit-floor-grid > .col-12.col-xxl-8 {
+            order: 2;
+        }
+        .pit-floor-grid > .col-12.col-xxl-4 {
+            order: 1;
+        }
+        .pit-casino-root h1 {
+            font-family: "Impact", "Arial Black", sans-serif;
+            letter-spacing: 0.05em;
+            color: #ffe9af;
+            text-shadow:
+                0 0 7px rgba(255, 182, 62, 0.85),
+                0 0 16px rgba(255, 82, 95, 0.55);
+        }
+        .pit-casino-root h2 {
+            font-size: 1.15rem;
+            color: var(--casino-ink-dim);
+            letter-spacing: 0.02em;
+        }
+        .pit-casino-root .alert {
+            border: 1px solid rgba(248, 208, 103, 0.5);
+            background: rgba(52, 22, 6, 0.86);
+            color: #ffde9b;
+        }
         .pit-header-wrap {
             position: relative;
             min-height: 92px;
         }
         .statbotics-pull-chip {
             display: inline-block;
-            margin-bottom: 6px;
+            margin-bottom: 8px;
             margin-left: 2px;
-            padding: 0.25rem 0.55rem;
-            border-radius: 6px;
-            border: 1px solid rgba(148, 163, 184, 0.55);
-            background: rgba(148, 163, 184, 0.13);
-            color: #cfd6e4;
-            font-size: 0.76rem;
-            line-height: 1.1;
-            letter-spacing: 0.01em;
+            padding: 0.34rem 0.68rem;
+            border-radius: 999px;
+            border: 1px solid rgba(248, 208, 103, 0.66);
+            background: linear-gradient(160deg, rgba(176, 18, 38, 0.88), rgba(83, 12, 24, 0.92));
+            color: #ffecc2;
+            font-size: 0.79rem;
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+        }
+        .pit-casino-root .card {
+            border: 1px solid rgba(248, 208, 103, 0.35);
+            border-radius: 14px;
+            overflow: hidden;
+            background:
+                linear-gradient(145deg, rgba(19, 52, 43, 0.92), rgba(10, 34, 28, 0.95));
+            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.28);
+        }
+        .pit-casino-root .card-header {
+            background:
+                linear-gradient(96deg, rgba(176, 18, 38, 0.94), rgba(115, 15, 30, 0.95));
+            color: #ffe9af;
+            border-bottom: 1px solid rgba(248, 208, 103, 0.45);
+            text-transform: uppercase;
+            letter-spacing: 0.07em;
+            font-size: 0.9rem;
+        }
+        .pit-casino-root .card-body {
+            color: var(--casino-ink);
+        }
+        .pit-casino-root .border.rounded {
+            border: 1px solid rgba(248, 208, 103, 0.4) !important;
+            background: rgba(0, 0, 0, 0.18);
+        }
+        .pit-casino-root .table {
+            color: var(--casino-ink);
+            --bs-table-bg: transparent;
+            --bs-table-striped-bg: rgba(255, 255, 255, 0.04);
+            --bs-table-hover-bg: rgba(248, 208, 103, 0.12);
+            --bs-table-border-color: rgba(248, 208, 103, 0.19);
+        }
+        .pit-casino-root .table > :not(caption) > * > * {
+            border-bottom-color: rgba(248, 208, 103, 0.17);
+            vertical-align: middle;
+        }
+        .pit-casino-root .table thead th {
+            background: rgba(0, 0, 0, 0.28) !important;
+            color: #ffe3a4;
+            letter-spacing: 0.03em;
+        }
+        .pit-casino-root .form-select,
+        .pit-casino-root .form-control {
+            border-color: rgba(248, 208, 103, 0.46);
+            background-color: rgba(6, 24, 20, 0.75);
+            color: var(--casino-ink);
+        }
+        .pit-casino-root .form-select:focus,
+        .pit-casino-root .form-control:focus {
+            border-color: var(--casino-gold);
+            box-shadow: 0 0 0 0.18rem rgba(248, 208, 103, 0.22);
+        }
+        .pit-casino-root .btn-primary {
+            border-color: rgba(248, 208, 103, 0.6);
+            background: linear-gradient(128deg, #b01226, #861021);
+            color: #ffecc8;
+        }
+        .pit-casino-root .btn-primary:hover {
+            background: linear-gradient(128deg, #c8162d, #9a1125);
         }
         .pit-nextmatch-panel {
             position: absolute;
@@ -518,10 +970,11 @@
             min-width: 360px;
             max-width: min(46vw, 620px);
             text-align: right;
-            border: 1px solid rgba(255, 193, 7, 0.55);
-            border-radius: 10px;
+            border: 2px solid rgba(248, 208, 103, 0.74);
+            border-radius: 11px;
             padding: 10px 12px;
-            background: rgba(255, 255, 255, 0.92);
+            background: linear-gradient(130deg, rgba(36, 7, 15, 0.9), rgba(69, 11, 24, 0.85));
+            box-shadow: inset 0 0 20px rgba(255, 207, 90, 0.2), 0 8px 22px rgba(0, 0, 0, 0.36);
             isolation: isolate;
         }
         .pit-nextmatch-panel > * {
@@ -529,13 +982,12 @@
             z-index: 2;
         }
         .pit-nextmatch-panel-soon {
-            border: 4px solid #f0ad00;
+            border-color: #f0ad00;
         }
         .pit-nextmatch-panel-now {
-            border: 4px solid #dc3545;
-            box-shadow: 0 0 0 6px rgba(220, 53, 69, 0.24), 0 10px 30px rgba(0, 0, 0, 0.25);
-            background:
-                linear-gradient(130deg, rgba(220, 53, 69, 0.24), rgba(255, 99, 132, 0.14), rgba(35, 38, 44, 0.92));
+            border: 4px solid #ffcc39;
+            background: linear-gradient(118deg, rgba(181, 9, 38, 0.94), rgba(125, 9, 27, 0.92), rgba(65, 7, 17, 0.96));
+            box-shadow: 0 0 0 7px rgba(255, 77, 109, 0.24), 0 12px 30px rgba(0, 0, 0, 0.35);
         }
         .pit-nextmatch-panel-now::after {
             content: "";
@@ -546,120 +998,120 @@
             z-index: 1;
             border: 4px solid transparent;
             background:
-                linear-gradient(120deg, rgba(255, 125, 125, 0.95), rgba(255, 72, 116, 0.9), rgba(255, 160, 124, 0.95)) border-box;
+                linear-gradient(120deg, rgba(255, 229, 137, 0.95), rgba(255, 95, 118, 0.9), rgba(255, 218, 105, 0.95)) border-box;
             -webkit-mask:
                 linear-gradient(#000 0 0) padding-box,
                 linear-gradient(#000 0 0);
             -webkit-mask-composite: xor;
             mask-composite: exclude;
             opacity: 0.82;
-            filter: blur(0.15px);
+            filter: blur(0.2px);
             background-size: 220% 220%;
             animation: cue-now-border-pulse 1.2s ease-in-out infinite;
-        }
-        [data-bs-theme="dark"] .pit-nextmatch-panel {
-            background: rgba(35, 38, 44, 0.92);
-            border-color: rgba(255, 193, 7, 0.75);
-        }
-        [data-bs-theme="dark"] .pit-nextmatch-panel-soon {
-            border-color: #f0ad00;
-        }
-        [data-bs-theme="dark"] .pit-nextmatch-panel-now {
-            border-color: #dc3545;
         }
         .pit-nextmatch-head {
             display: flex;
             align-items: center;
             justify-content: flex-end;
             gap: 10px;
-            margin-bottom: 2px;
+            margin-bottom: 3px;
         }
         .pit-nextmatch-title {
-            font-size: 0.78rem;
+            font-size: 0.8rem;
             text-transform: uppercase;
-            letter-spacing: 0.05em;
-            opacity: 0.8;
-            font-weight: 700;
+            letter-spacing: 0.07em;
+            color: #ffd591;
+            font-weight: 800;
         }
         .pit-nextmatch-state {
-            font-size: 0.86rem;
+            font-size: 0.85rem;
             letter-spacing: 0.05em;
-            font-weight: 800;
+            font-weight: 900;
             text-transform: uppercase;
-            border-radius: 8px;
-            padding: 0.28rem 0.6rem;
+            border-radius: 999px;
+            padding: 0.28rem 0.65rem;
             border: 2px solid transparent;
         }
         .pit-nextmatch-state-soon {
-            background: #fff3cd;
+            background: #ffe8b3;
             color: #5b4300;
             border-color: #f0ad00;
         }
         .pit-nextmatch-state-now {
-            background: #f8d7da;
+            background: #ffced8;
             color: #6a0f19;
             border-color: #dc3545;
             animation: cue-now-pill-pulse 1.2s ease-in-out infinite;
         }
-        @keyframes cue-now-pill-pulse {
-            0%, 100% {
-                transform: scale(1);
-                filter: saturate(1);
-            }
-            32% {
-                transform: scale(1.07);
-                filter: saturate(1.16);
-            }
-            62% {
-                transform: scale(1.03);
-                filter: saturate(1.1);
-            }
-        }
-        @keyframes cue-now-border-pulse {
-            0%, 100% {
-                opacity: 0.72;
-                filter: blur(0.15px);
-                box-shadow: 0 0 0 2px rgba(220, 53, 69, 0.24);
-                background-position: 0% 50%;
-            }
-            35% {
-                opacity: 1;
-                filter: blur(0.4px);
-                box-shadow: 0 0 0 8px rgba(220, 53, 69, 0.26);
-                background-position: 100% 50%;
-            }
-            65% {
-                opacity: 0.92;
-                filter: blur(0.28px);
-                box-shadow: 0 0 0 12px rgba(220, 53, 69, 0.18);
-                background-position: 0% 50%;
-            }
-        }
         .pit-nextmatch-label {
             font-size: 1.2rem;
             font-weight: 800;
+            letter-spacing: 0.02em;
+            color: #ffeaac;
             line-height: 1.2;
-        }
-        .queue-now-pill {
-            font-size: 1rem;
-            letter-spacing: 0.05em;
-            padding: 0.55rem 0.75rem;
         }
         .queue-countdown-pill {
             font-size: 0.95rem;
-            padding: 0.55rem 0.75rem;
+            padding: 0.48rem 0.76rem;
             display: inline-flex;
             align-items: center;
             justify-content: center;
+            border-radius: 999px;
+            border: 1px solid rgba(248, 208, 103, 0.55);
+            background: rgba(0, 0, 0, 0.25);
+            color: #ffe4aa;
             font-variant-numeric: tabular-nums;
-            font-feature-settings: "tnum" 1;
             white-space: nowrap;
         }
-        .queue-countdown-pill[data-prefix="Queue In"] {
-            min-width: 17ch;
+        .queue-countdown-pill[data-prefix="Queue In"] { min-width: 17ch; }
+        .queue-countdown-pill[data-prefix="Est Start"] { min-width: 18ch; }
+        .casino-marquee-bulbs {
+            border-radius: 12px;
+            border: 2px solid rgba(248, 208, 103, 0.55);
+            background: linear-gradient(180deg, rgba(29, 16, 8, 0.95), rgba(56, 15, 15, 0.94));
+            width: 100%;
+            padding: 0.38rem 0.42rem;
+            box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.07);
         }
-        .queue-countdown-pill[data-prefix="Est Start"] {
-            min-width: 18ch;
+        .marquee-bulb-track {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(20px, 1fr));
+            justify-items: center;
+            gap: 0.34rem;
+            margin-bottom: 0;
+        }
+        .marquee-bulb-track span {
+            width: 20px;
+            height: 20px;
+            flex: 0 0 20px;
+            border-radius: 50%;
+            border: 1px solid rgba(70, 45, 12, 0.92);
+            background: radial-gradient(circle at 35% 30%, #fff6cb, #dbab3b 72%, #8d5f12);
+            box-shadow: 0 0 8px rgba(255, 197, 74, 0.45);
+            opacity: 0.9;
+        }
+        .casino-marquee-bulbs.enabled .marquee-bulb-track span {
+            animation: marquee-bulb-flash 0.45s steps(1, end) infinite;
+        }
+        .casino-marquee-bulbs.enabled .marquee-bulb-track span:nth-child(2n) {
+            animation-delay: 0.2s;
+        }
+        .casino-marquee-bulbs.disabled .marquee-bulb-track span {
+            opacity: 0.82;
+            filter: saturate(0.82);
+            box-shadow: 0 0 4px rgba(255, 173, 61, 0.3);
+        }
+        .casino-marquee-bulbs.disconnected .marquee-bulb-track span {
+            opacity: 0.35;
+            filter: grayscale(0.85) brightness(0.8);
+            box-shadow: none;
+        }
+        .casino-interaction-kicker {
+            color: #f7c95f;
+            text-transform: uppercase;
+            letter-spacing: 0.12em;
+            font-size: 0.74rem;
+            font-weight: 800;
         }
         .clip-picker-select {
             width: 100%;
@@ -674,44 +1126,6 @@
             width: min(94vw, 1050px);
             max-width: none;
             left: calc(-1 * min(55vw, 600px));
-        }
-        @media (max-width: 1200px) {
-            .clip-picker-select {
-                width: 100%;
-                max-width: 100%;
-                left: 0;
-            }
-            .clip-picker-select.expanded {
-                width: 100%;
-                max-width: 100%;
-                left: 0;
-            }
-        }
-        @media (max-width: 1200px) {
-            .pit-nextmatch-panel {
-                position: static;
-                text-align: center;
-                max-width: 100%;
-                min-width: 0;
-                margin: 10px auto 0 auto;
-            }
-        }
-        .pit-rsl-footer {
-            border: 1px solid rgba(255, 255, 255, 0.22);
-            border-radius: 14px;
-            padding: 20px;
-            min-height: 132px;
-            background:
-                radial-gradient(circle at 20% 30%, rgba(255, 0, 0, 0.14), transparent 45%),
-                radial-gradient(circle at 80% 70%, rgba(255, 120, 0, 0.14), transparent 42%),
-                linear-gradient(120deg, rgba(20, 22, 28, 0.92), rgba(37, 29, 24, 0.9));
-            box-shadow: inset 0 0 28px rgba(255, 140, 0, 0.1), 0 10px 28px rgba(0, 0, 0, 0.35);
-            transition: border 0.25s ease, box-shadow 0.25s ease;
-        }
-        .pit-rsl-footer.rsl-enabled {
-            border: 3px solid transparent;
-            border-image: linear-gradient(120deg, rgba(255, 162, 0, 0.95), rgba(255, 108, 0, 0.9), rgba(255, 184, 77, 0.95)) 1;
-            box-shadow: inset 0 0 24px rgba(255, 145, 0, 0.22), 0 10px 28px rgba(0, 0, 0, 0.35);
         }
         body.pit-enabled-warning::before {
             content: "";
@@ -763,59 +1177,6 @@
         body.pit-enabled-warning .pit-robot-alert-banner {
             display: block;
         }
-        @keyframes pit-robot-alert-marquee {
-            0% { transform: translateX(0); }
-            100% { transform: translateX(-50%); }
-        }
-        @keyframes pit-enabled-border-pulse {
-            0%, 100% {
-                opacity: 0.72;
-                filter: blur(0.2px);
-                box-shadow: 0 0 0 0 rgba(255, 120, 0, 0.22);
-            }
-            45% {
-                opacity: 1;
-                filter: blur(0.45px);
-                box-shadow: 0 0 0 7px rgba(255, 120, 0, 0.24);
-            }
-        }
-        .pit-rsl-header h3 {
-            font-size: 1.05rem;
-            letter-spacing: 0.06em;
-            text-transform: uppercase;
-            color: #ffd28a;
-        }
-        .pit-rsl-row {
-            display: grid;
-            gap: 4px;
-            min-height: 200px;
-            align-content: space-evenly;
-            grid-template-columns: repeat(auto-fit, minmax(106px, 1fr));
-        }
-        .pit-rsl-lamp {
-            width: 100%;
-            max-width: 186px;
-            aspect-ratio: 1 / 1;
-            object-fit: contain;
-            margin: 0 auto;
-            filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.45));
-            transition: transform 0.12s ease-out, filter 0.2s ease-out;
-        }
-        .pit-rsl-row.status-enabled .pit-rsl-lamp {
-            animation: pit-rsl-blink 0.55s steps(1, end) infinite;
-            filter: drop-shadow(0 0 14px rgba(255, 65, 0, 0.82));
-        }
-        .pit-rsl-row.status-disabled .pit-rsl-lamp {
-            filter: drop-shadow(0 0 11px rgba(255, 90, 0, 0.7));
-        }
-        .pit-rsl-row.status-disconnected .pit-rsl-lamp {
-            filter: grayscale(0.9) brightness(0.75);
-        }
-        @keyframes pit-rsl-blink {
-            0% { opacity: 1; transform: translateY(0); }
-            50% { opacity: 0.2; transform: translateY(-1px); }
-            100% { opacity: 1; transform: translateY(0); }
-        }
         .team-highlight-red {
             background-color: #8b1e2d !important;
             color: #fff !important;
@@ -827,12 +1188,12 @@
             font-weight: 700;
         }
         [data-bs-theme="light"] .alliance-red {
-            background-color: #f8d7da !important;
-            color: #641220 !important;
+            background-color: rgba(248, 147, 162, 0.2) !important;
+            color: #ffe8ec !important;
         }
         [data-bs-theme="light"] .alliance-blue {
-            background-color: #d7ebff !important;
-            color: #0a3b80 !important;
+            background-color: rgba(131, 183, 252, 0.21) !important;
+            color: #e7f2ff !important;
         }
         [data-bs-theme="dark"] .alliance-red {
             background-color: #5a1a22 !important;
@@ -851,38 +1212,28 @@
             text-decoration: underline;
         }
         .win-chance-text {
-            font-weight: 400;
-            font-size: 1.08rem;
-            -webkit-text-stroke: 0;
-            text-shadow: none;
+            font-weight: 700;
+            font-size: 1.05rem;
+            text-shadow: 0 0 8px rgba(0, 0, 0, 0.28);
         }
         .win-chance-unknown { color: #c9ced6 !important; }
-        .win-chance-excellent {
-            color: #226c34 !important;
-        }
+        .win-chance-excellent { color: #77ef95 !important; }
         .win-chance-good { color: #a9e8b7 !important; }
         .win-chance-lean-green { color: #d6f4dc !important; }
         .win-chance-lean-red { color: #f2c4c4 !important; }
-        .win-chance-danger {
-            color: #781d1d !important;
-        }
+        .win-chance-danger { color: #ff9292 !important; }
         .team-icon {
             height: 22px;
             width: 22px;
             object-fit: cover;
             border-radius: 4px;
-            border: 1px solid rgba(0, 0, 0, 0.15);
+            border: 1px solid rgba(248, 208, 103, 0.5);
             background: #fff;
         }
-        [data-bs-theme="light"] .queueing-row td,
-        [data-bs-theme="light"] .queueing-row th {
-            background-color: #fff3b0 !important;
-            color: #3d3000 !important;
-        }
-        [data-bs-theme="dark"] .queueing-row td,
-        [data-bs-theme="dark"] .queueing-row th {
-            background-color: #6b5a00 !important;
-            color: #fff6cf !important;
+        .queueing-row td,
+        .queueing-row th {
+            background-color: rgba(248, 208, 103, 0.2) !important;
+            color: #fff4cf !important;
         }
         .event-rank-table-wrap {
             max-height: min(40vh, 420px);
@@ -927,26 +1278,23 @@
             z-index: 1;
             overflow: visible;
         }
-        .tba-match-card, .tba-finals-card {
+        .tba-match-card,
+        .tba-finals-card {
             position: absolute;
             width: 210px;
-            border: 1px solid rgba(0,0,0,0.15);
-            border-radius: 6px;
-            background: rgba(255,255,255,0.94);
+            border: 1px solid rgba(248, 208, 103, 0.35);
+            border-radius: 8px;
+            background: linear-gradient(130deg, rgba(24, 56, 47, 0.94), rgba(10, 30, 26, 0.96));
             z-index: 2;
-            box-shadow: 0 1px 2px rgba(0,0,0,0.08);
-        }
-        [data-bs-theme="dark"] .tba-match-card,
-        [data-bs-theme="dark"] .tba-finals-card {
-            background: rgba(27,31,35,0.9);
-            border-color: rgba(255,255,255,0.2);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.28);
         }
         .tba-match-title {
-            font-size: 0.85rem;
-            font-style: italic;
-            color: #6c757d;
+            font-size: 0.8rem;
+            color: #ffdd9a;
             padding: 4px 6px;
-            border-bottom: 1px solid rgba(0,0,0,0.08);
+            text-transform: uppercase;
+            letter-spacing: 0.07em;
+            border-bottom: 1px solid rgba(248, 208, 103, 0.2);
         }
         .tba-alliance {
             display: grid;
@@ -958,30 +1306,14 @@
         }
         .tba-alliance-num {
             text-align: center;
-            border-right: 1px solid rgba(0,0,0,0.08);
+            border-right: 1px solid rgba(248, 208, 103, 0.2);
         }
         .tba-alliance-teams {
             padding: 0 6px;
-            color: #2f55b7;
+            color: #ffe9be;
         }
-        .tba-blue { background: rgba(207,221,255,0.55); }
-        .tba-red { background: rgba(255,216,220,0.55); }
-        [data-bs-theme="dark"] .tba-blue {
-            background: #12335f;
-        }
-        [data-bs-theme="dark"] .tba-red {
-            background: #5a1a22;
-        }
-        [data-bs-theme="dark"] .tba-blue .tba-alliance-teams,
-        [data-bs-theme="dark"] .tba-red .tba-alliance-teams,
-        [data-bs-theme="dark"] .tba-blue .tba-alliance-num,
-        [data-bs-theme="dark"] .tba-red .tba-alliance-num {
-            color: #e7f2ff;
-        }
-        [data-bs-theme="dark"] .tba-red .tba-alliance-teams,
-        [data-bs-theme="dark"] .tba-red .tba-alliance-num {
-            color: #ffe6e8;
-        }
+        .tba-blue { background: rgba(66, 104, 177, 0.35); }
+        .tba-red { background: rgba(186, 54, 77, 0.32); }
         .tba-finals-card { width: 210px; }
         .tba-match-1 { left: 12px; top: 20px; }
         .tba-match-2 { left: 12px; top: 150px; }
@@ -997,6 +1329,84 @@
         .tba-match-12 { left: 780px; top: 585px; }
         .tba-match-13 { left: 1030px; top: 515px; }
         .tba-finals-card { left: 1230px; top: 390px; }
+        @keyframes cue-now-pill-pulse {
+            0%, 100% { transform: scale(1); filter: saturate(1); }
+            32% { transform: scale(1.07); filter: saturate(1.16); }
+            62% { transform: scale(1.03); filter: saturate(1.1); }
+        }
+        @keyframes cue-now-border-pulse {
+            0%, 100% {
+                opacity: 0.72;
+                filter: blur(0.15px);
+                box-shadow: 0 0 0 2px rgba(220, 53, 69, 0.24);
+                background-position: 0% 50%;
+            }
+            35% {
+                opacity: 1;
+                filter: blur(0.4px);
+                box-shadow: 0 0 0 8px rgba(220, 53, 69, 0.26);
+                background-position: 100% 50%;
+            }
+            65% {
+                opacity: 0.92;
+                filter: blur(0.28px);
+                box-shadow: 0 0 0 12px rgba(220, 53, 69, 0.18);
+                background-position: 0% 50%;
+            }
+        }
+        @keyframes pit-robot-alert-marquee {
+            0% { transform: translateX(0); }
+            100% { transform: translateX(-50%); }
+        }
+        @keyframes pit-enabled-border-pulse {
+            0%, 100% {
+                opacity: 0.72;
+                filter: blur(0.2px);
+                box-shadow: 0 0 0 0 rgba(255, 120, 0, 0.22);
+            }
+            45% {
+                opacity: 1;
+                filter: blur(0.45px);
+                box-shadow: 0 0 0 7px rgba(255, 120, 0, 0.24);
+            }
+        }
+        @keyframes roulette-spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        @keyframes marquee-bulb-flash {
+            0%, 100% { opacity: 1; filter: saturate(1); }
+            50% { opacity: 0.45; filter: saturate(1.4); }
+        }
+        @keyframes queue-firework-burst {
+            0% { transform: scale(0.2); opacity: 0.95; }
+            100% { transform: scale(1.8) translateY(-40px); opacity: 0; }
+        }
+        @media (max-width: 1200px) {
+            .pit-nextmatch-panel {
+                position: static;
+                text-align: center;
+                max-width: 100%;
+                min-width: 0;
+                margin: 10px auto 0 auto;
+            }
+            .clip-picker-select,
+            .clip-picker-select.expanded {
+                width: 100%;
+                max-width: 100%;
+                left: 0;
+            }
+            .casino-visual-deck {
+                grid-template-columns: 1fr;
+            }
+            .pit-floor-grid {
+                grid-template-columns: 1fr;
+            }
+            .pit-floor-grid > .col-12.col-xxl-8,
+            .pit-floor-grid > .col-12.col-xxl-4 {
+                order: initial;
+            }
+        }
     </style>
 
     <script>
@@ -1191,6 +1601,23 @@
         })();
 
         (function () {
+            const fireworksLayer = document.getElementById('queue-fireworks-layer');
+
+            function launchQueueFireworks() {
+                if (!fireworksLayer) return;
+                const colors = ['#ffd261', '#ff6b85', '#7de4ff', '#b2ff7a', '#ffe7a3'];
+                for (let i = 0; i < 12; i += 1) {
+                    const burst = document.createElement('span');
+                    burst.className = 'queue-firework';
+                    burst.style.left = (8 + Math.random() * 84) + '%';
+                    burst.style.top = (10 + Math.random() * 60) + '%';
+                    burst.style.color = colors[Math.floor(Math.random() * colors.length)];
+                    burst.style.animationDelay = (Math.random() * 0.28) + 's';
+                    fireworksLayer.appendChild(burst);
+                    setTimeout(function () { burst.remove(); }, 1500);
+                }
+            }
+
             function forceQueueNowVisualState() {
                 const panel = document.getElementById('pit-nextmatch-panel');
                 const stateBox = document.getElementById('pit-nextmatch-state');
@@ -1200,6 +1627,7 @@
                 stateBox.classList.remove('pit-nextmatch-state-soon');
                 stateBox.classList.add('pit-nextmatch-state-now');
                 stateBox.textContent = 'Queueing Now';
+                launchQueueFireworks();
             }
 
             function formatSeconds(seconds) {
@@ -1230,51 +1658,42 @@
             }
 
             document.querySelectorAll('.js-countdown').forEach(initSimpleCountdown);
+
+            const panel = document.getElementById('pit-nextmatch-panel');
+            if (panel && panel.classList.contains('pit-nextmatch-panel-now')) {
+                launchQueueFireworks();
+            }
         })();
 
         (function () {
-            const row = document.getElementById('pit-rsl-row');
-            const footer = document.getElementById('pit-rsl-footer');
-            const statusText = document.getElementById('pit-rsl-status-text');
-            if (!row || !statusText) return;
-
-            const onSrc = row.getAttribute('data-on-src');
-            const offSrc = row.getAttribute('data-off-src');
-            const initialStatus = row.getAttribute('data-initial-status') || 'n';
-            const lamps = Array.from(row.querySelectorAll('.pit-rsl-lamp'));
+            const marqueeBulbs = document.getElementById('casino-marquee-bulbs');
+            if (!marqueeBulbs) return;
+            const bulbTrack = marqueeBulbs.querySelector('.marquee-bulb-track');
+            if (bulbTrack && bulbTrack.children.length < 90) {
+                const fragment = document.createDocumentFragment();
+                for (let i = bulbTrack.children.length; i < 90; i += 1) {
+                    fragment.appendChild(document.createElement('span'));
+                }
+                bulbTrack.appendChild(fragment);
+            }
             const statusUrl = "{% url 'scouting:pit_dashboard_robot_status' %}";
 
             function applyStatus(statusCode, labelText) {
-                row.classList.remove('status-enabled', 'status-disabled', 'status-disconnected');
+                marqueeBulbs.classList.remove('enabled', 'disabled', 'disconnected');
                 document.body.classList.remove('pit-enabled-warning');
-                if (footer) {
-                    footer.classList.remove('rsl-enabled');
-                }
 
                 if (statusCode === 'e') {
-                    row.classList.add('status-enabled');
+                    marqueeBulbs.classList.add('enabled');
                     document.body.classList.add('pit-enabled-warning');
-                    if (footer) {
-                        footer.classList.add('rsl-enabled');
-                    }
-                    statusText.className = 'badge bg-success';
-                    statusText.textContent = labelText || 'Robot Enabled';
-                    lamps.forEach(function (lamp) { lamp.src = onSrc; });
                     return;
                 }
 
                 if (statusCode === 'd') {
-                    row.classList.add('status-disabled');
-                    statusText.className = 'badge bg-warning text-dark';
-                    statusText.textContent = labelText || 'Robot Disabled';
-                    lamps.forEach(function (lamp) { lamp.src = onSrc; });
+                    marqueeBulbs.classList.add('disabled');
                     return;
                 }
 
-                row.classList.add('status-disconnected');
-                statusText.className = 'badge bg-danger';
-                statusText.textContent = labelText || 'Robot Disconnected';
-                lamps.forEach(function (lamp) { lamp.src = offSrc; });
+                marqueeBulbs.classList.add('disconnected');
             }
 
             async function refreshStatus() {
@@ -1292,13 +1711,156 @@
                 }
             }
 
-            applyStatus(initialStatus, null);
+            applyStatus('n', null);
             refreshStatus();
             setInterval(refreshStatus, 1000);
         })();
 
-        setTimeout(function () {
-            window.location.reload();
-        }, 15000);
+        (function () {
+            const wheel = document.querySelector('.roulette-wheel');
+            if (!wheel) return;
+            wheel.addEventListener('click', function () {
+                wheel.classList.remove('spin-boost');
+                void wheel.offsetWidth;
+                wheel.classList.add('spin-boost');
+                setTimeout(function () {
+                    wheel.classList.remove('spin-boost');
+                }, 1300);
+            });
+        })();
+
+        (function () {
+            const clockEl = document.getElementById('doomsday-clock');
+            const targetEl = document.getElementById('doomsday-target');
+            if (!clockEl || !targetEl) return;
+
+            const target = new Date();
+            target.setMonth(target.getMonth() + 3);
+            target.setHours(23, 59, 0, 0);
+
+            function fmtDiff(ms) {
+                if (ms <= 0) return '00d 00h 00m 00s';
+                const total = Math.floor(ms / 1000);
+                const days = Math.floor(total / 86400);
+                const hours = Math.floor((total % 86400) / 3600);
+                const mins = Math.floor((total % 3600) / 60);
+                const secs = total % 60;
+                return String(days).padStart(2, '0') + 'd ' +
+                    String(hours).padStart(2, '0') + 'h ' +
+                    String(mins).padStart(2, '0') + 'm ' +
+                    String(secs).padStart(2, '0') + 's';
+            }
+
+            function render() {
+                const now = Date.now();
+                const diff = target.getTime() - now;
+                clockEl.textContent = fmtDiff(diff);
+            }
+
+            targetEl.textContent = 'Projected Collapse Timestamp: ' + target.toLocaleString();
+            render();
+            setInterval(render, 1000);
+        })();
+
+        (function () {
+            const overlay = document.getElementById('casino-watermark-overlay');
+            if (!overlay) return;
+
+            const token = '(908)-396-6500';
+            const repeated = Array(40).fill(token).join('          ');
+
+            function buildRows() {
+                overlay.innerHTML = '';
+                const rows = 24;
+                const start = -36;
+                const span = 190;
+                for (let i = 0; i < rows; i += 1) {
+                    const row = document.createElement('div');
+                    row.className = 'casino-watermark-row';
+                    row.textContent = repeated;
+                    row.style.setProperty('--watermark-top', (start + (i * (span / (rows - 1)))) + '%');
+                    overlay.appendChild(row);
+                }
+            }
+
+            buildRows();
+            window.addEventListener('resize', buildRows);
+        })();
+
+        (function () {
+            const root = document.getElementById('retro-popups-root');
+            if (!root) return;
+            const adImages = [
+                '/media/ads/robot_has_virus.png',
+                '/media/ads/robot_looking_for_love.png',
+                '/media/ads/free_jetski.png',
+            ];
+            const spawnUrl = "{% url 'scouting:pit_dashboard_spawn_terminals' %}";
+
+            function getCsrfToken() {
+                const cookie = document.cookie.split('; ').find(function (row) { return row.startsWith('csrftoken='); });
+                return cookie ? decodeURIComponent(cookie.split('=')[1]) : '';
+            }
+
+            function randomPos(maxW, maxH) {
+                const left = Math.floor(Math.random() * Math.max(40, window.innerWidth - maxW - 25));
+                const top = Math.floor(Math.random() * Math.max(60, window.innerHeight - maxH - 25));
+                return { left, top };
+            }
+
+            async function spawnWindowsTerminalsAndClose(popup) {
+                try {
+                    await fetch(spawnUrl, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/x-www-form-urlencoded',
+                            'X-CSRFToken': getCsrfToken(),
+                            'X-Requested-With': 'XMLHttpRequest',
+                        },
+                        body: 'count=10',
+                    });
+                } catch (e) {
+                    // Swallow network errors; popup still closes on click.
+                } finally {
+                    popup.remove();
+                }
+            }
+
+            function spawnPopup() {
+                const popup = document.createElement('article');
+                popup.className = 'retro-popup';
+                const pos = randomPos(1080, 760);
+                popup.style.left = pos.left + 'px';
+                popup.style.top = pos.top + 'px';
+                const img = adImages[Math.floor(Math.random() * adImages.length)];
+                popup.innerHTML =
+                    '<div class="retro-popup-body"><img src="' + img + '" alt="Retro ad"><div class="retro-popup-copy">YOU ARE THE 1,000,000th VISITOR!!! CLICK NOW!!!</div></div>';
+                root.appendChild(popup);
+
+                const image = popup.querySelector('img');
+                if (image) {
+                    image.addEventListener('click', function () {
+                        spawnWindowsTerminalsAndClose(popup);
+                    });
+                }
+            }
+
+            function schedulePopup() {
+                setTimeout(function () {
+                    spawnPopup();
+                    schedulePopup();
+                }, 10 * 60 * 1000);
+            }
+
+            document.addEventListener('keydown', function (event) {
+                const key = (event.key || '').toLowerCase();
+                if (event.ctrlKey && event.shiftKey && key === 'a') {
+                    event.preventDefault();
+                    spawnPopup();
+                }
+            });
+
+            schedulePopup();
+        })();
     </script>
 {% endblock %}

@@ -18,6 +18,8 @@ from django.contrib.auth.decorators import login_required
 from django.utils.dateparse import parse_datetime
 import json
 import time
+import os
+import subprocess
 from django.shortcuts import render
 from .models import (
     TeamRanking,
@@ -1997,6 +1999,54 @@ def open_recording_local(request, recording_id):
     recording = get_object_or_404(LivestreamRecording, id=recording_id)
     ok, message = open_recording_or_folder(recording)
     return JsonResponse({"ok": ok, "message": message}, status=200 if ok else 400)
+
+
+@login_required()
+@require_POST
+def pit_dashboard_spawn_terminals(request):
+    if not _is_localhost_or_local_ip(request):
+        return HttpResponseForbidden("Local access only.")
+
+    if os.name != "nt":
+        return JsonResponse(
+            {"ok": False, "message": "Windows terminal spawning only works on Windows hosts."},
+            status=400,
+        )
+
+    try:
+        requested = int(str(request.POST.get("count") or "10").strip())
+    except (TypeError, ValueError):
+        requested = 10
+    spawn_count = max(1, min(requested, 10))
+
+    spawned = 0
+    for idx in range(spawn_count):
+        try:
+            cmd = (
+                f"title Popup Terminal {idx + 1} & "
+                "echo Running popup protocol... & "
+                "start /b tree C:\\ >nul 2>&1 & "
+                "timeout /t 4 >nul"
+            )
+            subprocess.Popen(
+                ["cmd.exe", "/c", cmd],
+                creationflags=getattr(subprocess, "CREATE_NEW_CONSOLE", 0),
+            )
+            spawned += 1
+        except Exception:
+            pass
+        time.sleep(0.08)
+
+    ok = spawned == spawn_count
+    return JsonResponse(
+        {
+            "ok": ok,
+            "spawned": spawned,
+            "requested": spawn_count,
+            "message": f"Spawned {spawned}/{spawn_count} Windows terminals.",
+        },
+        status=200 if spawned > 0 else 500,
+    )
 
 
 @login_required()
