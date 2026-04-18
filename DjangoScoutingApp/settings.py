@@ -181,6 +181,6 @@ SYNC_ACCOUNT_PASSWORD = 'nisfnmsklgopsjfkgnsldfgbkgfskjdfbgksbd'
 # SYNC_MASTER_SERVER = 'http://localhost:8001'
 SYNC_MASTER_SERVER = 'https://team3637.logangreif.com'
 
-LIVESTREAM_SOURCE_URL = 'https://www.youtube.com/live/21XI3EQbwzo?si=9lyDtAwoU6aIT5XU'
+LIVESTREAM_SOURCE_URL = 'https://www.youtube.com/live/TEDXtzR1Dwk?si=X_TZPe8peuMWc1HL'
 LIVESTREAM_RECORDINGS_SUBDIR = 'recordings'
 LIVESTREAM_TEAM_NUMBER = 3637

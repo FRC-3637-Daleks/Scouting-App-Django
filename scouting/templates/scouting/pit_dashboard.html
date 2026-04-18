@@ -24,7 +24,6 @@
             </div>
         </div>
     </div>
-    <div id="casino-watermark-overlay" class="casino-watermark-overlay" aria-hidden="true"></div>
     <div id="pit-dashboard-root" class="container-fluid pit-casino-root">
         {% if statbotics_last_pulled_display %}
             <div class="statbotics-pull-chip">
@@ -107,11 +106,13 @@
                 <h3>Command Dalek</h3>
                 <div class="dalek-stage">
                     <div class="dalek-spinner">
-                        <object data="/media/3d/Dalek_command.c4d" type="application/octet-stream" class="dalek-model-object">
-                            <div class="dalek-fallback">
-                                Dalek model loaded from <code>/media/3d/Dalek_command.c4d</code>
-                            </div>
-                        </object>
+                        <div id="dalek-viewer" class="dalek-viewer" role="img" aria-label="Spinning Dalek display model"></div>
+                        <div class="dalek-panel-controls">
+                            <button id="dalek-fullscreen-toggle" type="button" class="btn btn-sm btn-warning">Fullscreen</button>
+                        </div>
+                        <div id="dalek-game-hud" class="dalek-game-hud">Dalek Runner: loading...</div>
+                        <div id="dalek-fallback" class="dalek-fallback" hidden>Unable to render Dalek model.</div>
+                        <div id="dalek-debug" class="dalek-debug">Dalek debug: waiting for renderer...</div>
                     </div>
                 </div>
             </section>
@@ -561,27 +562,6 @@
             border: 2px solid rgba(248, 208, 103, 0.34);
             box-shadow: inset 0 0 0 2px rgba(176, 18, 38, 0.42);
         }
-        .casino-watermark-overlay {
-            position: fixed;
-            inset: 0;
-            pointer-events: none;
-            z-index: 100;
-            overflow: hidden;
-            opacity: 0.2;
-        }
-        .casino-watermark-row {
-            position: absolute;
-            left: -70vw;
-            width: 240vw;
-            font-family: "Impact", "Arial Black", sans-serif;
-            font-size: clamp(0.72rem, 0.95vw, 1rem);
-            letter-spacing: 0.11em;
-            color: rgba(248, 208, 103, 0.56);
-            white-space: pre;
-            text-align: left;
-            top: var(--watermark-top, 0%);
-            transform: rotate(-22deg);
-        }
         .pit-casino-root > * {
             position: relative;
             z-index: 1;
@@ -679,26 +659,92 @@
             overflow: hidden;
         }
         .dalek-spinner {
-            width: 150px;
-            height: 150px;
-            animation: dalek-bounce 1.9s ease-in-out infinite;
+            width: 100%;
+            height: 100%;
+            padding: 6px;
+            position: relative;
         }
-        .dalek-spinner .dalek-model-object {
+        .dalek-viewer {
+            width: 100%;
+            height: 100%;
+            border-radius: 10px;
+            background:
+                radial-gradient(circle at 28% 24%, rgba(248, 208, 103, 0.15), transparent 58%),
+                radial-gradient(circle at 76% 18%, rgba(92, 182, 255, 0.16), transparent 62%),
+                linear-gradient(180deg, rgba(6, 21, 33, 0.82), rgba(11, 16, 24, 0.9));
+        }
+        .dalek-viewer canvas {
             width: 100%;
             height: 100%;
             display: block;
-            animation: dalek-rotate 8s linear infinite;
-            filter: drop-shadow(0 8px 12px rgba(0, 0, 0, 0.45));
+            border-radius: 10px;
+        }
+        .dalek-panel-controls {
+            position: absolute;
+            top: 8px;
+            right: 10px;
+            z-index: 4;
+            display: flex;
+            gap: 6px;
+        }
+        .dalek-stage.is-panel-fullscreen {
+            position: fixed;
+            inset: 10px;
+            height: auto;
+            z-index: 13050;
+            border-width: 2px;
+            box-shadow: 0 14px 46px rgba(0, 0, 0, 0.65);
+        }
+        body.dalek-panel-fullscreen-lock {
+            overflow: hidden;
         }
         .dalek-fallback {
-            font-size: 0.78rem;
-            text-align: center;
-            color: #ffe5aa;
-            line-height: 1.35;
-            padding: 0.6rem;
-            border: 1px solid rgba(248, 208, 103, 0.34);
+            position: absolute;
+            inset: 18px;
             border-radius: 8px;
-            background: rgba(0, 0, 0, 0.25);
+            display: grid;
+            place-items: center;
+            text-align: center;
+            padding: 10px;
+            font-size: 0.76rem;
+            color: #ffe7b2;
+            border: 1px solid rgba(248, 208, 103, 0.45);
+            background: rgba(0, 0, 0, 0.5);
+        }
+        .dalek-game-hud {
+            position: absolute;
+            left: 10px;
+            right: 10px;
+            top: 44px;
+            z-index: 3;
+            font-family: "Trebuchet MS", "Segoe UI", sans-serif;
+            font-size: 0.68rem;
+            line-height: 1.25;
+            color: #ffefc7;
+            background: rgba(0, 0, 0, 0.55);
+            border: 1px solid rgba(248, 208, 103, 0.35);
+            border-radius: 6px;
+            padding: 4px 7px;
+            text-align: center;
+            letter-spacing: 0.02em;
+        }
+        .dalek-debug {
+            position: absolute;
+            left: 10px;
+            right: 10px;
+            bottom: 8px;
+            z-index: 3;
+            font-family: Consolas, "Courier New", monospace;
+            font-size: 0.65rem;
+            line-height: 1.25;
+            color: #ffe4a8;
+            background: rgba(0, 0, 0, 0.62);
+            border: 1px solid rgba(248, 208, 103, 0.4);
+            border-radius: 6px;
+            padding: 4px 6px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
         }
         .queue-fireworks-layer {
             position: fixed;
@@ -1444,6 +1490,8 @@
         }
     </style>
 
+    <script src="{% static 'vendor/three/legacy/three.min.js' %}"></script>
+    <script src="{% static 'vendor/three/legacy/GLTFLoader.js' %}"></script>
     <script>
         (function () {
             const wrap = document.getElementById('tba-bracket-wrap');
@@ -1765,31 +1813,6 @@
         })();
 
         (function () {
-            const overlay = document.getElementById('casino-watermark-overlay');
-            if (!overlay) return;
-
-            const token = '(908)-396-6500';
-            const repeated = Array(40).fill(token).join('          ');
-
-            function buildRows() {
-                overlay.innerHTML = '';
-                const rows = 24;
-                const start = -36;
-                const span = 190;
-                for (let i = 0; i < rows; i += 1) {
-                    const row = document.createElement('div');
-                    row.className = 'casino-watermark-row';
-                    row.textContent = repeated;
-                    row.style.setProperty('--watermark-top', (start + (i * (span / (rows - 1)))) + '%');
-                    overlay.appendChild(row);
-                }
-            }
-
-            buildRows();
-            window.addEventListener('resize', buildRows);
-        })();
-
-        (function () {
             const root = document.getElementById('retro-popups-root');
             if (!root) return;
             const adImages = [
@@ -1869,6 +1892,396 @@
             });
 
             schedulePopup();
+        })();
+    </script>
+    <script>
+        (function () {
+            window.__dalek_debug_booted = true;
+            const mount = document.getElementById('dalek-viewer');
+            const fallback = document.getElementById('dalek-fallback');
+            const debugEl = document.getElementById('dalek-debug');
+            const hudEl = document.getElementById('dalek-game-hud');
+            function setDebug(message) {
+                if (debugEl) {
+                    debugEl.textContent = 'Dalek debug: ' + message;
+                }
+            }
+            function setHud(message) {
+                if (hudEl) {
+                    hudEl.textContent = message;
+                }
+            }
+            setDebug('legacy script loaded');
+            setHud('Dalek Reactor: starting renderer...');
+            if (!mount) return;
+            if (!window.THREE || !THREE.GLTFLoader) {
+                if (fallback) {
+                    fallback.hidden = false;
+                    fallback.textContent = '3D renderer failed to initialize.';
+                }
+                setDebug('THREE/GLTFLoader not available');
+                setHud('Dalek Reactor: renderer libs missing.');
+                return;
+            }
+            try {
+                setDebug('initializing WebGL renderer');
+
+                const scene = new THREE.Scene();
+                const renderer = new THREE.WebGLRenderer({
+                    antialias: true,
+                    alpha: true,
+                    powerPreference: 'high-performance',
+                });
+                renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+                renderer.outputColorSpace = THREE.SRGBColorSpace;
+                mount.appendChild(renderer.domElement);
+                setDebug('renderer created');
+
+                const camera = new THREE.PerspectiveCamera(34, 1, 0.01, 100);
+                camera.position.set(0, 0.4, 3.8);
+
+                scene.add(new THREE.AmbientLight(0x6ea6d1, 0.55));
+
+                const keyLight = new THREE.DirectionalLight(0xffd58b, 1.2);
+                keyLight.position.set(2.5, 3.8, 2.2);
+                scene.add(keyLight);
+
+                const fillLight = new THREE.DirectionalLight(0x78bfff, 0.7);
+                fillLight.position.set(-2.1, 1.3, 2.8);
+                scene.add(fillLight);
+
+                const rimLight = new THREE.PointLight(0xf7a641, 0.8, 8);
+                rimLight.position.set(0.8, 1.2, -1.8);
+                scene.add(rimLight);
+
+                let dalek = null;
+                let dalekRadius = 1;
+                let baseY = 0;
+                let baseDistance = 3.6;
+                let cameraDistance = 3.6;
+                let minDistance = 2.5;
+                let maxDistance = 6.5;
+                let userYaw = 0;
+                let userPitch = 0;
+                let autoYaw = 0;
+                let pointerDown = false;
+                let dragged = false;
+                let lastX = 0;
+                let lastY = 0;
+
+                const raycaster = new THREE.Raycaster();
+                const pointer = new THREE.Vector2();
+                let targetMesh = null;
+                let targetMeshes = [];
+                let targetExpiresAt = 0;
+                let score = 0;
+                let misses = 0;
+                let streak = 0;
+                let timeLeft = 35;
+                let gameActive = false;
+                let gameTimer = null;
+                let targetIndex = 0;
+
+                function updateHud() {
+                    if (!gameActive) {
+                        setHud('Dalek Reactor: Round over. Press R to restart.');
+                        return;
+                    }
+                    setHud(
+                        'Dalek Reactor: Score ' + score +
+                        ' | Misses ' + misses +
+                        ' | Streak ' + streak +
+                        ' | Time ' + timeLeft + 's | Drag rotate, wheel zoom, click lit Dalek panel'
+                    );
+                }
+
+                function computeFitDistance(radius, aspect) {
+                    const vFov = THREE.MathUtils.degToRad(camera.fov);
+                    const hFov = 2 * Math.atan(Math.tan(vFov / 2) * Math.max(aspect, 0.1));
+                    const vertical = radius / Math.sin(vFov / 2);
+                    const horizontal = radius / Math.sin(hFov / 2);
+                    return Math.max(vertical, horizontal) * 1.14;
+                }
+
+                function getMaterials(mesh) {
+                    if (!mesh || !mesh.material) return [];
+                    return Array.isArray(mesh.material) ? mesh.material : [mesh.material];
+                }
+
+                function setMeshTargetGlow(mesh, active, pulse) {
+                    if (!mesh) return;
+                    const mats = getMaterials(mesh);
+                    mats.forEach(function (mat) {
+                        if (!mat || !mat.emissive) return;
+                        if (!mat.userData.dalekBase) {
+                            mat.userData.dalekBase = {
+                                emissive: mat.emissive.clone(),
+                                emissiveIntensity: typeof mat.emissiveIntensity === 'number' ? mat.emissiveIntensity : 0.2,
+                            };
+                        }
+                        if (active) {
+                            mat.emissive.setHex(0xff9d2f);
+                            mat.emissiveIntensity = 0.45 + (pulse || 0);
+                        } else {
+                            mat.emissive.copy(mat.userData.dalekBase.emissive);
+                            mat.emissiveIntensity = mat.userData.dalekBase.emissiveIntensity;
+                        }
+                    });
+                }
+
+                function targetDurationSeconds() {
+                    return Math.max(0.85, 2.35 - (streak * 0.08));
+                }
+
+                function chooseTarget(nowElapsed) {
+                    if (!gameActive || !dalek || !targetMeshes.length) return;
+                    if (targetMesh) {
+                        setMeshTargetGlow(targetMesh, false, 0);
+                    }
+                    targetIndex = Math.floor(Math.random() * targetMeshes.length);
+                    targetMesh = targetMeshes[targetIndex];
+                    setMeshTargetGlow(targetMesh, true, 0.12);
+                    targetExpiresAt = nowElapsed + targetDurationSeconds();
+                    const label = (targetMesh.name && targetMesh.name.trim()) ? targetMesh.name : ('Zone ' + (targetIndex + 1));
+                    setDebug('target: ' + label);
+                }
+
+                function startGame() {
+                    score = 0;
+                    misses = 0;
+                    streak = 0;
+                    timeLeft = 35;
+                    gameActive = true;
+                    targetExpiresAt = 0;
+                    if (targetMesh) setMeshTargetGlow(targetMesh, false, 0);
+                    targetMesh = null;
+                    updateHud();
+                    if (gameTimer) clearInterval(gameTimer);
+                    gameTimer = setInterval(function () {
+                        timeLeft -= 1;
+                        if (timeLeft <= 0) {
+                            timeLeft = 0;
+                            gameActive = false;
+                            if (targetMesh) setMeshTargetGlow(targetMesh, false, 0);
+                            targetMesh = null;
+                            clearInterval(gameTimer);
+                            gameTimer = null;
+                            updateHud();
+                            setDebug('round complete - score ' + score);
+                        } else {
+                            updateHud();
+                        }
+                    }, 1000);
+                }
+
+                function tryHit(clientX, clientY, nowElapsed) {
+                    if (!targetMesh || !gameActive || !dalek) return;
+                    const rect = renderer.domElement.getBoundingClientRect();
+                    pointer.x = ((clientX - rect.left) / rect.width) * 2 - 1;
+                    pointer.y = -((clientY - rect.top) / rect.height) * 2 + 1;
+                    raycaster.setFromCamera(pointer, camera);
+                    const hits = raycaster.intersectObject(dalek, true);
+                    const clickedMesh = hits.length ? hits[0].object : null;
+                    if (clickedMesh && clickedMesh === targetMesh) {
+                        const points = 1 + Math.floor(streak / 3);
+                        score += points;
+                        streak += 1;
+                        setDebug('target hit +' + points);
+                        chooseTarget(nowElapsed);
+                    } else {
+                        misses += 1;
+                        streak = 0;
+                    }
+                    updateHud();
+                }
+
+                const loader = new THREE.GLTFLoader();
+                setDebug('loading /media/3d/Darlek.glb');
+                loader.load(
+                    '/media/3d/Darlek.glb',
+                    function (gltf) {
+                        setDebug('model loaded, applying materials');
+                        dalek = gltf.scene;
+                        dalek.traverse(function (node) {
+                            if (!node.isMesh) return;
+                            node.castShadow = false;
+                            node.receiveShadow = false;
+
+                            const stylize = function (material) {
+                                if (!material) return material;
+                                const shaded = material.clone();
+                                shaded.color = new THREE.Color(0x5f9fd1);
+                                shaded.emissive = new THREE.Color(0x07131d);
+                                shaded.emissiveIntensity = 0.2;
+                                shaded.metalness = 0.42;
+                                shaded.roughness = 0.34;
+                                return shaded;
+                            };
+
+                            if (Array.isArray(node.material)) {
+                                node.material = node.material.map(stylize);
+                            } else {
+                                node.material = stylize(node.material);
+                            }
+                        });
+
+                        const box = new THREE.Box3().setFromObject(dalek);
+                        const sphere = box.getBoundingSphere(new THREE.Sphere());
+                        dalek.position.sub(sphere.center);
+                        const normalizedScale = 0.88 / Math.max(sphere.radius, 0.001);
+                        dalek.scale.multiplyScalar(normalizedScale);
+
+                        const resizedBox = new THREE.Box3().setFromObject(dalek);
+                        const resizedSphere = resizedBox.getBoundingSphere(new THREE.Sphere());
+                        dalekRadius = resizedSphere.radius;
+                        baseY = -0.02;
+                        dalek.position.y = baseY;
+                        scene.add(dalek);
+                        targetMeshes = [];
+                        dalek.traverse(function (node) {
+                            if (!node.isMesh || !node.geometry) return;
+                            if (!node.geometry.boundingSphere) node.geometry.computeBoundingSphere();
+                            const localRadius = node.geometry.boundingSphere ? node.geometry.boundingSphere.radius : 0;
+                            const worldScale = node.getWorldScale(new THREE.Vector3());
+                            const scaledRadius = localRadius * Math.max(worldScale.x, worldScale.y, worldScale.z);
+                            if (scaledRadius < dalekRadius * 0.09) return;
+                            targetMeshes.push(node);
+                        });
+                        if (!targetMeshes.length) {
+                            dalek.traverse(function (node) {
+                                if (node.isMesh) targetMeshes.push(node);
+                            });
+                        }
+                        baseDistance = computeFitDistance(dalekRadius, camera.aspect);
+                        cameraDistance = baseDistance;
+                        minDistance = baseDistance * 0.72;
+                        maxDistance = baseDistance * 1.7;
+                        startGame();
+                        chooseTarget(0);
+                        setDebug('model ready, fit and game active');
+                    },
+                    undefined,
+                    function (err) {
+                        if (fallback) {
+                            fallback.hidden = false;
+                            fallback.textContent = 'Dalek model failed to load.';
+                        }
+                        setDebug('GLB load error: ' + ((err && err.message) ? err.message : 'unknown'));
+                        setHud('Dalek Reactor: model failed to load.');
+                    }
+                );
+
+                function resize() {
+                    const w = Math.max(40, mount.clientWidth);
+                    const h = Math.max(40, mount.clientHeight);
+                    renderer.setSize(w, h, false);
+                    camera.aspect = w / h;
+                    camera.updateProjectionMatrix();
+                    baseDistance = computeFitDistance(dalekRadius, camera.aspect);
+                    minDistance = baseDistance * 0.72;
+                    maxDistance = baseDistance * 1.7;
+                    cameraDistance = THREE.MathUtils.clamp(cameraDistance, minDistance, maxDistance);
+                }
+
+                if ('ResizeObserver' in window) {
+                    const ro = new ResizeObserver(resize);
+                    ro.observe(mount);
+                }
+                window.addEventListener('resize', resize);
+                resize();
+
+                renderer.domElement.addEventListener('pointerdown', function (event) {
+                    pointerDown = true;
+                    dragged = false;
+                    lastX = event.clientX;
+                    lastY = event.clientY;
+                    renderer.domElement.setPointerCapture(event.pointerId);
+                });
+
+                renderer.domElement.addEventListener('pointermove', function (event) {
+                    if (!pointerDown || !dalek) return;
+                    const dx = event.clientX - lastX;
+                    const dy = event.clientY - lastY;
+                    if (Math.abs(dx) + Math.abs(dy) > 2) dragged = true;
+                    userYaw += dx * 0.01;
+                    userPitch = THREE.MathUtils.clamp(userPitch + dy * 0.006, -0.42, 0.42);
+                    lastX = event.clientX;
+                    lastY = event.clientY;
+                });
+
+                renderer.domElement.addEventListener('pointerup', function (event) {
+                    const elapsed = clock.getElapsedTime();
+                    if (!dragged) {
+                        tryHit(event.clientX, event.clientY, elapsed);
+                    }
+                    pointerDown = false;
+                    dragged = false;
+                });
+
+                renderer.domElement.addEventListener('wheel', function (event) {
+                    event.preventDefault();
+                    const zoomStep = event.deltaY > 0 ? 1.08 : 0.92;
+                    cameraDistance = THREE.MathUtils.clamp(cameraDistance * zoomStep, minDistance, maxDistance);
+                }, { passive: false });
+
+                document.addEventListener('keydown', function (event) {
+                    if (event.key && event.key.toLowerCase() === 'r' && dalek) {
+                        startGame();
+                        chooseTarget(clock.getElapsedTime());
+                        setDebug('round restarted');
+                    }
+                });
+
+                const clock = new THREE.Clock();
+                function animate() {
+                    requestAnimationFrame(animate);
+                    const dt = clock.getDelta();
+                    const t = clock.elapsedTime;
+                    if (dalek) {
+                        autoYaw += dt * 0.85;
+                        dalek.rotation.y = autoYaw + userYaw;
+                        dalek.rotation.x = userPitch;
+                        dalek.position.y = baseY + Math.sin(t * 2.0) * 0.06;
+                    }
+                    if (targetMesh) {
+                        const pulse = (Math.sin(t * 10) + 1) * 0.22;
+                        setMeshTargetGlow(targetMesh, true, pulse);
+                        if (gameActive && t >= targetExpiresAt) {
+                            misses += 1;
+                            streak = 0;
+                            updateHud();
+                            chooseTarget(t);
+                        }
+                    }
+                    camera.position.set(0, dalekRadius * 0.16, cameraDistance);
+                    camera.lookAt(0, 0, 0);
+                    renderer.render(scene, camera);
+                }
+                animate();
+            } catch (e) {
+                if (fallback) {
+                    fallback.hidden = false;
+                    fallback.textContent = '3D renderer failed to initialize.';
+                }
+                setDebug('init error: ' + (e && e.message ? e.message : 'unknown'));
+                setHud('Dalek Reactor: renderer init failed.');
+            }
+        })();
+    </script>
+    <script>
+        (function () {
+            setTimeout(function () {
+                if (window.__dalek_debug_booted) return;
+                var debugEl = document.getElementById('dalek-debug');
+                var fallback = document.getElementById('dalek-fallback');
+                if (debugEl) {
+                    debugEl.textContent = 'Dalek debug: legacy loader script did not execute.';
+                }
+                if (fallback) {
+                    fallback.hidden = false;
+                    fallback.textContent = '3D renderer failed to initialize.';
+                }
+            }, 1200);
         })();
     </script>
 {% endblock %}
