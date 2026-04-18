@@ -2024,9 +2024,8 @@ def pit_dashboard_spawn_terminals(request):
         try:
             cmd = (
                 f"title Popup Terminal {idx + 1} & "
-                "echo Running popup protocol... & "
-                "start /b tree C:\\ >nul 2>&1 & "
-                "timeout /t 4 >nul"
+                "timeout /t 1 /nobreak >nul & "
+                "exit"
             )
             subprocess.Popen(
                 ["cmd.exe", "/c", cmd],
