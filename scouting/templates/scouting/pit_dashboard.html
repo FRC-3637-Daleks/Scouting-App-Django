@@ -1901,6 +1901,8 @@
             const fallback = document.getElementById('dalek-fallback');
             const debugEl = document.getElementById('dalek-debug');
             const hudEl = document.getElementById('dalek-game-hud');
+            const fullscreenBtn = document.getElementById('dalek-fullscreen-toggle');
+            const stageEl = mount ? mount.closest('.dalek-stage') : null;
             function setDebug(message) {
                 if (debugEl) {
                     debugEl.textContent = 'Dalek debug: ' + message;
@@ -1912,7 +1914,7 @@
                 }
             }
             setDebug('legacy script loaded');
-            setHud('Dalek Reactor: starting renderer...');
+            setHud('Dalek Runner: starting renderer...');
             if (!mount) return;
             if (!window.THREE || !THREE.GLTFLoader) {
                 if (fallback) {
@@ -1920,7 +1922,7 @@
                     fallback.textContent = '3D renderer failed to initialize.';
                 }
                 setDebug('THREE/GLTFLoader not available');
-                setHud('Dalek Reactor: renderer libs missing.');
+                setHud('Dalek Runner: renderer libs missing.');
                 return;
             }
             try {
@@ -1937,162 +1939,177 @@
                 mount.appendChild(renderer.domElement);
                 setDebug('renderer created');
 
-                const camera = new THREE.PerspectiveCamera(34, 1, 0.01, 100);
-                camera.position.set(0, 0.4, 3.8);
+                const camera = new THREE.PerspectiveCamera(36, 1, 0.01, 140);
+                camera.position.set(0, 2.4, 6.4);
+                camera.lookAt(0, 1.1, 0);
 
-                scene.add(new THREE.AmbientLight(0x6ea6d1, 0.55));
+                scene.add(new THREE.AmbientLight(0x6ea6d1, 0.62));
 
                 const keyLight = new THREE.DirectionalLight(0xffd58b, 1.2);
                 keyLight.position.set(2.5, 3.8, 2.2);
                 scene.add(keyLight);
 
-                const fillLight = new THREE.DirectionalLight(0x78bfff, 0.7);
-                fillLight.position.set(-2.1, 1.3, 2.8);
+                const fillLight = new THREE.DirectionalLight(0x78bfff, 0.8);
+                fillLight.position.set(-2.1, 2.1, 3.2);
                 scene.add(fillLight);
 
-                const rimLight = new THREE.PointLight(0xf7a641, 0.8, 8);
-                rimLight.position.set(0.8, 1.2, -1.8);
+                const rimLight = new THREE.PointLight(0xf7a641, 0.95, 14);
+                rimLight.position.set(0.8, 2.2, -1.8);
                 scene.add(rimLight);
 
+                const laneWidth = 2.2;
+                const clock = new THREE.Clock();
+                const groundSegments = [];
+                const obstacles = [];
+                const stars = [];
+                const runnerGroup = new THREE.Group();
+                scene.add(runnerGroup);
                 let dalek = null;
-                let dalekRadius = 1;
-                let baseY = 0;
-                let baseDistance = 3.6;
-                let cameraDistance = 3.6;
-                let minDistance = 2.5;
-                let maxDistance = 6.5;
-                let userYaw = 0;
-                let userPitch = 0;
-                let autoYaw = 0;
-                let pointerDown = false;
-                let dragged = false;
-                let lastX = 0;
-                let lastY = 0;
-
-                const raycaster = new THREE.Raycaster();
-                const pointer = new THREE.Vector2();
-                let targetMesh = null;
-                let targetMeshes = [];
-                let targetExpiresAt = 0;
+                let dalekRadius = 0.8;
+                let laneOffsetX = 0;
+                let laneTargetX = 0;
+                let jumpVelocity = 0;
+                let runnerY = 0;
+                let speed = 7.4;
+                let spawnTimer = 0;
                 let score = 0;
-                let misses = 0;
-                let streak = 0;
-                let timeLeft = 35;
-                let gameActive = false;
-                let gameTimer = null;
-                let targetIndex = 0;
+                let highScore = Number(localStorage.getItem('dalek_runner_highscore') || '0');
+                let running = false;
+                let gameOver = false;
+                let started = false;
+                let dragActive = false;
+                let dragMoved = false;
+                let lastPointerX = 0;
+                let lastPointerY = 0;
+                let dragYaw = 0;
+                let dragPitch = 0;
+                const gravity = -21.5;
+                const jumpPower = 8.1;
+                const maxSpeed = 14.8;
 
                 function updateHud() {
-                    if (!gameActive) {
-                        setHud('Dalek Reactor: Round over. Press R to restart.');
+                    if (!started) {
+                        setHud('Dalek Runner: Press Space / Up Arrow / Click to begin');
+                        return;
+                    }
+                    if (gameOver) {
+                        setHud(
+                            'Dalek Runner: Crashed | Score ' + Math.floor(score) +
+                            ' | High ' + Math.floor(highScore) +
+                            ' | Press R to restart'
+                        );
                         return;
                     }
                     setHud(
-                        'Dalek Reactor: Score ' + score +
-                        ' | Misses ' + misses +
-                        ' | Streak ' + streak +
-                        ' | Time ' + timeLeft + 's | Drag rotate, wheel zoom, click lit Dalek panel'
+                        'Dalek Runner: Score ' + Math.floor(score) +
+                        ' | High ' + Math.floor(highScore) +
+                        ' | Speed ' + speed.toFixed(1) +
+                        ' | Controls: Space jump, A/D strafe, drag rotate'
                     );
                 }
 
-                function computeFitDistance(radius, aspect) {
-                    const vFov = THREE.MathUtils.degToRad(camera.fov);
-                    const hFov = 2 * Math.atan(Math.tan(vFov / 2) * Math.max(aspect, 0.1));
-                    const vertical = radius / Math.sin(vFov / 2);
-                    const horizontal = radius / Math.sin(hFov / 2);
-                    return Math.max(vertical, horizontal) * 1.14;
-                }
-
-                function getMaterials(mesh) {
-                    if (!mesh || !mesh.material) return [];
-                    return Array.isArray(mesh.material) ? mesh.material : [mesh.material];
-                }
-
-                function setMeshTargetGlow(mesh, active, pulse) {
-                    if (!mesh) return;
-                    const mats = getMaterials(mesh);
-                    mats.forEach(function (mat) {
-                        if (!mat || !mat.emissive) return;
-                        if (!mat.userData.dalekBase) {
-                            mat.userData.dalekBase = {
-                                emissive: mat.emissive.clone(),
-                                emissiveIntensity: typeof mat.emissiveIntensity === 'number' ? mat.emissiveIntensity : 0.2,
-                            };
-                        }
-                        if (active) {
-                            mat.emissive.setHex(0xff9d2f);
-                            mat.emissiveIntensity = 0.45 + (pulse || 0);
-                        } else {
-                            mat.emissive.copy(mat.userData.dalekBase.emissive);
-                            mat.emissiveIntensity = mat.userData.dalekBase.emissiveIntensity;
-                        }
+                function resetGame() {
+                    obstacles.forEach(function (obs) {
+                        scene.remove(obs);
                     });
-                }
-
-                function targetDurationSeconds() {
-                    return Math.max(0.85, 2.35 - (streak * 0.08));
-                }
-
-                function chooseTarget(nowElapsed) {
-                    if (!gameActive || !dalek || !targetMeshes.length) return;
-                    if (targetMesh) {
-                        setMeshTargetGlow(targetMesh, false, 0);
-                    }
-                    targetIndex = Math.floor(Math.random() * targetMeshes.length);
-                    targetMesh = targetMeshes[targetIndex];
-                    setMeshTargetGlow(targetMesh, true, 0.12);
-                    targetExpiresAt = nowElapsed + targetDurationSeconds();
-                    const label = (targetMesh.name && targetMesh.name.trim()) ? targetMesh.name : ('Zone ' + (targetIndex + 1));
-                    setDebug('target: ' + label);
-                }
-
-                function startGame() {
+                    obstacles.length = 0;
+                    runnerY = 0;
+                    jumpVelocity = 0;
+                    laneOffsetX = 0;
+                    laneTargetX = 0;
+                    speed = 7.4;
+                    spawnTimer = 0.8;
                     score = 0;
-                    misses = 0;
-                    streak = 0;
-                    timeLeft = 35;
-                    gameActive = true;
-                    targetExpiresAt = 0;
-                    if (targetMesh) setMeshTargetGlow(targetMesh, false, 0);
-                    targetMesh = null;
+                    gameOver = false;
+                    started = true;
+                    running = true;
+                    setDebug('run started');
                     updateHud();
-                    if (gameTimer) clearInterval(gameTimer);
-                    gameTimer = setInterval(function () {
-                        timeLeft -= 1;
-                        if (timeLeft <= 0) {
-                            timeLeft = 0;
-                            gameActive = false;
-                            if (targetMesh) setMeshTargetGlow(targetMesh, false, 0);
-                            targetMesh = null;
-                            clearInterval(gameTimer);
-                            gameTimer = null;
-                            updateHud();
-                            setDebug('round complete - score ' + score);
-                        } else {
-                            updateHud();
-                        }
-                    }, 1000);
                 }
 
-                function tryHit(clientX, clientY, nowElapsed) {
-                    if (!targetMesh || !gameActive || !dalek) return;
-                    const rect = renderer.domElement.getBoundingClientRect();
-                    pointer.x = ((clientX - rect.left) / rect.width) * 2 - 1;
-                    pointer.y = -((clientY - rect.top) / rect.height) * 2 + 1;
-                    raycaster.setFromCamera(pointer, camera);
-                    const hits = raycaster.intersectObject(dalek, true);
-                    const clickedMesh = hits.length ? hits[0].object : null;
-                    if (clickedMesh && clickedMesh === targetMesh) {
-                        const points = 1 + Math.floor(streak / 3);
-                        score += points;
-                        streak += 1;
-                        setDebug('target hit +' + points);
-                        chooseTarget(nowElapsed);
-                    } else {
-                        misses += 1;
-                        streak = 0;
+                function jump() {
+                    if (!started || gameOver) {
+                        resetGame();
+                        return;
+                    }
+                    if (runnerY <= 0.001) {
+                        jumpVelocity = jumpPower;
+                    }
+                }
+
+                function addGround() {
+                    const g = new THREE.BoxGeometry(4.8, 0.12, 5.2);
+                    const m = new THREE.MeshStandardMaterial({
+                        color: 0x13263d,
+                        emissive: 0x05121f,
+                        roughness: 0.8,
+                        metalness: 0.08,
+                    });
+                    for (let i = 0; i < 8; i += 1) {
+                        const seg = new THREE.Mesh(g, m.clone());
+                        seg.position.set(0, -0.42, -i * 5.1);
+                        scene.add(seg);
+                        groundSegments.push(seg);
+                    }
+                }
+
+                function addBackdrop() {
+                    const starGeo = new THREE.SphereGeometry(0.04, 8, 8);
+                    for (let i = 0; i < 36; i += 1) {
+                        const mat = new THREE.MeshBasicMaterial({
+                            color: (i % 3 === 0) ? 0xffd788 : 0x8fc8ff,
+                        });
+                        const star = new THREE.Mesh(starGeo, mat);
+                        star.position.set(
+                            (Math.random() * 2 - 1) * 7,
+                            2 + Math.random() * 3.5,
+                            -Math.random() * 48
+                        );
+                        scene.add(star);
+                        stars.push(star);
+                    }
+                }
+
+                function spawnObstacle() {
+                    const width = 0.5 + Math.random() * 0.35;
+                    const height = 0.7 + Math.random() * 0.8;
+                    const depth = 0.55 + Math.random() * 0.35;
+                    const g = new THREE.BoxGeometry(width, height, depth);
+                    const m = new THREE.MeshStandardMaterial({
+                        color: 0x81253b,
+                        emissive: 0x22070f,
+                        roughness: 0.44,
+                        metalness: 0.33,
+                    });
+                    const obs = new THREE.Mesh(g, m);
+                    obs.position.set(
+                        THREE.MathUtils.randFloatSpread(laneWidth * 1.25),
+                        -0.42 + (height / 2),
+                        -22 - Math.random() * 6
+                    );
+                    obs.userData = { w: width, h: height, d: depth };
+                    scene.add(obs);
+                    obstacles.push(obs);
+                }
+
+                function checkCollision(obs) {
+                    const dz = Math.abs(obs.position.z - 0);
+                    const dx = Math.abs(obs.position.x - laneOffsetX);
+                    const hitZ = dz < (obs.userData.d * 0.5 + dalekRadius * 0.42);
+                    const hitX = dx < (obs.userData.w * 0.5 + dalekRadius * 0.4);
+                    const hitY = runnerY < (obs.userData.h - 0.12);
+                    return hitZ && hitX && hitY;
+                }
+
+                function endRun() {
+                    running = false;
+                    gameOver = true;
+                    if (score > highScore) {
+                        highScore = score;
+                        localStorage.setItem('dalek_runner_highscore', String(Math.floor(highScore)));
                     }
                     updateHud();
+                    setDebug('collision at score ' + Math.floor(score));
                 }
 
                 const loader = new THREE.GLTFLoader();
@@ -2100,7 +2117,7 @@
                 loader.load(
                     '/media/3d/Darlek.glb',
                     function (gltf) {
-                        setDebug('model loaded, applying materials');
+                        setDebug('model loaded, applying runner shading');
                         dalek = gltf.scene;
                         dalek.traverse(function (node) {
                             if (!node.isMesh) return;
@@ -2128,37 +2145,17 @@
                         const box = new THREE.Box3().setFromObject(dalek);
                         const sphere = box.getBoundingSphere(new THREE.Sphere());
                         dalek.position.sub(sphere.center);
-                        const normalizedScale = 0.88 / Math.max(sphere.radius, 0.001);
+                        const normalizedScale = 0.94 / Math.max(sphere.radius, 0.001);
                         dalek.scale.multiplyScalar(normalizedScale);
 
                         const resizedBox = new THREE.Box3().setFromObject(dalek);
                         const resizedSphere = resizedBox.getBoundingSphere(new THREE.Sphere());
                         dalekRadius = resizedSphere.radius;
-                        baseY = -0.02;
-                        dalek.position.y = baseY;
-                        scene.add(dalek);
-                        targetMeshes = [];
-                        dalek.traverse(function (node) {
-                            if (!node.isMesh || !node.geometry) return;
-                            if (!node.geometry.boundingSphere) node.geometry.computeBoundingSphere();
-                            const localRadius = node.geometry.boundingSphere ? node.geometry.boundingSphere.radius : 0;
-                            const worldScale = node.getWorldScale(new THREE.Vector3());
-                            const scaledRadius = localRadius * Math.max(worldScale.x, worldScale.y, worldScale.z);
-                            if (scaledRadius < dalekRadius * 0.09) return;
-                            targetMeshes.push(node);
-                        });
-                        if (!targetMeshes.length) {
-                            dalek.traverse(function (node) {
-                                if (node.isMesh) targetMeshes.push(node);
-                            });
-                        }
-                        baseDistance = computeFitDistance(dalekRadius, camera.aspect);
-                        cameraDistance = baseDistance;
-                        minDistance = baseDistance * 0.72;
-                        maxDistance = baseDistance * 1.7;
-                        startGame();
-                        chooseTarget(0);
-                        setDebug('model ready, fit and game active');
+                        runnerGroup.add(dalek);
+                        addGround();
+                        addBackdrop();
+                        updateHud();
+                        setDebug('runner ready');
                     },
                     undefined,
                     function (err) {
@@ -2167,7 +2164,7 @@
                             fallback.textContent = 'Dalek model failed to load.';
                         }
                         setDebug('GLB load error: ' + ((err && err.message) ? err.message : 'unknown'));
-                        setHud('Dalek Reactor: model failed to load.');
+                        setHud('Dalek Runner: model failed to load.');
                     }
                 );
 
@@ -2177,10 +2174,6 @@
                     renderer.setSize(w, h, false);
                     camera.aspect = w / h;
                     camera.updateProjectionMatrix();
-                    baseDistance = computeFitDistance(dalekRadius, camera.aspect);
-                    minDistance = baseDistance * 0.72;
-                    maxDistance = baseDistance * 1.7;
-                    cameraDistance = THREE.MathUtils.clamp(cameraDistance, minDistance, maxDistance);
                 }
 
                 if ('ResizeObserver' in window) {
@@ -2190,71 +2183,172 @@
                 window.addEventListener('resize', resize);
                 resize();
 
+                function syncFullscreenButton() {
+                    if (!fullscreenBtn || !stageEl) return;
+                    const active = !!document.fullscreenElement || stageEl.classList.contains('is-panel-fullscreen');
+                    fullscreenBtn.textContent = active ? 'Exit Fullscreen' : 'Fullscreen';
+                }
+
+                function toggleFullscreenPanel() {
+                    if (!stageEl) return;
+                    if (document.fullscreenElement) {
+                        document.exitFullscreen().catch(function () {
+                            stageEl.classList.remove('is-panel-fullscreen');
+                            document.body.classList.remove('dalek-panel-fullscreen-lock');
+                        });
+                        return;
+                    }
+                    if (stageEl.requestFullscreen) {
+                        stageEl.requestFullscreen().catch(function () {
+                            stageEl.classList.toggle('is-panel-fullscreen');
+                            document.body.classList.toggle('dalek-panel-fullscreen-lock', stageEl.classList.contains('is-panel-fullscreen'));
+                        });
+                    } else {
+                        stageEl.classList.toggle('is-panel-fullscreen');
+                        document.body.classList.toggle('dalek-panel-fullscreen-lock', stageEl.classList.contains('is-panel-fullscreen'));
+                    }
+                    setTimeout(function () {
+                        resize();
+                        syncFullscreenButton();
+                    }, 120);
+                }
+
+                if (fullscreenBtn) {
+                    fullscreenBtn.addEventListener('click', function () {
+                        toggleFullscreenPanel();
+                    });
+                }
+                document.addEventListener('fullscreenchange', function () {
+                    syncFullscreenButton();
+                    resize();
+                });
+
                 renderer.domElement.addEventListener('pointerdown', function (event) {
-                    pointerDown = true;
-                    dragged = false;
-                    lastX = event.clientX;
-                    lastY = event.clientY;
+                    dragActive = true;
+                    dragMoved = false;
+                    lastPointerX = event.clientX;
+                    lastPointerY = event.clientY;
                     renderer.domElement.setPointerCapture(event.pointerId);
                 });
 
                 renderer.domElement.addEventListener('pointermove', function (event) {
-                    if (!pointerDown || !dalek) return;
-                    const dx = event.clientX - lastX;
-                    const dy = event.clientY - lastY;
-                    if (Math.abs(dx) + Math.abs(dy) > 2) dragged = true;
-                    userYaw += dx * 0.01;
-                    userPitch = THREE.MathUtils.clamp(userPitch + dy * 0.006, -0.42, 0.42);
-                    lastX = event.clientX;
-                    lastY = event.clientY;
+                    if (!dragActive) return;
+                    const dx = event.clientX - lastPointerX;
+                    const dy = event.clientY - lastPointerY;
+                    if (Math.abs(dx) + Math.abs(dy) > 2) dragMoved = true;
+                    dragYaw += dx * 0.004;
+                    dragPitch = THREE.MathUtils.clamp(dragPitch + dy * 0.003, -0.28, 0.26);
+                    lastPointerX = event.clientX;
+                    lastPointerY = event.clientY;
                 });
 
-                renderer.domElement.addEventListener('pointerup', function (event) {
-                    const elapsed = clock.getElapsedTime();
-                    if (!dragged) {
-                        tryHit(event.clientX, event.clientY, elapsed);
-                    }
-                    pointerDown = false;
-                    dragged = false;
+                renderer.domElement.addEventListener('pointerup', function () {
+                    if (!dragMoved) jump();
+                    dragActive = false;
+                    dragMoved = false;
                 });
 
-                renderer.domElement.addEventListener('wheel', function (event) {
-                    event.preventDefault();
-                    const zoomStep = event.deltaY > 0 ? 1.08 : 0.92;
-                    cameraDistance = THREE.MathUtils.clamp(cameraDistance * zoomStep, minDistance, maxDistance);
-                }, { passive: false });
+                renderer.domElement.addEventListener('click', function () {
+                    // pointerup handles jump to avoid accidental jumps while dragging.
+                });
 
                 document.addEventListener('keydown', function (event) {
-                    if (event.key && event.key.toLowerCase() === 'r' && dalek) {
-                        startGame();
-                        chooseTarget(clock.getElapsedTime());
-                        setDebug('round restarted');
+                    const key = (event.key || '').toLowerCase();
+                    if (key === 'r') {
+                        resetGame();
+                        setDebug('run restarted');
+                        return;
+                    }
+                    if (key === ' ' || key === 'arrowup' || key === 'w') {
+                        event.preventDefault();
+                        jump();
+                        return;
+                    }
+                    if (key === 'a' || key === 'arrowleft') {
+                        laneTargetX = -laneWidth * 0.4;
+                        return;
+                    }
+                    if (key === 'd' || key === 'arrowright') {
+                        laneTargetX = laneWidth * 0.4;
+                        return;
                     }
                 });
 
-                const clock = new THREE.Clock();
+                document.addEventListener('keyup', function (event) {
+                    const key = (event.key || '').toLowerCase();
+                    if (key === 'a' || key === 'arrowleft' || key === 'd' || key === 'arrowright') {
+                        laneTargetX = 0;
+                    }
+                });
+
                 function animate() {
                     requestAnimationFrame(animate);
                     const dt = clock.getDelta();
                     const t = clock.elapsedTime;
-                    if (dalek) {
-                        autoYaw += dt * 0.85;
-                        dalek.rotation.y = autoYaw + userYaw;
-                        dalek.rotation.x = userPitch;
-                        dalek.position.y = baseY + Math.sin(t * 2.0) * 0.06;
-                    }
-                    if (targetMesh) {
-                        const pulse = (Math.sin(t * 10) + 1) * 0.22;
-                        setMeshTargetGlow(targetMesh, true, pulse);
-                        if (gameActive && t >= targetExpiresAt) {
-                            misses += 1;
-                            streak = 0;
-                            updateHud();
-                            chooseTarget(t);
+
+                    if (running) {
+                        speed = Math.min(maxSpeed, speed + dt * 0.2);
+                        score += speed * dt * 4.6;
+
+                        jumpVelocity += gravity * dt;
+                        runnerY = Math.max(0, runnerY + jumpVelocity * dt);
+                        if (runnerY <= 0) jumpVelocity = 0;
+
+                        laneOffsetX += (laneTargetX - laneOffsetX) * Math.min(1, dt * 7);
+
+                        spawnTimer -= dt;
+                        if (spawnTimer <= 0) {
+                            spawnObstacle();
+                            spawnTimer = THREE.MathUtils.randFloat(0.82, 1.55) - ((speed - 7.4) * 0.03);
+                            spawnTimer = Math.max(0.5, spawnTimer);
+                        }
+
+                        for (let i = obstacles.length - 1; i >= 0; i -= 1) {
+                            const obs = obstacles[i];
+                            obs.position.z += speed * dt;
+                            obs.rotation.y += dt * 0.8;
+                            if (obs.position.z > 8) {
+                                scene.remove(obs);
+                                obstacles.splice(i, 1);
+                                continue;
+                            }
+                            if (checkCollision(obs)) {
+                                endRun();
+                                break;
+                            }
+                        }
+
+                        for (let i = 0; i < groundSegments.length; i += 1) {
+                            const seg = groundSegments[i];
+                            seg.position.z += speed * dt;
+                            if (seg.position.z > 6) {
+                                seg.position.z -= groundSegments.length * 5.1;
+                            }
                         }
                     }
-                    camera.position.set(0, dalekRadius * 0.16, cameraDistance);
-                    camera.lookAt(0, 0, 0);
+
+                    if (dalek) {
+                        dalek.rotation.y += (running ? 1 : 0.3) * dt;
+                        dalek.rotation.x = Math.sin(t * 7.5) * 0.02;
+                        runnerGroup.position.set(laneOffsetX, -0.04 + runnerY, 0);
+                    }
+
+                    for (let i = 0; i < stars.length; i += 1) {
+                        const s = stars[i];
+                        s.position.z += speed * dt * 0.32;
+                        if (s.position.z > 4) {
+                            s.position.z = -42 - Math.random() * 8;
+                            s.position.x = (Math.random() * 2 - 1) * 7;
+                            s.position.y = 2 + Math.random() * 3.5;
+                        }
+                    }
+
+                    const camX = (laneOffsetX * 0.18) + (Math.sin(dragYaw) * 0.9);
+                    const camZ = 6.4 + (Math.cos(dragYaw) - 1) * 1.1;
+                    const camY = 2.4 + (runnerY * 0.18) + (dragPitch * 1.9);
+                    camera.position.set(camX, camY, camZ);
+                    camera.lookAt(laneOffsetX * 0.3, 1.05 + (runnerY * 0.2), 0);
+                    if (started) updateHud();
                     renderer.render(scene, camera);
                 }
                 animate();
@@ -2264,7 +2358,7 @@
                     fallback.textContent = '3D renderer failed to initialize.';
                 }
                 setDebug('init error: ' + (e && e.message ? e.message : 'unknown'));
-                setHud('Dalek Reactor: renderer init failed.');
+                setHud('Dalek Runner: renderer init failed.');
             }
         })();
     </script>
